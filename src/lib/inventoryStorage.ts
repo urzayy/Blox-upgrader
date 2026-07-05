@@ -1,0 +1,93 @@
+import { type Skin } from '../data/skins';
+import { findAccountByEmail } from './auth';
+
+const STORAGE_VERSION = 2;
+
+function defaultInventory(_userId: string | null): Skin[] {
+  return [];
+}
+
+function inventoryKey(userId: string | null): string {
+  return userId
+    ? `blox-upgrader/inventory/${userId}`
+    : 'blox-upgrader/inventory/guest';
+}
+
+function versionKey(userId: string | null): string {
+  return userId
+    ? `blox-upgrader/inventory-version/${userId}`
+    : 'blox-upgrader/inventory-version/guest';
+}
+
+function isSkin(value: unknown): value is Skin {
+  if (!value || typeof value !== 'object') return false;
+  const s = value as Skin;
+  return (
+    typeof s.id === 'string'
+    && typeof s.name === 'string'
+    && typeof s.weapon === 'string'
+    && typeof s.rarity === 'string'
+    && typeof s.wear === 'string'
+    && typeof s.price === 'number'
+    && typeof s.image === 'string'
+  );
+}
+
+export function loadInventory(userId: string | null = null): Skin[] {
+  const key = inventoryKey(userId);
+  const vKey = versionKey(userId);
+
+  try {
+    const version = localStorage.getItem(vKey);
+    if (version !== String(STORAGE_VERSION)) {
+      localStorage.setItem(vKey, String(STORAGE_VERSION));
+      localStorage.removeItem(key);
+      return defaultInventory(userId);
+    }
+
+    const raw = localStorage.getItem(key);
+    if (!raw) return defaultInventory(userId);
+
+    const parsed: unknown = JSON.parse(raw);
+    if (!Array.isArray(parsed) || !parsed.every(isSkin)) return defaultInventory(userId);
+
+    return parsed;
+  } catch {
+    return defaultInventory(userId);
+  }
+}
+
+export function saveInventory(inventory: Skin[], userId: string | null = null): void {
+  try {
+    localStorage.setItem(inventoryKey(userId), JSON.stringify(inventory));
+  } catch {
+    /* storage full or blocked */
+  }
+}
+
+export function clearSavedInventory(userId: string | null = null): void {
+  try {
+    localStorage.removeItem(inventoryKey(userId));
+    localStorage.removeItem(versionKey(userId));
+  } catch {
+    /* noop */
+  }
+}
+
+/** Wipes a user's saved inventory to empty (by email). */
+export function clearInventoryForEmail(email: string): boolean {
+  const account = findAccountByEmail(email);
+  if (!account) return false;
+  const vKey = versionKey(account.id);
+  const key = inventoryKey(account.id);
+  localStorage.setItem(vKey, String(STORAGE_VERSION));
+  localStorage.setItem(key, JSON.stringify([]));
+  return true;
+}
+
+export function clearInventoryForUserId(userId: string): void {
+  const vKey = versionKey(userId);
+  const key = inventoryKey(userId);
+  localStorage.setItem(vKey, String(STORAGE_VERSION));
+  localStorage.setItem(key, JSON.stringify([]));
+}

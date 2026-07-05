@@ -1,0 +1,21 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    @apply scroll-smooth antialiased;
+  }
+  body {
+    @apply bg-deep text-white font-body overflow-hidden h-screen;
+  }
+}
+
+@layer components {
+  .input-filter {
+    @apply rounded-lg border border-white/10 bg-elevated px-2 py-1.5 text-[11px] text-white outline-none transition focus:border-gold/40;
+  }
+}
+
+@layer utilities {
+}
