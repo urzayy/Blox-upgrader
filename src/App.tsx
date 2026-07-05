@@ -62,6 +62,7 @@ export default function App() {
   const [playersOnline, setPlayersOnline] = useState(650);
   const [turbo, setTurbo] = useState(false);
   const [lockedSkinIds, setLockedSkinIds] = useState<Set<string>>(() => new Set());
+  const [upgradeRollingIds, setUpgradeRollingIds] = useState<Set<string>>(() => new Set());
   const [thanksToastVisible, setThanksToastVisible] = useState(false);
   const inventoryRef = useRef(inventory);
   const balanceRef = useRef(balance);
@@ -120,8 +121,17 @@ export default function App() {
     if (inputSkins.length && nextCap) sfx.select();
   }, [cap, inputSkins, applyPresetTarget, log]);
 
+  const isSkinLocked = useCallback((skinId: string) => (
+    lockedSkinIds.has(skinId) || upgradeRollingIds.has(skinId)
+  ), [lockedSkinIds, upgradeRollingIds]);
+
+  const effectiveLockedSkinIds = useMemo(() => {
+    if (upgradeRollingIds.size === 0) return lockedSkinIds;
+    return new Set([...lockedSkinIds, ...upgradeRollingIds]);
+  }, [lockedSkinIds, upgradeRollingIds]);
+
   const handleInputSelect = useCallback((s: Skin) => {
-    if (lockedSkinIds.has(s.id)) return;
+    if (isSkinLocked(s.id)) return;
     setInputSkins(prev => {
       if (prev.some(x => x.id === s.id)) {
         log('CLICK.deselect_input', { skin: s.name, price: formatUSD(s.price) });
@@ -133,16 +143,16 @@ export default function App() {
       sfx.select();
       return [...prev, s];
     });
-  }, [log, lockedSkinIds]);
+  }, [log, isSkinLocked]);
 
   const handleSellSkin = useCallback((skin: Skin) => {
-    if (lockedSkinIds.has(skin.id)) return;
+    if (isSkinLocked(skin.id)) return;
     setInventory(prev => sellSkinFromInventory(prev, skin.id));
     setBalance(prev => prev + skin.price);
     setInputSkins(prev => prev.filter(s => s.id !== skin.id));
     log('INVENTORY.sell', { skin: skin.name, price: formatUSD(skin.price), weapon: skin.weapon });
     sfx.select();
-  }, [lockedSkinIds, log]);
+  }, [isSkinLocked, log]);
 
   const handleShopPurchase = useCallback((items: ShopPurchaseItem[]): boolean => {
     if (!user) return false;
@@ -462,6 +472,8 @@ export default function App() {
   const onUpgradeComplete = useCallback((won: boolean, roll: RollResult) => {
     if (!user || !inputSkins.length || !targetSkin) return;
 
+    setUpgradeRollingIds(new Set());
+
     setInventory(prev => applyUpgradeToInventory(prev, inputSkins, targetSkin, won));
 
     const inputLabel = inputSkins.length === 1
@@ -502,6 +514,7 @@ export default function App() {
 
   const handleUpgradeStart = useCallback(() => {
     if (!user || !inputSkins.length || !targetSkin) return;
+    setUpgradeRollingIds(new Set(inputSkins.map(s => s.id)));
     const inputLabel = inputSkins.length === 1
       ? inputSkins[0].name
       : `${inputSkins.length} skins · ${formatUSD(inputTotal)}`;
@@ -532,7 +545,7 @@ export default function App() {
         <Header
           inventory={inventory}
           balance={balance}
-          lockedSkinIds={lockedSkinIds}
+          lockedSkinIds={effectiveLockedSkinIds}
           totalUpgrades={totalUpgrades}
           playersOnline={playersOnline}
           turbo={turbo}
@@ -555,7 +568,9 @@ export default function App() {
               <SelectedSkinSlot
                 skins={inputSkins}
                 variant="input"
+                inputRolling={upgradeRollingIds.size > 0}
                 onClear={() => {
+                  if (upgradeRollingIds.size > 0) return;
                   log('CLICK.clear_input', { count: inputSkins.length });
                   setInputSkins([]);
                 }}
@@ -592,6 +607,7 @@ export default function App() {
                 selected={inputSkins}
                 maxSelected={MAX_INPUT_SKINS}
                 lockedSkinIds={lockedSkinIds}
+                upgradeRollingIds={upgradeRollingIds}
                 balance={balance}
                 requiresLogin={!user}
                 onLoginRequired={openLogin}

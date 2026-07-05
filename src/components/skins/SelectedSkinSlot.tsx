@@ -1,5 +1,6 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import { SkinImage } from './SkinImage';
+import { SkinLockOverlay } from './SkinLockOverlay';
 import { RARITY, type Skin } from '../../data/skins';
 import { CoinPrice } from '../ui/CoinPrice';
 import { inventoryTotal } from '../../lib/inventory';
@@ -8,10 +9,11 @@ interface Props {
   variant: 'input' | 'target';
   skin?: Skin | null;
   skins?: Skin[];
+  inputRolling?: boolean;
   onClear?: () => void;
 }
 
-export function SelectedSkinSlot({ variant, skin = null, skins = [], onClear }: Props) {
+export function SelectedSkinSlot({ variant, skin = null, skins = [], inputRolling = false, onClear }: Props) {
   const isInput = variant === 'input';
   const inputList = isInput ? skins : skin ? [skin] : [];
   const hasSelection = inputList.length > 0;
@@ -35,13 +37,18 @@ export function SelectedSkinSlot({ variant, skin = null, skins = [], onClear }: 
         {!hasSelection ? (
           <EmptySlot isInput={isInput} />
         ) : isInput && inputList.length > 1 ? (
-          <MultiInputDisplay skins={inputList} total={total} onClear={onClear} />
+          <MultiInputDisplay skins={inputList} total={total} onClear={onClear} rolling={inputRolling} />
         ) : (
           <SingleSkinDisplay
             skin={inputList[0]}
             variant={variant}
             onClear={onClear}
+            rolling={isInput && inputRolling}
           />
+        )}
+
+        {isInput && inputRolling && hasSelection && (
+          <SkinLockOverlay label="Rolling" />
         )}
 
         <div
@@ -66,10 +73,12 @@ function SingleSkinDisplay({
   skin,
   variant,
   onClear,
+  rolling = false,
 }: {
   skin: Skin;
   variant: 'input' | 'target';
   onClear?: () => void;
+  rolling?: boolean;
 }) {
   return (
     <motion.div
@@ -79,7 +88,7 @@ function SingleSkinDisplay({
       transition={{ type: 'spring', stiffness: 320, damping: 26 }}
       className="flex h-full w-full flex-col items-center justify-center p-3"
     >
-      {onClear && <ClearSlotButton onClick={onClear} className="right-2 top-2" />}
+      {onClear && !rolling && <ClearSlotButton onClick={onClear} className="right-2 top-2" />}
       <div className="relative h-[110px] w-full max-w-[200px]">
         <SkinImage
           layoutId={variant === 'target' ? `skin-target-${skin.id}` : `skin-input-${skin.id}`}
@@ -107,10 +116,12 @@ function MultiInputDisplay({
   skins,
   total,
   onClear,
+  rolling = false,
 }: {
   skins: Skin[];
   total: number;
   onClear?: () => void;
+  rolling?: boolean;
 }) {
   return (
     <motion.div
@@ -118,7 +129,7 @@ function MultiInputDisplay({
       animate={{ opacity: 1, scale: 1 }}
       className="relative flex h-full w-full flex-col p-2"
     >
-      {onClear && <ClearSlotButton onClick={onClear} className="right-1.5 top-1.5" />}
+      {onClear && !rolling && <ClearSlotButton onClick={onClear} className="right-1.5 top-1.5" />}
       <div className="mb-2 flex items-center justify-between gap-2 px-1">
         <span className="text-[10px] font-semibold text-white/60">
           {skins.length} skins seleccionadas

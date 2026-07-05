@@ -3,7 +3,7 @@ interface Props {
   compact?: boolean;
 }
 
-export function SkinLockOverlay({ label = 'Withdraw', compact }: Props) {
+export function SkinLockOverlay({ label = 'Locked', compact }: Props) {
   return (
     <div className="absolute inset-0 z-30 flex flex-col items-center justify-center rounded-lg bg-black/60 backdrop-blur-[2px]">
       <svg

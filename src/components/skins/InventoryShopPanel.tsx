@@ -13,6 +13,7 @@ interface Props {
   selected: Skin[];
   maxSelected: number;
   lockedSkinIds?: ReadonlySet<string>;
+  upgradeRollingIds?: ReadonlySet<string>;
   balance: number;
   requiresLogin: boolean;
   onLoginRequired: () => void;
@@ -26,6 +27,7 @@ export function InventoryShopPanel({
   selected,
   maxSelected,
   lockedSkinIds,
+  upgradeRollingIds,
   balance,
   requiresLogin,
   onLoginRequired,
@@ -37,7 +39,7 @@ export function InventoryShopPanel({
   const [page, setPage] = useState(0);
   const selectedIds = new Set(selected.map(s => s.id));
   const atMax = selected.length >= maxSelected;
-  const lockedCount = lockedSkinIds?.size ?? 0;
+  const lockedCount = (lockedSkinIds?.size ?? 0) + (upgradeRollingIds?.size ?? 0);
 
   const totalPages = Math.max(1, Math.ceil(skins.length / PAGE_SIZE));
   const safePage = Math.min(page, totalPages - 1);
@@ -107,22 +109,28 @@ export function InventoryShopPanel({
               </p>
             ) : (
               <div className="grid grid-cols-[repeat(auto-fill,minmax(96px,1fr))] content-start items-start gap-2 sm:grid-cols-[repeat(auto-fill,minmax(108px,1fr))] md:grid-cols-[repeat(auto-fill,minmax(118px,1fr))]">
-                {visibleSkins.map(s => (
+                {visibleSkins.map(s => {
+                  const rolling = upgradeRollingIds?.has(s.id) ?? false;
+                  const withdrawLocked = lockedSkinIds?.has(s.id) ?? false;
+                  const locked = rolling || withdrawLocked;
+                  return (
                   <div key={s.id} className="min-w-0">
                     <SkinCard
                       skin={s}
                       selected={selectedIds.has(s.id)}
-                      locked={lockedSkinIds?.has(s.id)}
+                      locked={locked}
+                      lockLabel={rolling ? 'Rolling' : 'Withdraw'}
                       variant="inventory"
                       layoutIdPrefix={
-                        selectedIds.has(s.id) && selected.length === 1 ? 'input' : undefined
+                        selectedIds.has(s.id) && selected.length === 1 && !locked ? 'input' : undefined
                       }
                       onSelect={onSelect}
                       onSell={onSell}
                       compact
                     />
                   </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>

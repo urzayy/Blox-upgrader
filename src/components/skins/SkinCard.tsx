@@ -8,6 +8,7 @@ interface Props {
   skin: Skin;
   selected?: boolean;
   locked?: boolean;
+  lockLabel?: string;
   variant?: 'inventory' | 'target';
   layoutIdPrefix?: 'input' | 'target';
   compact?: boolean;
@@ -19,6 +20,7 @@ export const SkinCard = memo(function SkinCard({
   skin,
   selected,
   locked,
+  lockLabel = 'Withdraw',
   variant = 'inventory',
   layoutIdPrefix,
   compact,
@@ -49,7 +51,7 @@ export const SkinCard = memo(function SkinCard({
           if (locked) return;
           onSelect(skin);
         }}
-        title={locked ? `${skin.name} — en retiro, bloqueada` : skin.name}
+        title={locked ? `${skin.name} — ${lockLabel.toLowerCase()}, bloqueada` : skin.name}
         className={`absolute inset-0 z-0 w-full text-left ${
           locked ? 'cursor-not-allowed' : 'cursor-pointer'
         }`}
@@ -103,7 +105,7 @@ export const SkinCard = memo(function SkinCard({
         </button>
       )}
 
-      {locked && <SkinLockOverlay compact={compact} />}
+      {locked && <SkinLockOverlay label={lockLabel} compact={compact} />}
     </div>
   );
 });
