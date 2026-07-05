@@ -81,6 +81,14 @@ export function LoginModal() {
               ✕
             </button>
 
+            <img
+              src="/logo.png"
+              alt="BloxUpgrader.com"
+              className="mx-auto mb-4 h-16 w-auto object-contain"
+              width={64}
+              height={54}
+            />
+
             <h2 id="login-title" className="font-display text-xl font-bold tracking-wide text-white">
               Login
             </h2>
