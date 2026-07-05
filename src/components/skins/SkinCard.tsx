@@ -105,7 +105,7 @@ export const SkinCard = memo(function SkinCard({
         </button>
       )}
 
-      {locked && <SkinLockOverlay label={lockLabel} compact={compact} />}
+      {locked && <SkinLockOverlay label={lockLabel} compact={compact} className="z-40" />}
     </div>
   );
 });

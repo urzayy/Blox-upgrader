@@ -1,11 +1,12 @@
 interface Props {
   label?: string;
   compact?: boolean;
+  className?: string;
 }
 
-export function SkinLockOverlay({ label = 'Locked', compact }: Props) {
+export function SkinLockOverlay({ label = 'Locked', compact, className = '' }: Props) {
   return (
-    <div className="absolute inset-0 z-30 flex flex-col items-center justify-center rounded-lg bg-black/60 backdrop-blur-[2px]">
+    <div className={`absolute inset-0 z-30 flex flex-col items-center justify-center rounded-lg bg-black/60 backdrop-blur-[2px] ${className}`}>
       <svg
         aria-hidden="true"
         viewBox="0 0 24 24"

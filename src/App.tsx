@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { flushSync } from 'react-dom';
 import { LayoutGroup } from 'framer-motion';
 import { Header } from './components/layout/Header';
 import { LiveFeed } from './components/layout/LiveFeed';
@@ -62,7 +63,9 @@ export default function App() {
   const [playersOnline, setPlayersOnline] = useState(650);
   const [turbo, setTurbo] = useState(false);
   const [lockedSkinIds, setLockedSkinIds] = useState<Set<string>>(() => new Set());
-  const [upgradeRollingIds, setUpgradeRollingIds] = useState<Set<string>>(() => new Set());
+  const [isUpgradeRolling, setIsUpgradeRolling] = useState(false);
+  const isUpgradeRollingRef = useRef(false);
+  const rollingInputIdsRef = useRef<string[]>([]);
   const [thanksToastVisible, setThanksToastVisible] = useState(false);
   const inventoryRef = useRef(inventory);
   const balanceRef = useRef(balance);
@@ -121,9 +124,16 @@ export default function App() {
     if (inputSkins.length && nextCap) sfx.select();
   }, [cap, inputSkins, applyPresetTarget, log]);
 
-  const isSkinLocked = useCallback((skinId: string) => (
-    lockedSkinIds.has(skinId) || upgradeRollingIds.has(skinId)
-  ), [lockedSkinIds, upgradeRollingIds]);
+  const upgradeRollingIds = useMemo(
+    () => (isUpgradeRolling ? new Set(inputSkins.map(s => s.id)) : new Set<string>()),
+    [isUpgradeRolling, inputSkins],
+  );
+
+  const isSkinLocked = useCallback((skinId: string) => {
+    if (lockedSkinIds.has(skinId)) return true;
+    if (isUpgradeRollingRef.current && rollingInputIdsRef.current.includes(skinId)) return true;
+    return upgradeRollingIds.has(skinId);
+  }, [lockedSkinIds, upgradeRollingIds]);
 
   const effectiveLockedSkinIds = useMemo(() => {
     if (upgradeRollingIds.size === 0) return lockedSkinIds;
@@ -472,7 +482,9 @@ export default function App() {
   const onUpgradeComplete = useCallback((won: boolean, roll: RollResult) => {
     if (!user || !inputSkins.length || !targetSkin) return;
 
-    setUpgradeRollingIds(new Set());
+    isUpgradeRollingRef.current = false;
+    rollingInputIdsRef.current = [];
+    setIsUpgradeRolling(false);
 
     setInventory(prev => applyUpgradeToInventory(prev, inputSkins, targetSkin, won));
 
@@ -514,7 +526,10 @@ export default function App() {
 
   const handleUpgradeStart = useCallback(() => {
     if (!user || !inputSkins.length || !targetSkin) return;
-    setUpgradeRollingIds(new Set(inputSkins.map(s => s.id)));
+    const ids = inputSkins.map(s => s.id);
+    rollingInputIdsRef.current = ids;
+    isUpgradeRollingRef.current = true;
+    flushSync(() => setIsUpgradeRolling(true));
     const inputLabel = inputSkins.length === 1
       ? inputSkins[0].name
       : `${inputSkins.length} skins · ${formatUSD(inputTotal)}`;
@@ -568,9 +583,9 @@ export default function App() {
               <SelectedSkinSlot
                 skins={inputSkins}
                 variant="input"
-                inputRolling={upgradeRollingIds.size > 0}
+                inputRolling={isUpgradeRolling}
                 onClear={() => {
-                  if (upgradeRollingIds.size > 0) return;
+                  if (isUpgradeRolling) return;
                   log('CLICK.clear_input', { count: inputSkins.length });
                   setInputSkins([]);
                 }}
