@@ -69,12 +69,19 @@ export function DepositModal({ open, onClose, onRequestDeposit }: Props) {
               paginated={false}
               priceSort="desc"
               maxItemQuantity={999}
+              minSubmitTotal={MIN_DEPOSIT_TOTAL}
               submitIcon="chat"
               submitLabel="Live chat"
               emptyError="Selecciona al menos una skin para depositar."
               validateSubmit={(_, total) => validateDepositTotal(total)}
               onSubmit={async items => {
                 setError('');
+                const total = items.reduce((sum, item) => sum + item.skin.price * item.quantity, 0);
+                const validation = validateDepositTotal(total);
+                if (!validation.ok) {
+                  setError(validation.error ?? 'Depósito inválido.');
+                  return false;
+                }
                 const ticketId = await onRequestDeposit(items);
                 if (!ticketId) {
                   setError('No se pudo crear la solicitud de depósito. Inténtalo de nuevo.');

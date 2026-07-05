@@ -20,6 +20,7 @@ interface Props {
   paginated?: boolean;
   priceSort?: 'asc' | 'desc';
   maxItemQuantity?: number;
+  minSubmitTotal?: number;
   validateSubmit?: (items: CatalogCartItem[], total: number) => { ok: boolean; error?: string };
   onSubmit: (items: CatalogCartItem[]) => boolean | void | Promise<boolean | void>;
 }
@@ -43,6 +44,7 @@ export function SkinCatalogCart({
   paginated = true,
   priceSort = 'asc',
   maxItemQuantity = 99,
+  minSubmitTotal,
   validateSubmit,
   onSubmit,
 }: Props) {
@@ -102,6 +104,8 @@ export function SkinCatalogCart({
   );
 
   const cartCount = cartItems.reduce((sum, item) => sum + item.quantity, 0);
+  const belowMinTotal = minSubmitTotal != null && cartCount > 0 && cartTotal < minSubmitTotal;
+  const canSubmit = cartCount > 0 && !belowMinTotal;
 
   const deselectSkin = (skinId: string) => {
     setCart(prev => {
@@ -285,7 +289,12 @@ export function SkinCatalogCart({
           </div>
         )}
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          {belowMinTotal && (
+            <p className="text-[10px] font-semibold text-risk">
+              Mínimo {minSubmitTotal!.toLocaleString('es-ES')} monedas · faltan {(minSubmitTotal! - cartTotal).toLocaleString('es-ES')}
+            </p>
+          )}
           <button
             type="button"
             disabled={!cartCount}
@@ -298,7 +307,7 @@ export function SkinCatalogCart({
           {submitIcon === 'cart' ? (
             <button
               type="button"
-              disabled={!cartCount || submitting}
+              disabled={!canSubmit || submitting}
               onClick={() => { void handleSubmit(); }}
               className="group relative flex min-w-[132px] items-center justify-between gap-2 overflow-hidden rounded-lg border border-gold/45 px-3 py-2 shadow-[0_0_24px_rgba(255,215,0,0.3)] transition enabled:hover:border-gold enabled:hover:shadow-[0_0_32px_rgba(255,215,0,0.45)] disabled:cursor-not-allowed disabled:opacity-35"
             >
@@ -318,7 +327,7 @@ export function SkinCatalogCart({
           ) : (
             <button
               type="button"
-              disabled={!cartCount || submitting}
+              disabled={!canSubmit || submitting}
               onClick={() => { void handleSubmit(); }}
               className="flex min-w-[148px] items-center justify-between gap-2 rounded-lg border border-gold/45 bg-gold/15 px-3 py-2 transition enabled:hover:bg-gold/25 disabled:cursor-not-allowed disabled:opacity-35"
             >
