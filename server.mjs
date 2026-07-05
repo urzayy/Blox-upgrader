@@ -358,7 +358,10 @@ app.post('/api/player-state/sync', async (req, res) => {
     sendJson(res, 200, { ok: true, state });
   } catch (error) {
     console.error('[player-state/sync]', error);
-    sendJson(res, 500, { error: 'error' });
+    sendJson(res, 500, {
+      error: 'error',
+      message: error instanceof Error ? error.message : 'sync failed',
+    });
   }
 });
 
@@ -382,7 +385,10 @@ app.get('/api/admin/player-state', async (req, res) => {
     sendJson(res, 200, { state });
   } catch (error) {
     console.error('[admin/player-state]', error);
-    sendJson(res, 500, { error: 'error' });
+    sendJson(res, 500, {
+      error: 'error',
+      message: error instanceof Error ? error.message : 'load failed',
+    });
   }
 });
 

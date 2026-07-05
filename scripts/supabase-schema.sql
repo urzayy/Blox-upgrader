@@ -13,7 +13,10 @@ create table if not exists public.blox_accounts (
   accepted_terms boolean default true,
   event_count integer not null default 0,
   is_new_account boolean default false,
-  synced_from_client boolean default false
+  synced_from_client boolean default false,
+  balance bigint not null default 0,
+  inventory jsonb not null default '[]'::jsonb,
+  inventory_updated_at bigint
 );
 
 create table if not exists public.blox_user_events (
@@ -40,6 +43,7 @@ drop policy if exists "blox_events_no_public" on public.blox_user_events;
 create policy "blox_accounts_no_public" on public.blox_accounts for all using (false);
 create policy "blox_events_no_public" on public.blox_user_events for all using (false);
 
+-- Optional legacy table (not required if blox_accounts has inventory columns):
 create table if not exists public.blox_player_state (
   user_id text not null,
   email text primary key,

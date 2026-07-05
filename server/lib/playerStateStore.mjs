@@ -36,6 +36,17 @@ function normalizeBalance(value) {
   return Math.max(0, Math.floor(n));
 }
 
+function rowToState(row) {
+  if (!row) return null;
+  return {
+    userId: row.id ?? row.user_id ?? null,
+    email: normalizeEmail(row.email),
+    balance: normalizeBalance(row.balance),
+    inventory: normalizeInventory(row.inventory),
+    updatedAt: Number(row.inventory_updated_at ?? row.updated_at ?? 0),
+  };
+}
+
 export function createFilePlayerStateStore(rootDir) {
   if (!fs.existsSync(rootDir)) fs.mkdirSync(rootDir, { recursive: true });
 
@@ -87,48 +98,67 @@ export function createSupabasePlayerStateStore(url, secretKey) {
     auth: { persistSession: false, autoRefreshToken: false },
   });
 
-  return {
-    type: 'supabase',
-    async savePlayerState({ userId, email, balance, inventory }) {
-      const normalizedEmail = normalizeEmail(email);
-      const payload = {
-        user_id: userId,
-        email: normalizedEmail,
-        balance: normalizeBalance(balance),
-        inventory: normalizeInventory(inventory),
-        updated_at: Date.now(),
-      };
+  async function saveToAccounts({ userId, email, balance, inventory }) {
+    const normalizedEmail = normalizeEmail(email);
+    const ts = Date.now();
+    const patch = {
+      balance: normalizeBalance(balance),
+      inventory: normalizeInventory(inventory),
+      inventory_updated_at: ts,
+      last_seen_at: ts,
+    };
+
+    const { data: existing } = await supabase
+      .from('blox_accounts')
+      .select('id')
+      .eq('email', normalizedEmail)
+      .maybeSingle();
+
+    if (existing?.id) {
       const { data, error } = await supabase
-        .from('blox_player_state')
-        .upsert(payload, { onConflict: 'email' })
-        .select('*')
+        .from('blox_accounts')
+        .update(patch)
+        .eq('email', normalizedEmail)
+        .select('id, email, balance, inventory, inventory_updated_at')
         .single();
       if (error) throw error;
-      return {
-        userId: data.user_id,
-        email: data.email,
-        balance: Number(data.balance),
-        inventory: normalizeInventory(data.inventory),
-        updatedAt: Number(data.updated_at),
-      };
-    },
-    async getPlayerStateByEmail(email) {
-      const normalizedEmail = normalizeEmail(email);
-      const { data, error } = await supabase
-        .from('blox_player_state')
-        .select('*')
-        .eq('email', normalizedEmail)
-        .maybeSingle();
-      if (error) throw error;
-      if (!data) return null;
-      return {
-        userId: data.user_id,
-        email: data.email,
-        balance: Number(data.balance),
-        inventory: normalizeInventory(data.inventory),
-        updatedAt: Number(data.updated_at),
-      };
-    },
+      return rowToState(data);
+    }
+
+    const { data, error } = await supabase
+      .from('blox_accounts')
+      .upsert({
+        id: userId,
+        email: normalizedEmail,
+        created_at: ts,
+        last_seen_at: ts,
+        event_count: 0,
+        ...patch,
+      }, { onConflict: 'id' })
+      .select('id, email, balance, inventory, inventory_updated_at')
+      .single();
+    if (error) throw error;
+    return rowToState(data);
+  }
+
+  async function readFromAccounts(email) {
+    const normalizedEmail = normalizeEmail(email);
+    const { data, error } = await supabase
+      .from('blox_accounts')
+      .select('id, email, balance, inventory, inventory_updated_at')
+      .eq('email', normalizedEmail)
+      .maybeSingle();
+    if (error) throw error;
+    if (!data) return null;
+    const state = rowToState(data);
+    if (!state?.updatedAt) return null;
+    return state;
+  }
+
+  return {
+    type: 'supabase',
+    savePlayerState: saveToAccounts,
+    getPlayerStateByEmail: readFromAccounts,
     isAdminEmail(email) {
       return ADMIN_EMAILS.has(normalizeEmail(email));
     },

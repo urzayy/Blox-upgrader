@@ -455,6 +455,16 @@ export default function App() {
 
   useEffect(() => {
     if (!user) return;
+    void syncPlayerState({
+      userId: user.userId,
+      email: user.email,
+      balance,
+      inventory,
+    });
+  }, [user?.userId]);
+
+  useEffect(() => {
+    if (!user) return;
     const timer = setTimeout(() => {
       void syncPlayerState({
         userId: user.userId,
@@ -462,7 +472,7 @@ export default function App() {
         balance,
         inventory,
       });
-    }, 1200);
+    }, 800);
     return () => clearTimeout(timer);
   }, [user, inventory, balance]);
 

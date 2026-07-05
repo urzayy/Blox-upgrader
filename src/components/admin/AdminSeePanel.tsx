@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { sortSkinsByPriceDesc, type Skin } from '../../data/skins';
 import { inventoryTotal } from '../../lib/inventory';
-import { fetchPlayerStateByEmail, type PlayerStateSnapshot } from '../../lib/playerStateApi';
+import { fetchPlayerStateByEmail, syncPlayerState, type PlayerStateSnapshot } from '../../lib/playerStateApi';
 import { isValidGrantEmail, normalizeGrantEmail } from '../../lib/inventoryGrants';
 import { CoinPrice } from '../ui/CoinPrice';
 import { SkinImage } from '../skins/SkinImage';
@@ -10,10 +10,16 @@ import { SkinImage } from '../skins/SkinImage';
 interface Props {
   open: boolean;
   adminEmail: string;
+  localSession?: {
+    userId: string;
+    email: string;
+    balance: number;
+    inventory: Skin[];
+  } | null;
   onClose: () => void;
 }
 
-export function AdminSeePanel({ open, adminEmail, onClose }: Props) {
+export function AdminSeePanel({ open, adminEmail, localSession, onClose }: Props) {
   const [targetEmail, setTargetEmail] = useState('');
   const [state, setState] = useState<PlayerStateSnapshot | null>(null);
   const [searchedEmail, setSearchedEmail] = useState('');
@@ -46,14 +52,63 @@ export function AdminSeePanel({ open, adminEmail, onClose }: Props) {
     setLoading(true);
     setError('');
     try {
+      if (
+        localSession
+        && normalizeGrantEmail(localSession.email) === email
+      ) {
+        await syncPlayerState({
+          userId: localSession.userId,
+          email: localSession.email,
+          balance: localSession.balance,
+          inventory: localSession.inventory,
+        });
+      }
+
       const next = await fetchPlayerStateByEmail(adminEmail, email);
       setSearchedEmail(email);
-      setState(next);
-      if (!next) {
-        setError('No hay inventario sincronizado para este correo.');
+      if (next) {
+        setState(next);
+        return;
       }
-    } catch {
-      setError('No se pudo cargar el inventario.');
+
+      if (
+        localSession
+        && normalizeGrantEmail(localSession.email) === email
+      ) {
+        setState({
+          userId: localSession.userId,
+          email: normalizeGrantEmail(localSession.email),
+          balance: localSession.balance,
+          inventory: localSession.inventory,
+          updatedAt: Date.now(),
+        });
+        setError('Mostrando inventario de este navegador. Aún no sincronizado en el servidor.');
+        return;
+      }
+
+      setState(null);
+      setError('No hay inventario sincronizado para este correo.');
+    } catch (err) {
+      if (
+        localSession
+        && normalizeGrantEmail(localSession.email) === email
+      ) {
+        setSearchedEmail(email);
+        setState({
+          userId: localSession.userId,
+          email: normalizeGrantEmail(localSession.email),
+          balance: localSession.balance,
+          inventory: localSession.inventory,
+          updatedAt: Date.now(),
+        });
+        setError(
+          err instanceof Error && err.message.includes('column')
+            ? 'Falta configurar Supabase. Mostrando inventario local de este navegador.'
+            : 'Servidor no disponible. Mostrando inventario local de este navegador.',
+        );
+        return;
+      }
+      setError(err instanceof Error ? err.message : 'No se pudo cargar el inventario.');
       setState(null);
     } finally {
       setLoading(false);

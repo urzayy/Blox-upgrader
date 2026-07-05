@@ -38,7 +38,10 @@ export async function fetchPlayerStateByEmail(
     `/api/admin/player-state?adminEmail=${encodeURIComponent(adminEmail)}&email=${encodeURIComponent(email.trim().toLowerCase())}`,
   );
   if (res.status === 404) return null;
-  if (!res.ok) throw new Error('Could not load player state');
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({})) as { message?: string };
+    throw new Error(data.message ?? 'Could not load player state');
+  }
   const data = await res.json() as { state: PlayerStateSnapshot | null };
   return data.state;
 }

@@ -188,6 +188,12 @@ export function Header({
         <AdminSeePanel
           open={seeOpen}
           adminEmail={user.email}
+          localSession={{
+            userId: user.userId,
+            email: user.email,
+            balance,
+            inventory,
+          }}
           onClose={() => setSeeOpen(false)}
         />
       )}
