@@ -360,7 +360,7 @@ app.post('/api/player-state/sync', async (req, res) => {
     console.error('[player-state/sync]', error);
     sendJson(res, 500, {
       error: 'error',
-      message: error instanceof Error ? error.message : 'sync failed',
+      message: error instanceof Error ? error.message : (error?.message ?? 'sync failed'),
     });
   }
 });
@@ -387,7 +387,7 @@ app.get('/api/admin/player-state', async (req, res) => {
     console.error('[admin/player-state]', error);
     sendJson(res, 500, {
       error: 'error',
-      message: error instanceof Error ? error.message : 'load failed',
+      message: error instanceof Error ? error.message : (error?.message ?? 'load failed'),
     });
   }
 });

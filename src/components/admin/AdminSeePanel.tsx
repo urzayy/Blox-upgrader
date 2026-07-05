@@ -87,7 +87,7 @@ export function AdminSeePanel({ open, adminEmail, localSession, onClose }: Props
       }
 
       setState(null);
-      setError('No hay inventario sincronizado para este correo.');
+      setError('Este jugador aún no ha sincronizado su inventario. Debe entrar al sitio al menos una vez.');
     } catch (err) {
       if (
         localSession
@@ -108,7 +108,13 @@ export function AdminSeePanel({ open, adminEmail, localSession, onClose }: Props
         );
         return;
       }
-      setError(err instanceof Error ? err.message : 'No se pudo cargar el inventario.');
+      setError(
+        err instanceof Error
+          ? (err.message.includes('column') || err.message.includes('schema cache')
+            ? 'Falta ejecutar el SQL de inventario en Supabase. Mientras tanto, solo verás jugadores que hayan entrado recientemente.'
+            : err.message)
+          : 'No se pudo cargar el inventario.',
+      );
       setState(null);
     } finally {
       setLoading(false);

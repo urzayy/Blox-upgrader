@@ -165,7 +165,42 @@ export function createSupabasePlayerStateStore(url, secretKey) {
   };
 }
 
+function supabaseErrorMessage(error) {
+  if (!error) return 'unknown error';
+  if (error instanceof Error) return error.message;
+  if (typeof error.message === 'string') return error.message;
+  return 'database error';
+}
+
+export function createHybridPlayerStateStore(fileStore, remoteStore) {
+  return {
+    type: remoteStore.type === 'supabase' ? 'hybrid-supabase' : remoteStore.type,
+    async savePlayerState(payload) {
+      const fileSaved = await fileStore.savePlayerState(payload);
+      try {
+        return await remoteStore.savePlayerState(payload);
+      } catch (error) {
+        console.error('[player-state] remote save failed, kept file copy:', supabaseErrorMessage(error));
+        return fileSaved;
+      }
+    },
+    async getPlayerStateByEmail(email) {
+      try {
+        const remote = await remoteStore.getPlayerStateByEmail(email);
+        if (remote) return remote;
+      } catch (error) {
+        console.error('[player-state] remote read failed, trying file:', supabaseErrorMessage(error));
+      }
+      return fileStore.getPlayerStateByEmail(email);
+    },
+    isAdminEmail(email) {
+      return fileStore.isAdminEmail(email);
+    },
+  };
+}
+
 export function createPlayerStateStore({ playerStateDir }) {
+  const fileStore = createFilePlayerStateStore(playerStateDir);
   const url = process.env.SUPABASE_URL?.trim();
   const secret = (
     process.env.SUPABASE_SECRET_KEY
@@ -174,8 +209,11 @@ export function createPlayerStateStore({ playerStateDir }) {
   ).trim();
 
   if (url && secret) {
-    return createSupabasePlayerStateStore(url, secret);
+    return createHybridPlayerStateStore(
+      fileStore,
+      createSupabasePlayerStateStore(url, secret),
+    );
   }
 
-  return createFilePlayerStateStore(playerStateDir);
+  return fileStore;
 }
