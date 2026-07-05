@@ -182,13 +182,10 @@ export function Header({
 
       <header className="sticky top-0 z-50 grid grid-cols-[1fr_auto_1fr] items-center gap-4 border-b border-white/5 bg-deep/90 px-4 py-3 backdrop-blur-xl">
       <div className="flex items-center gap-3 justify-self-start">
-        <img
-          src="/logo.png"
-          alt="BloxUpgrader.com"
-          className="h-12 w-auto shrink-0 object-contain"
-          width={48}
-          height={40}
-        />
+        <h1 className="font-display text-lg font-bold tracking-[0.12em] uppercase">
+          Blox<span className="text-gold">Upgrader</span>
+          <span className="text-[11px] font-semibold tracking-normal text-white/40">.com</span>
+        </h1>
 
         <div className="hidden items-center gap-2 sm:flex">
           <div className="flex items-center gap-1.5 rounded-lg border border-white/5 bg-panel/80 px-2.5 py-1">
