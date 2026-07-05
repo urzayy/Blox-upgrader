@@ -1,5 +1,8 @@
 node_modules
 dist
+.env
+.env.local
+.env.*.local
 user-logs/*.txt
 !user-logs/README.md
 withdraw-chats/*.json
@@ -13,5 +16,6 @@ site-state/*.json
 user-db/users.json
 user-db/accounts.json
 user-db/events/*.jsonl
+user-db/.storage-probe
 !user-db/README.md
 src/lib/feedBot.mjs

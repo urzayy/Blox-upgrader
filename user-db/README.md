@@ -1,41 +1,28 @@
 # User database — Blox Upgrader
 
-Server-side store for **everyone who registers on bloxupgrader.com**.
+Production registrations are stored in **Supabase** (free tier).
 
-## Production (bloxupgrader.com)
+## Setup (once)
 
-All registrations go to the **Render server disk**, not your PC:
+1. Open Supabase → **SQL Editor** → New query
+2. Paste all of `scripts/supabase-schema.sql`
+3. Click **Run**
 
-| File | Contents |
-|------|----------|
-| `/var/data/user-db/accounts.json` | Registered emails + password hashes |
-| `/var/data/user-db/users.json` | User index (activity stats) |
-| `/var/data/user-db/events/*.jsonl` | Every action per user |
-| `/var/data/user-logs/*.txt` | Plain-text activity logs |
+## Environment variables
 
-**View users:** log in as admin on bloxupgrader.com → **Users DB** button.
+| Variable | Where |
+|----------|--------|
+| `SUPABASE_URL` | `.env` locally + Render Environment |
+| `SUPABASE_SECRET_KEY` | `.env` locally + Render Environment (secret) |
 
-**Requires:** Render **Starter plan** + **1 GB persistent disk** (see `render.yaml`).
+Never commit `.env` or paste secret keys in GitHub.
 
-## Local development
+## View users
 
-Same structure under `user-db/` in the project folder, but only when using:
+**bloxupgrader.com** → admin login → **Users DB**
 
-```bash
-npm run dev
-```
+Or Supabase → **Table Editor** → `blox_accounts` / `blox_user_events`
 
-Registrations on **bloxupgrader.com** do **not** appear in your local `user-db/` folder.
+## Local dev
 
-## Flow
-
-1. User registers on bloxupgrader.com
-2. Browser calls `POST /api/auth/register`
-3. Server writes to `/var/data/user-db/` (persistent disk)
-
-## Admin API
-
-- `GET /api/admin/user-db/status?adminEmail=...`
-- `GET /api/admin/user-db/users?adminEmail=...`
-
-Admin emails: `urzay1v1@gmail.com`, `ecruzcastillo2009@gmail.com`
+Uses the same Supabase project when `.env` is configured. The local `user-db/` folder is only a fallback without Supabase env vars.

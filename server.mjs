@@ -2,12 +2,15 @@ import express from 'express';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import dotenv from 'dotenv';
 import {
   createBotFeedItem,
   enrichFeedItem,
   FEED_STATE_VERSION,
 } from './src/lib/feedBot.mjs';
-import { createUserDb } from './server/lib/userDb.mjs';
+import { createUserStore } from './server/lib/userStore.mjs';
+
+dotenv.config();
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = __dirname;
@@ -30,20 +33,12 @@ for (const dir of [LOGS_DIR, USER_DB_DIR, path.join(USER_DB_DIR, 'events'), CHAT
   if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
 }
 
-const userDb = createUserDb(USER_DB_DIR);
+const userStore = createUserStore({ userDbDir: USER_DB_DIR });
+let storageStatus = { ok: false, path: userStore.type === 'supabase' ? 'supabase' : USER_DB_DIR };
 
-function checkPersistentStorage() {
-  try {
-    const probe = path.join(USER_DB_DIR, '.storage-probe');
-    fs.writeFileSync(probe, `${Date.now()}\n`, 'utf8');
-    fs.readFileSync(probe, 'utf8');
-    return { ok: true, path: USER_DB_DIR };
-  } catch (error) {
-    return { ok: false, path: USER_DB_DIR, error: error instanceof Error ? error.message : 'write failed' };
-  }
+async function refreshStorageStatus() {
+  storageStatus = await userStore.checkConnection();
 }
-
-const storageStatus = checkPersistentStorage();
 
 function sanitizeEmail(email) {
   return email.replace(/@/g, '_at_').replace(/[^a-zA-Z0-9._-]/g, '_');
@@ -242,7 +237,7 @@ function appendUserTxtLog(email, line) {
   }
 }
 
-app.post('/api/auth/register', (req, res) => {
+app.post('/api/auth/register', async (req, res) => {
   try {
     const {
       userId,
@@ -258,7 +253,7 @@ app.post('/api/auth/register', (req, res) => {
       sendJson(res, 400, { error: 'bad request' });
       return;
     }
-    const result = userDb.registerAccount({
+    const result = await userStore.registerAccount({
       userId,
       email,
       passwordHash,
@@ -277,62 +272,66 @@ app.post('/api/auth/register', (req, res) => {
   }
 });
 
-app.post('/api/auth/login', (req, res) => {
+app.post('/api/auth/login', async (req, res) => {
   try {
     const { userId, email, nickname } = req.body ?? {};
     if (!userId || !email) {
       sendJson(res, 400, { error: 'bad request' });
       return;
     }
-    const result = userDb.touchAccountLogin({ userId, email, nickname });
+    const result = await userStore.touchAccountLogin({ userId, email, nickname });
     if (result?.line) appendUserTxtLog(email, result.line);
     sendJson(res, 200, { ok: true, user: result?.user ?? null });
-  } catch {
+  } catch (error) {
+    console.error('[auth/login]', error);
     sendJson(res, 500, { error: 'error' });
   }
 });
 
-app.post('/api/users/sync', (req, res) => {
+app.post('/api/users/sync', async (req, res) => {
   try {
     const { userId, email, nickname, isNewAccount } = req.body ?? {};
     if (!userId || !email) {
       sendJson(res, 400, { error: 'bad request' });
       return;
     }
-    const user = userDb.upsertUser({ userId, email, nickname, isNewAccount });
+    const user = await userStore.upsertUser({ userId, email, nickname, isNewAccount });
     sendJson(res, 200, { ok: true, user });
-  } catch {
+  } catch (error) {
+    console.error('[users/sync]', error);
     sendJson(res, 500, { error: 'error' });
   }
 });
 
-app.post('/api/user-log', (req, res) => {
+app.post('/api/user-log', async (req, res) => {
   try {
     const { userId, email, line, action, details } = req.body ?? {};
     if (!email || typeof line !== 'string') {
       sendJson(res, 400, { error: 'bad request' });
       return;
     }
-    const filePath = path.join(LOGS_DIR, `${sanitizeEmail(email)}.txt`);
     appendUserTxtLog(email, line);
-    const event = userDb.appendEvent({ userId, email, line, action, details });
+    const event = await userStore.appendEvent({ userId, email, line, action, details });
     sendJson(res, 200, { ok: true, eventId: event.id });
-  } catch {
+  } catch (error) {
+    console.error('[user-log]', error);
     sendJson(res, 500, { error: 'error' });
   }
 });
 
-app.get('/api/admin/user-db/status', (req, res) => {
+app.get('/api/admin/user-db/status', async (req, res) => {
   const adminEmail = String(req.query.adminEmail ?? '');
-  if (!userDb.isAdminEmail(adminEmail)) {
+  if (!userStore.isAdminEmail(adminEmail)) {
     sendJson(res, 403, { error: 'forbidden' });
     return;
   }
-  const users = userDb.listUsers();
-  const emails = userDb.listRegisteredEmails();
+  await refreshStorageStatus();
+  const users = await userStore.listUsers();
+  const emails = await userStore.listRegisteredEmails();
   sendJson(res, 200, {
     storage: storageStatus,
-    dataDir: DATA_DIR,
+    backend: userStore.type ?? 'file',
+    dataDir: userStore.type === 'supabase' ? process.env.SUPABASE_URL : DATA_DIR,
     logsDir: LOGS_DIR,
     userCount: users.length,
     registeredEmailCount: emails.length,
@@ -341,41 +340,41 @@ app.get('/api/admin/user-db/status', (req, res) => {
   });
 });
 
-app.get('/api/admin/user-db/users', (req, res) => {
+app.get('/api/admin/user-db/users', async (req, res) => {
   const adminEmail = String(req.query.adminEmail ?? '');
-  if (!userDb.isAdminEmail(adminEmail)) {
+  if (!userStore.isAdminEmail(adminEmail)) {
     sendJson(res, 403, { error: 'forbidden' });
     return;
   }
-  sendJson(res, 200, { users: userDb.listUsers() });
+  sendJson(res, 200, { users: await userStore.listUsers() });
 });
 
-app.get('/api/admin/user-db/users/:userId', (req, res) => {
+app.get('/api/admin/user-db/users/:userId', async (req, res) => {
   const adminEmail = String(req.query.adminEmail ?? '');
-  if (!userDb.isAdminEmail(adminEmail)) {
+  if (!userStore.isAdminEmail(adminEmail)) {
     sendJson(res, 403, { error: 'forbidden' });
     return;
   }
-  const user = userDb.getUser(req.params.userId);
+  const user = await userStore.getUser(req.params.userId);
   if (!user) {
     sendJson(res, 404, { error: 'not found' });
     return;
   }
-  sendJson(res, 200, { user, events: userDb.getUserEvents(req.params.userId) });
+  sendJson(res, 200, { user, events: await userStore.getUserEvents(req.params.userId) });
 });
 
-app.get('/api/admin/user-db/users/:userId/export.txt', (req, res) => {
+app.get('/api/admin/user-db/users/:userId/export.txt', async (req, res) => {
   const adminEmail = String(req.query.adminEmail ?? '');
-  if (!userDb.isAdminEmail(adminEmail)) {
+  if (!userStore.isAdminEmail(adminEmail)) {
     sendJson(res, 403, { error: 'forbidden' });
     return;
   }
-  if (!userDb.getUser(req.params.userId)) {
+  if (!(await userStore.getUser(req.params.userId))) {
     sendJson(res, 404, { error: 'not found' });
     return;
   }
   res.type('text/plain; charset=utf-8');
-  res.send(userDb.exportUserTxt(req.params.userId));
+  res.send(await userStore.exportUserTxt(req.params.userId));
 });
 
 app.get('/api/site-state', (_req, res) => {
@@ -700,8 +699,9 @@ setInterval(() => {
   }
 }, 3500);
 
-app.listen(PORT, () => {
+app.listen(PORT, async () => {
+  await refreshStorageStatus();
   console.log(`[BloxUpgrader.com] ${SITE_URL}`);
-  console.log(`[UserDB] data=${DATA_DIR} db=${USER_DB_DIR} logs=${LOGS_DIR}`);
+  console.log(`[UserDB] backend=${userStore.type ?? 'file'} path=${storageStatus.path}`);
   console.log(`[UserDB] storage ${storageStatus.ok ? 'OK' : 'FAILED'}${storageStatus.error ? `: ${storageStatus.error}` : ''}`);
 });

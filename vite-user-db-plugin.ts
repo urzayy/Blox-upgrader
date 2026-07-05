@@ -1,7 +1,10 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import dotenv from 'dotenv';
 import type { Plugin } from 'vite';
-import { createUserDb } from './server/lib/userDb.mjs';
+import { createUserStore } from './server/lib/userStore.mjs';
+
+dotenv.config();
 
 function readJsonBody(req: { on: (event: string, cb: (chunk: Buffer) => void) => void }): Promise<unknown> {
   return new Promise((resolve, reject) => {
@@ -24,29 +27,14 @@ function sendJson(res: { statusCode: number; setHeader: (k: string, v: string) =
 }
 
 export function userDbPlugin(dbDir: string): Plugin {
-  const db = createUserDb(dbDir);
-  const dataDir = path.dirname(dbDir);
-
-  function checkPersistentStorage() {
-    try {
-      const probe = path.join(dbDir, '.storage-probe');
-      fs.writeFileSync(probe, `${Date.now()}\n`, 'utf8');
-      return { ok: true, path: dbDir };
-    } catch (error) {
-      return { ok: false, path: dbDir, error: error instanceof Error ? error.message : 'write failed' };
-    }
-  }
-
-  const storageStatus = checkPersistentStorage();
+  const userStore = createUserStore({ userDbDir: dbDir });
 
   function appendTxtLog(email: string, line: string) {
     const logsDir = path.resolve(path.dirname(dbDir), 'user-logs');
     if (!fs.existsSync(logsDir)) fs.mkdirSync(logsDir, { recursive: true });
     const sanitizeEmail = (value: string) => value.replace(/@/g, '_at_').replace(/[^a-zA-Z0-9._-]/g, '_');
     const filePath = path.join(logsDir, `${sanitizeEmail(email)}.txt`);
-    if (!fs.existsSync(filePath) && line.startsWith('#')) {
-      fs.writeFileSync(filePath, `${line}\n`, 'utf8');
-    } else if (!fs.existsSync(filePath)) {
+    if (!fs.existsSync(filePath)) {
       fs.writeFileSync(
         filePath,
         `# Blox Upgrader — ${email}\n# Created: ${new Date().toISOString()}\n\n${line}\n`,
@@ -63,53 +51,32 @@ export function userDbPlugin(dbDir: string): Plugin {
       server.middlewares.use(async (req, res, next) => {
         const url = req.url?.split('?')[0] ?? '';
 
-        if (url === '/api/auth/register' && req.method === 'POST') {
-          try {
-            const body = await readJsonBody(req) as {
-              userId?: string;
-              email?: string;
-              passwordHash?: string;
-              salt?: string;
-              createdAt?: number;
-              acceptedAge?: boolean;
-              acceptedTerms?: boolean;
-              nickname?: string;
-            };
+        try {
+          if (url === '/api/auth/register' && req.method === 'POST') {
+            const body = await readJsonBody(req) as Record<string, unknown>;
             if (!body.userId || !body.email || !body.passwordHash || !body.salt) {
               sendJson(res, 400, { error: 'bad request' });
               return;
             }
-            const result = db.registerAccount({ ...body, isNewAccount: true });
-            if (result?.line && body.email) appendTxtLog(body.email, result.line);
+            const result = await userStore.registerAccount({ ...body, isNewAccount: true });
+            if (result?.line && typeof body.email === 'string') appendTxtLog(body.email, result.line);
             sendJson(res, 200, { ok: true, user: result?.user ?? null });
-          } catch {
-            sendJson(res, 500, { error: 'error' });
+            return;
           }
-          return;
-        }
 
-        if (url === '/api/auth/login' && req.method === 'POST') {
-          try {
-            const body = await readJsonBody(req) as {
-              userId?: string;
-              email?: string;
-              nickname?: string;
-            };
+          if (url === '/api/auth/login' && req.method === 'POST') {
+            const body = await readJsonBody(req) as { userId?: string; email?: string; nickname?: string };
             if (!body.userId || !body.email) {
               sendJson(res, 400, { error: 'bad request' });
               return;
             }
-            const result = db.touchAccountLogin(body);
-            if (result?.line && body.email) appendTxtLog(body.email, result.line);
+            const result = await userStore.touchAccountLogin(body);
+            if (result?.line) appendTxtLog(body.email, result.line);
             sendJson(res, 200, { ok: true, user: result?.user ?? null });
-          } catch {
-            sendJson(res, 500, { error: 'error' });
+            return;
           }
-          return;
-        }
 
-        if (url === '/api/users/sync' && req.method === 'POST') {
-          try {
+          if (url === '/api/users/sync' && req.method === 'POST') {
             const body = await readJsonBody(req) as {
               userId?: string;
               email?: string;
@@ -120,16 +87,12 @@ export function userDbPlugin(dbDir: string): Plugin {
               sendJson(res, 400, { error: 'bad request' });
               return;
             }
-            const user = db.upsertUser(body);
+            const user = await userStore.upsertUser(body);
             sendJson(res, 200, { ok: true, user });
-          } catch {
-            sendJson(res, 500, { error: 'error' });
+            return;
           }
-          return;
-        }
 
-        if (url === '/api/user-log' && req.method === 'POST') {
-          try {
+          if (url === '/api/user-log' && req.method === 'POST') {
             const body = await readJsonBody(req) as {
               userId?: string;
               email?: string;
@@ -142,75 +105,79 @@ export function userDbPlugin(dbDir: string): Plugin {
               return;
             }
             appendTxtLog(body.email, body.line);
-            const event = db.appendEvent(body);
+            const event = await userStore.appendEvent(body);
             sendJson(res, 200, { ok: true, eventId: event.id });
-          } catch {
-            sendJson(res, 500, { error: 'error' });
+            return;
           }
-          return;
-        }
 
-        if (url === '/api/admin/user-db/status' && req.method === 'GET') {
-          const adminEmail = new URL(req.url ?? '', 'http://local').searchParams.get('adminEmail') ?? '';
-          if (!db.isAdminEmail(adminEmail)) {
-            sendJson(res, 403, { error: 'forbidden' });
+          if (url === '/api/admin/user-db/status' && req.method === 'GET') {
+            const adminEmail = new URL(req.url ?? '', 'http://local').searchParams.get('adminEmail') ?? '';
+            if (!userStore.isAdminEmail(adminEmail)) {
+              sendJson(res, 403, { error: 'forbidden' });
+              return;
+            }
+            const storage = await userStore.checkConnection();
+            const users = await userStore.listUsers();
+            sendJson(res, 200, {
+              storage,
+              backend: userStore.type ?? 'file',
+              dataDir: userStore.type === 'supabase' ? process.env.SUPABASE_URL : path.dirname(dbDir),
+              logsDir: path.resolve(path.dirname(dbDir), 'user-logs'),
+              userCount: users.length,
+              registeredEmailCount: (await userStore.listRegisteredEmails()).length,
+              registeredEmails: await userStore.listRegisteredEmails(),
+              siteUrl: 'http://localhost:5173',
+            });
             return;
           }
-          const users = db.listUsers();
-          sendJson(res, 200, {
-            storage: storageStatus,
-            dataDir,
-            logsDir: path.resolve(dataDir, 'user-logs'),
-            userCount: users.length,
-            registeredEmailCount: db.listRegisteredEmails().length,
-            registeredEmails: db.listRegisteredEmails(),
-            siteUrl: 'http://localhost:5173',
-          });
-          return;
-        }
 
-        if (url === '/api/admin/user-db/users' && req.method === 'GET') {
-          const adminEmail = new URL(req.url ?? '', 'http://local').searchParams.get('adminEmail') ?? '';
-          if (!db.isAdminEmail(adminEmail)) {
-            sendJson(res, 403, { error: 'forbidden' });
+          if (url === '/api/admin/user-db/users' && req.method === 'GET') {
+            const adminEmail = new URL(req.url ?? '', 'http://local').searchParams.get('adminEmail') ?? '';
+            if (!userStore.isAdminEmail(adminEmail)) {
+              sendJson(res, 403, { error: 'forbidden' });
+              return;
+            }
+            sendJson(res, 200, { users: await userStore.listUsers() });
             return;
           }
-          sendJson(res, 200, { users: db.listUsers() });
-          return;
-        }
 
-        const userMatch = url.match(/^\/api\/admin\/user-db\/users\/([^/]+)$/);
-        if (userMatch && req.method === 'GET') {
-          const adminEmail = new URL(req.url ?? '', 'http://local').searchParams.get('adminEmail') ?? '';
-          if (!db.isAdminEmail(adminEmail)) {
-            sendJson(res, 403, { error: 'forbidden' });
+          const userMatch = url.match(/^\/api\/admin\/user-db\/users\/([^/]+)$/);
+          if (userMatch && req.method === 'GET') {
+            const adminEmail = new URL(req.url ?? '', 'http://local').searchParams.get('adminEmail') ?? '';
+            if (!userStore.isAdminEmail(adminEmail)) {
+              sendJson(res, 403, { error: 'forbidden' });
+              return;
+            }
+            const userId = decodeURIComponent(userMatch[1]);
+            const user = await userStore.getUser(userId);
+            if (!user) {
+              sendJson(res, 404, { error: 'not found' });
+              return;
+            }
+            sendJson(res, 200, { user, events: await userStore.getUserEvents(userId) });
             return;
           }
-          const userId = decodeURIComponent(userMatch[1]);
-          const user = db.getUser(userId);
-          if (!user) {
-            sendJson(res, 404, { error: 'not found' });
-            return;
-          }
-          sendJson(res, 200, { user, events: db.getUserEvents(userId) });
-          return;
-        }
 
-        const exportMatch = url.match(/^\/api\/admin\/user-db\/users\/([^/]+)\/export\.txt$/);
-        if (exportMatch && req.method === 'GET') {
-          const adminEmail = new URL(req.url ?? '', 'http://local').searchParams.get('adminEmail') ?? '';
-          if (!db.isAdminEmail(adminEmail)) {
-            sendJson(res, 403, { error: 'forbidden' });
+          const exportMatch = url.match(/^\/api\/admin\/user-db\/users\/([^/]+)\/export\.txt$/);
+          if (exportMatch && req.method === 'GET') {
+            const adminEmail = new URL(req.url ?? '', 'http://local').searchParams.get('adminEmail') ?? '';
+            if (!userStore.isAdminEmail(adminEmail)) {
+              sendJson(res, 403, { error: 'forbidden' });
+              return;
+            }
+            const userId = decodeURIComponent(exportMatch[1]);
+            if (!(await userStore.getUser(userId))) {
+              sendJson(res, 404, { error: 'not found' });
+              return;
+            }
+            res.statusCode = 200;
+            res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+            res.end(await userStore.exportUserTxt(userId));
             return;
           }
-          const userId = decodeURIComponent(exportMatch[1]);
-          if (!db.getUser(userId)) {
-            sendJson(res, 404, { error: 'not found' });
-            return;
-          }
-          res.statusCode = 200;
-          res.setHeader('Content-Type', 'text/plain; charset=utf-8');
-          res.end(db.exportUserTxt(userId));
+        } catch (error) {
+          console.error('[user-db-api]', error);
+          sendJson(res, 500, { error: 'error' });
           return;
         }
 

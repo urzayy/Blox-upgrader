@@ -103,8 +103,8 @@ export function AdminUserDbPanel({ open, adminEmail, onClose }: Props) {
                 {status && (
                   <p className={`mt-1 text-[10px] ${status.storage.ok ? 'text-win' : 'text-risk'}`}>
                     {status.storage.ok
-                      ? `${status.registeredEmailCount} registered emails on server · ${status.dataDir}`
-                      : `Storage error on server — ${status.storage.error ?? 'cannot write database'}`}
+                      ? `${status.registeredEmailCount} emails · ${status.backend === 'supabase' ? 'Supabase' : 'Local files'}`
+                      : `Database error — ${status.storage.error ?? 'run scripts/supabase-schema.sql in Supabase SQL Editor'}`}
                   </p>
                 )}
               </div>

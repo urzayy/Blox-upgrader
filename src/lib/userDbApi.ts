@@ -112,6 +112,7 @@ export function dbUserExportUrl(adminEmail: string, userId: string): string {
 
 export interface DbStatus {
   storage: { ok: boolean; path: string; error?: string };
+  backend?: string;
   dataDir: string;
   logsDir: string;
   userCount: number;
