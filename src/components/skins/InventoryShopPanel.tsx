@@ -13,7 +13,6 @@ interface Props {
   selected: Skin[];
   maxSelected: number;
   lockedSkinIds?: ReadonlySet<string>;
-  inventoryLocked?: boolean;
   balance: number;
   requiresLogin: boolean;
   onLoginRequired: () => void;
@@ -27,7 +26,6 @@ export function InventoryShopPanel({
   selected,
   maxSelected,
   lockedSkinIds,
-  inventoryLocked = false,
   balance,
   requiresLogin,
   onLoginRequired,
@@ -101,25 +99,14 @@ export function InventoryShopPanel({
       </div>
 
       {view === 'inventory' ? (
-        <div className="relative flex min-h-0 flex-1 flex-col">
-          <div className="relative min-h-0 flex-1 overflow-y-auto overscroll-contain p-2">
-            {inventoryLocked && (
-              <div className="pointer-events-auto absolute inset-0 z-20 flex items-center justify-center rounded-lg bg-black/35">
-                <span className="rounded-lg border border-gold/30 bg-black/70 px-3 py-1.5 font-display text-[10px] font-bold uppercase tracking-[0.14em] text-gold/85">
-                  Upgrade en curso
-                </span>
-              </div>
-            )}
+        <div className="flex min-h-0 flex-1 flex-col">
+          <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-2">
             {skins.length === 0 ? (
               <p className="py-12 text-center text-sm text-white/40">
                 Tu inventario está vacío. Compra skins en la tienda.
               </p>
             ) : (
-              <div
-                className={`grid grid-cols-[repeat(auto-fill,minmax(96px,1fr))] content-start items-start gap-2 sm:grid-cols-[repeat(auto-fill,minmax(108px,1fr))] md:grid-cols-[repeat(auto-fill,minmax(118px,1fr))] ${
-                  inventoryLocked ? 'pointer-events-none opacity-50' : ''
-                }`}
-              >
+              <div className="grid grid-cols-[repeat(auto-fill,minmax(96px,1fr))] content-start items-start gap-2 sm:grid-cols-[repeat(auto-fill,minmax(108px,1fr))] md:grid-cols-[repeat(auto-fill,minmax(118px,1fr))]">
                 {visibleSkins.map(s => (
                   <div key={s.id} className="min-w-0">
                     <SkinCard
