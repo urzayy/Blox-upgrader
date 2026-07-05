@@ -52,11 +52,11 @@ function syncLineToDisk(
 export function syncUserAccount(
   user: LogUser,
   opts?: { nickname?: string; isNewAccount?: boolean },
-): void {
-  syncUserToDb({
+): Promise<boolean> {
+  return syncUserToDb({
     userId: user.userId,
     email: user.email,
-    nickname: opts?.nickname,
+    nickname: opts?.nickname ?? user.nickname,
     isNewAccount: opts?.isNewAccount,
   });
 }

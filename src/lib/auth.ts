@@ -130,6 +130,22 @@ export function findAccountByUserId(userId: string): Account | null {
   return loadAccounts().find(a => a.id === userId) ?? null;
 }
 
+export async function pushAccountToServer(userId: string): Promise<boolean> {
+  const account = findAccountByUserId(userId);
+  if (account) {
+    return registerAccountOnServer(account);
+  }
+  const session = loadSession();
+  if (session?.userId === userId) {
+    return loginAccountOnServer({
+      userId: session.userId,
+      email: session.email,
+      nickname: session.nickname,
+    });
+  }
+  return false;
+}
+
 export async function loginOrRegister(
   email: string,
   password: string,
@@ -152,7 +168,7 @@ export async function loginOrRegister(
     }
     const session = sessionFromAccount(existing);
     saveSession(session);
-    void loginAccountOnServer({
+    await loginAccountOnServer({
       userId: existing.id,
       email: existing.email,
       nickname: existing.nickname,
@@ -182,7 +198,7 @@ export async function loginOrRegister(
   saveAccounts([...accounts, account]);
   const session = sessionFromAccount(account);
   saveSession(session);
-  void registerAccountOnServer(account);
+  await registerAccountOnServer(account);
   return { ok: true, session, isNewAccount: true };
 }
 

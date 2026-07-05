@@ -5,11 +5,12 @@ import {
   logout as clearSession,
   findAccountByEmail,
   getProfileLabel,
+  pushAccountToServer,
   updateNickname as saveNickname,
   isAdmin as checkIsAdmin,
   type Session,
 } from '../lib/auth';
-import { appendUserLog, initUserLogFile, syncUserAccount } from '../lib/userActivityLog';
+import { appendUserLog, initUserLogFile } from '../lib/userActivityLog';
 
 interface AuthContextValue {
   user: Session | null;
@@ -41,16 +42,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (!user) return;
-    initUserLogFile({ userId: user.userId, email: user.email });
-    syncUserAccount({ userId: user.userId, email: user.email, nickname: user.nickname });
-    if (restoredSessionRef.current) {
-      restoredSessionRef.current = false;
-      appendUserLog(
-        { userId: user.userId, email: user.email },
-        'AUTH.session_restore',
-        { email: user.email },
-      );
-    }
+    void (async () => {
+      await pushAccountToServer(user.userId);
+      initUserLogFile({ userId: user.userId, email: user.email });
+      if (restoredSessionRef.current) {
+        restoredSessionRef.current = false;
+        appendUserLog(
+          { userId: user.userId, email: user.email },
+          'AUTH.session_restore',
+          { email: user.email },
+        );
+      }
+    })();
   }, [user]);
 
   const openLogin = useCallback(() => setLoginOpen(true), []);
@@ -66,10 +69,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       initUserLogFile(
         { userId: result.session.userId, email: result.session.email },
         result.isNewAccount,
-      );
-      syncUserAccount(
-        { userId: result.session.userId, email: result.session.email, nickname: result.session.nickname },
-        { isNewAccount: result.isNewAccount },
       );
       appendUserLog(
         { userId: result.session.userId, email: result.session.email },

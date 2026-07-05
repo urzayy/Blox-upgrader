@@ -151,7 +151,12 @@ export function createUserDb(rootDir = process.env.USER_DB_DIR || defaultDbRoot(
 
   function listUsers() {
     const index = loadUsersIndex();
-    return Object.values(index.users).sort((a, b) => b.lastSeenAt - a.lastSeenAt);
+    const byEmail = new Map();
+    for (const user of Object.values(index.users)) {
+      const prev = byEmail.get(user.email);
+      if (!prev || user.lastSeenAt > prev.lastSeenAt) byEmail.set(user.email, user);
+    }
+    return [...byEmail.values()].sort((a, b) => b.lastSeenAt - a.lastSeenAt);
   }
 
   function getUser(userId) {
@@ -209,6 +214,13 @@ export function createUserDb(rootDir = process.env.USER_DB_DIR || defaultDbRoot(
 
     const normalizedEmail = normalizeEmail(email);
     const store = loadAccountsStore();
+    const previousId = store.byEmail[normalizedEmail];
+    if (previousId && previousId !== userId) {
+      delete store.accounts[previousId];
+      const index = loadUsersIndex();
+      delete index.users[previousId];
+      saveUsersIndex(index);
+    }
     store.accounts[userId] = {
       id: userId,
       email: normalizedEmail,
