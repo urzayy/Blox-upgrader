@@ -33,6 +33,23 @@ function isSkin(value: unknown): value is Skin {
   );
 }
 
+/** Legacy saves could reuse catalog ids; React keys must stay unique. */
+function ensureUniqueInventoryIds(skins: Skin[]): Skin[] {
+  const seen = new Set<string>();
+  return skins.map(skin => {
+    if (!seen.has(skin.id)) {
+      seen.add(skin.id);
+      return skin;
+    }
+    const unique: Skin = {
+      ...skin,
+      id: `inv_fix_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+    };
+    seen.add(unique.id);
+    return unique;
+  });
+}
+
 export function loadInventory(userId: string | null = null): Skin[] {
   const key = inventoryKey(userId);
   const vKey = versionKey(userId);
@@ -51,7 +68,7 @@ export function loadInventory(userId: string | null = null): Skin[] {
     const parsed: unknown = JSON.parse(raw);
     if (!Array.isArray(parsed) || !parsed.every(isSkin)) return defaultInventory(userId);
 
-    return parsed;
+    return ensureUniqueInventoryIds(parsed);
   } catch {
     return defaultInventory(userId);
   }
