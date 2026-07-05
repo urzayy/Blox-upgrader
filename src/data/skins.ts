@@ -350,7 +350,20 @@ const skinImageByName = new Map(SKIN_CATALOG.map(s => [s.name, s.image]));
 
 /** Resolve catalog image URL from a skin display name (legacy feed rows). */
 export function findSkinImageByName(name: string): string | undefined {
-  return skinImageByName.get(name);
+  const exact = skinImageByName.get(name);
+  if (exact) return exact;
+
+  const lower = name.toLowerCase();
+  const caseInsensitive = SKIN_CATALOG.find(s => s.name.toLowerCase() === lower);
+  if (caseInsensitive) return caseInsensitive.image;
+
+  const skinPart = lower.split('|').pop()?.trim();
+  if (skinPart) {
+    const bySkinPart = SKIN_CATALOG.find(s => s.name.toLowerCase().includes(skinPart));
+    if (bySkinPart) return bySkinPart.image;
+  }
+
+  return undefined;
 }
 
 export const FEED_USERS = [

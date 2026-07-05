@@ -44,7 +44,43 @@ const FEED_SKIN_CATALOG = [
   { name: 'Skeleton | Fade', image: 'https://bloxstrike.net/items/bloxstrike-live/116910956316790.png' },
   { name: 'Stiletto | Violet', image: 'https://bloxstrike.net/items/bloxstrike-live/87519753219275.png' },
   { name: 'Sports Gloves | Imperial', image: 'https://bloxstrike.net/items/bloxstrike-live/75665163318076.png' },
+  { name: 'Karambit | Scarlet', image: 'https://bloxstrike.net/items/bloxstrike-live/93160113970136.png' },
+  { name: 'Bayonet | Scarlet', image: 'https://bloxstrike.net/items/bloxstrike-live/73019270186108.png' },
+  { name: 'Bayonet | Tiger Stripes', image: 'https://bloxstrike.net/items/bloxstrike-live/70463036776846.png' },
+  { name: 'Flip | Fade', image: 'https://bloxstrike.net/items/bloxstrike-live/122890588562444.png' },
 ];
+
+const FEED_SKIN_IMAGE_BY_NAME = new Map(FEED_SKIN_CATALOG.map(s => [s.name, s.image]));
+
+const LEGACY_FEED_NAME_ALIASES = {
+  'AK-47 | Redline': 'Karambit | Scarlet',
+  'AWP | Asiimov': 'AWP | Beta',
+  'M4A4 | Howl': 'Karambit | Fade',
+  'Glock-18 | Fade': 'Flip | Fade',
+  'USP-S | Kill Confirmed': 'Stiletto | Violet',
+  'Desert Eagle | Blaze': 'Bayonet | Scarlet',
+  'Butterfly Knife | Doppler': 'Butterfly | Fade',
+  'AWP | Dragon Lore': 'AWP | Beta',
+  'M9 Bayonet | Tiger Tooth': 'Bayonet | Tiger Stripes',
+};
+
+function resolveFeedImageByName(name, storedImage) {
+  if (storedImage) return storedImage;
+  if (!name || name.includes(' skins · ')) return undefined;
+  const direct = FEED_SKIN_IMAGE_BY_NAME.get(name);
+  if (direct) return direct;
+  const alias = LEGACY_FEED_NAME_ALIASES[name];
+  if (alias) return FEED_SKIN_IMAGE_BY_NAME.get(alias);
+  return undefined;
+}
+
+function enrichFeedItem(item) {
+  return {
+    ...item,
+    inputImage: resolveFeedImageByName(item.inputSkin, item.inputImage),
+    targetImage: resolveFeedImageByName(item.targetSkin, item.targetImage),
+  };
+}
 
 function isFeedItem(value) {
   return (
@@ -104,7 +140,7 @@ function loadState() {
       return initial;
     }
     return {
-      feed: parsed.feed.slice(0, 40),
+      feed: parsed.feed.slice(0, 40).map(enrichFeedItem),
       totalUpgrades: Math.max(BASE_TOTAL_UPGRADES, Math.floor(parsed.totalUpgrades ?? BASE_TOTAL_UPGRADES)),
       playersOnline: Math.max(480, Math.min(820, Math.floor(parsed.playersOnline ?? 650))),
       updatedAt: parsed.updatedAt ?? Date.now(),
@@ -128,9 +164,10 @@ function saveState(state) {
 }
 
 function appendFeedItem(state, item) {
+  const enriched = enrichFeedItem(item);
   return {
     ...state,
-    feed: [item, ...state.feed.filter(existing => existing.id !== item.id)].slice(0, 40),
+    feed: [enriched, ...state.feed.filter(existing => existing.id !== enriched.id)].slice(0, 40),
     totalUpgrades: state.totalUpgrades + 1,
     updatedAt: Date.now(),
   };
