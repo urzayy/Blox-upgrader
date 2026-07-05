@@ -7,11 +7,14 @@ import {
   enrichFeedItem,
   FEED_STATE_VERSION,
 } from './src/lib/feedBot.mjs';
+import { createUserDb } from './server/lib/userDb.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = __dirname;
 const DIST = path.join(ROOT, 'dist');
-const LOGS_DIR = path.join(ROOT, 'user-logs');
+const USER_DB_DIR = process.env.USER_DB_DIR || path.join(ROOT, 'user-db');
+const DATA_DIR = process.env.USER_DB_DIR ? path.dirname(USER_DB_DIR) : ROOT;
+const LOGS_DIR = process.env.USER_LOGS_DIR || path.join(DATA_DIR, 'user-logs');
 const CHATS_DIR = path.join(ROOT, 'withdraw-chats');
 const GRANTS_DIR = path.join(ROOT, 'inventory-grants');
 const BALANCE_GRANTS_DIR = path.join(ROOT, 'balance-grants');
@@ -23,9 +26,11 @@ const SITE_URL = process.env.SITE_URL || `http://localhost:${PORT}`;
 const BASE_TOTAL_UPGRADES = 13_200;
 const MIN_DEPOSIT_TOTAL = 100;
 
-for (const dir of [LOGS_DIR, CHATS_DIR, GRANTS_DIR, BALANCE_GRANTS_DIR, STATE_DIR]) {
+for (const dir of [LOGS_DIR, USER_DB_DIR, path.join(USER_DB_DIR, 'events'), CHATS_DIR, GRANTS_DIR, BALANCE_GRANTS_DIR, STATE_DIR]) {
   if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
 }
+
+const userDb = createUserDb(USER_DB_DIR);
 
 function sanitizeEmail(email) {
   return email.replace(/@/g, '_at_').replace(/[^a-zA-Z0-9._-]/g, '_');
@@ -209,29 +214,135 @@ app.disable('x-powered-by');
 app.set('trust proxy', 1);
 app.use(express.json({ limit: '1mb' }));
 
+function appendUserTxtLog(email, line) {
+  const filePath = path.join(LOGS_DIR, `${sanitizeEmail(email)}.txt`);
+  if (!fs.existsSync(filePath) && line.startsWith('#')) {
+    fs.writeFileSync(filePath, `${line}\n`, 'utf8');
+  } else if (!fs.existsSync(filePath)) {
+    fs.writeFileSync(
+      filePath,
+      `# Blox Upgrader — ${email}\n# Created: ${new Date().toISOString()}\n\n${line}\n`,
+      'utf8',
+    );
+  } else {
+    fs.appendFileSync(filePath, `${line}\n`, 'utf8');
+  }
+}
+
+app.post('/api/auth/register', (req, res) => {
+  try {
+    const {
+      userId,
+      email,
+      passwordHash,
+      salt,
+      createdAt,
+      acceptedAge,
+      acceptedTerms,
+      nickname,
+    } = req.body ?? {};
+    if (!userId || !email || !passwordHash || !salt) {
+      sendJson(res, 400, { error: 'bad request' });
+      return;
+    }
+    const result = userDb.registerAccount({
+      userId,
+      email,
+      passwordHash,
+      salt,
+      createdAt,
+      acceptedAge,
+      acceptedTerms,
+      nickname,
+      isNewAccount: true,
+    });
+    if (result?.line) appendUserTxtLog(email, result.line);
+    sendJson(res, 200, { ok: true, user: result?.user ?? null });
+  } catch {
+    sendJson(res, 500, { error: 'error' });
+  }
+});
+
+app.post('/api/auth/login', (req, res) => {
+  try {
+    const { userId, email, nickname } = req.body ?? {};
+    if (!userId || !email) {
+      sendJson(res, 400, { error: 'bad request' });
+      return;
+    }
+    const result = userDb.touchAccountLogin({ userId, email, nickname });
+    if (result?.line) appendUserTxtLog(email, result.line);
+    sendJson(res, 200, { ok: true, user: result?.user ?? null });
+  } catch {
+    sendJson(res, 500, { error: 'error' });
+  }
+});
+
+app.post('/api/users/sync', (req, res) => {
+  try {
+    const { userId, email, nickname, isNewAccount } = req.body ?? {};
+    if (!userId || !email) {
+      sendJson(res, 400, { error: 'bad request' });
+      return;
+    }
+    const user = userDb.upsertUser({ userId, email, nickname, isNewAccount });
+    sendJson(res, 200, { ok: true, user });
+  } catch {
+    sendJson(res, 500, { error: 'error' });
+  }
+});
+
 app.post('/api/user-log', (req, res) => {
   try {
-    const { email, line } = req.body ?? {};
+    const { userId, email, line, action, details } = req.body ?? {};
     if (!email || typeof line !== 'string') {
       sendJson(res, 400, { error: 'bad request' });
       return;
     }
     const filePath = path.join(LOGS_DIR, `${sanitizeEmail(email)}.txt`);
-    if (!fs.existsSync(filePath) && line.startsWith('#')) {
-      fs.writeFileSync(filePath, `${line}\n`, 'utf8');
-    } else if (!fs.existsSync(filePath)) {
-      fs.writeFileSync(
-        filePath,
-        `# Blox Upgrader — ${email}\n# Creado: ${new Date().toISOString()}\n\n${line}\n`,
-        'utf8',
-      );
-    } else {
-      fs.appendFileSync(filePath, `${line}\n`, 'utf8');
-    }
-    sendJson(res, 200, { ok: true });
+    appendUserTxtLog(email, line);
+    const event = userDb.appendEvent({ userId, email, line, action, details });
+    sendJson(res, 200, { ok: true, eventId: event.id });
   } catch {
     sendJson(res, 500, { error: 'error' });
   }
+});
+
+app.get('/api/admin/user-db/users', (req, res) => {
+  const adminEmail = String(req.query.adminEmail ?? '');
+  if (!userDb.isAdminEmail(adminEmail)) {
+    sendJson(res, 403, { error: 'forbidden' });
+    return;
+  }
+  sendJson(res, 200, { users: userDb.listUsers() });
+});
+
+app.get('/api/admin/user-db/users/:userId', (req, res) => {
+  const adminEmail = String(req.query.adminEmail ?? '');
+  if (!userDb.isAdminEmail(adminEmail)) {
+    sendJson(res, 403, { error: 'forbidden' });
+    return;
+  }
+  const user = userDb.getUser(req.params.userId);
+  if (!user) {
+    sendJson(res, 404, { error: 'not found' });
+    return;
+  }
+  sendJson(res, 200, { user, events: userDb.getUserEvents(req.params.userId) });
+});
+
+app.get('/api/admin/user-db/users/:userId/export.txt', (req, res) => {
+  const adminEmail = String(req.query.adminEmail ?? '');
+  if (!userDb.isAdminEmail(adminEmail)) {
+    sendJson(res, 403, { error: 'forbidden' });
+    return;
+  }
+  if (!userDb.getUser(req.params.userId)) {
+    sendJson(res, 404, { error: 'not found' });
+    return;
+  }
+  res.type('text/plain; charset=utf-8');
+  res.send(userDb.exportUserTxt(req.params.userId));
 });
 
 app.get('/api/site-state', (_req, res) => {

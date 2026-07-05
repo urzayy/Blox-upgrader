@@ -2,12 +2,12 @@ export const MIN_DEPOSIT_TOTAL = 100;
 
 export function validateDepositTotal(total: number): { ok: boolean; error?: string } {
   if (!Number.isFinite(total) || total <= 0) {
-    return { ok: false, error: 'Selecciona al menos una skin para depositar.' };
+    return { ok: false, error: 'Select at least one skin to deposit.' };
   }
   if (total < MIN_DEPOSIT_TOTAL) {
     return {
       ok: false,
-      error: `El depósito mínimo es ${MIN_DEPOSIT_TOTAL.toLocaleString('es-ES')} monedas en total.`,
+      error: `Minimum deposit is ${MIN_DEPOSIT_TOTAL.toLocaleString('en-US')} coins total.`,
     };
   }
   return { ok: true };

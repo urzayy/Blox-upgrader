@@ -25,7 +25,7 @@ export function DepositModal({ open, onClose, onRequestDeposit }: Props) {
         >
           <button
             type="button"
-            aria-label="Cerrar"
+            aria-label="Close"
             className="absolute inset-0 bg-black/80 backdrop-blur-sm"
             onClick={onClose}
           />
@@ -46,8 +46,8 @@ export function DepositModal({ open, onClose, onRequestDeposit }: Props) {
                   Deposit
                 </h2>
                 <p className="mt-1 text-[11px] text-white/45">
-                  Selecciona las skins y cantidades que quieres depositar. Mínimo{' '}
-                  {MIN_DEPOSIT_TOTAL.toLocaleString('es-ES')} monedas en total (pueden ser muchas skins de 1 moneda).
+                  Select the skins and quantities you want to deposit. Minimum{' '}
+                  {MIN_DEPOSIT_TOTAL.toLocaleString('en-US')} coins total (many 1-coin skins are fine).
                 </p>
                 {error && (
                   <p className="mt-2 rounded-lg border border-risk/25 bg-risk/10 px-3 py-1.5 text-[10px] text-risk">
@@ -60,7 +60,7 @@ export function DepositModal({ open, onClose, onRequestDeposit }: Props) {
                 onClick={onClose}
                 className="shrink-0 rounded-lg border border-white/10 px-3 py-1.5 text-xs text-white/50 transition hover:border-white/25 hover:text-white"
               >
-                Cerrar
+                Close
               </button>
             </div>
 
@@ -72,19 +72,19 @@ export function DepositModal({ open, onClose, onRequestDeposit }: Props) {
               minSubmitTotal={MIN_DEPOSIT_TOTAL}
               submitIcon="chat"
               submitLabel="Live chat"
-              emptyError="Selecciona al menos una skin para depositar."
+              emptyError="Select at least one skin to deposit."
               validateSubmit={(_, total) => validateDepositTotal(total)}
               onSubmit={async items => {
                 setError('');
                 const total = items.reduce((sum, item) => sum + item.skin.price * item.quantity, 0);
                 const validation = validateDepositTotal(total);
                 if (!validation.ok) {
-                  setError(validation.error ?? 'Depósito inválido.');
+                  setError(validation.error ?? 'Invalid deposit.');
                   return false;
                 }
                 const ticketId = await onRequestDeposit(items);
                 if (!ticketId) {
-                  setError('No se pudo crear la solicitud de depósito. Inténtalo de nuevo.');
+                  setError('Could not create the deposit request. Please try again.');
                   return false;
                 }
                 onClose();

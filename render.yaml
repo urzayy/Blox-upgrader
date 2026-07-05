@@ -9,3 +9,9 @@ services:
         value: production
       - key: SITE_URL
         value: https://bloxupgrader.com
+      - key: USER_DB_DIR
+        value: /var/data/user-db
+    disk:
+      name: blox-data
+      mountPath: /var/data
+      sizeGB: 1

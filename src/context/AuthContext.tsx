@@ -9,7 +9,7 @@ import {
   isAdmin as checkIsAdmin,
   type Session,
 } from '../lib/auth';
-import { appendUserLog, initUserLogFile } from '../lib/userActivityLog';
+import { appendUserLog, initUserLogFile, syncUserAccount } from '../lib/userActivityLog';
 
 interface AuthContextValue {
   user: Session | null;
@@ -42,6 +42,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!user) return;
     initUserLogFile({ userId: user.userId, email: user.email });
+    syncUserAccount({ userId: user.userId, email: user.email, nickname: user.nickname });
     if (restoredSessionRef.current) {
       restoredSessionRef.current = false;
       appendUserLog(
@@ -65,6 +66,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       initUserLogFile(
         { userId: result.session.userId, email: result.session.email },
         result.isNewAccount,
+      );
+      syncUserAccount(
+        { userId: result.session.userId, email: result.session.email, nickname: result.session.nickname },
+        { isNewAccount: result.isNewAccount },
       );
       appendUserLog(
         { userId: result.session.userId, email: result.session.email },

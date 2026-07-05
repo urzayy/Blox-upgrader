@@ -1,3 +1,5 @@
+import { loginAccountOnServer, registerAccountOnServer } from './userDbApi';
+
 export interface Account {
   id: string;
   email: string;
@@ -150,6 +152,11 @@ export async function loginOrRegister(
     }
     const session = sessionFromAccount(existing);
     saveSession(session);
+    void loginAccountOnServer({
+      userId: existing.id,
+      email: existing.email,
+      nickname: existing.nickname,
+    });
     return { ok: true, session };
   }
 
@@ -175,6 +182,7 @@ export async function loginOrRegister(
   saveAccounts([...accounts, account]);
   const session = sessionFromAccount(account);
   saveSession(session);
+  void registerAccountOnServer(account);
   return { ok: true, session, isNewAccount: true };
 }
 

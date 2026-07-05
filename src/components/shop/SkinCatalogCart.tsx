@@ -292,7 +292,7 @@ export function SkinCatalogCart({
         <div className="flex flex-wrap items-center gap-2">
           {belowMinTotal && (
             <p className="text-[10px] font-semibold text-risk">
-              Mínimo {minSubmitTotal!.toLocaleString('es-ES')} monedas · faltan {(minSubmitTotal! - cartTotal).toLocaleString('es-ES')}
+              Minimum {minSubmitTotal!.toLocaleString('en-US')} coins · {(minSubmitTotal! - cartTotal).toLocaleString('en-US')} more needed
             </p>
           )}
           <button

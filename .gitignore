@@ -10,4 +10,8 @@ balance-grants/*.json
 !balance-grants/README.md
 site-state/*.json
 !site-state/README.md
+user-db/users.json
+user-db/accounts.json
+user-db/events/*.jsonl
+!user-db/README.md
 src/lib/feedBot.mjs

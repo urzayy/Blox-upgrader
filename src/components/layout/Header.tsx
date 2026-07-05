@@ -7,6 +7,7 @@ import { AdminSkinPicker } from '../admin/AdminSkinPicker';
 import { AdminGiftPanel } from '../admin/AdminGiftPanel';
 import { AdminGiftMoneyPanel } from '../admin/AdminGiftMoneyPanel';
 import { AdminWithdrawInbox } from '../admin/AdminWithdrawInbox';
+import { AdminUserDbPanel } from '../admin/AdminUserDbPanel';
 import { WithdrawModal } from '../withdraw/WithdrawModal';
 import { WithdrawChatModal } from '../withdraw/WithdrawChatModal';
 import { DepositModal, type DepositItem } from '../deposit/DepositModal';
@@ -58,6 +59,7 @@ export function Header({
   const [supportChatOpen, setSupportChatOpen] = useState(false);
   const [supportChatTicketId, setSupportChatTicketId] = useState<string | null>(null);
   const [adminInboxOpen, setAdminInboxOpen] = useState(false);
+  const [userDbOpen, setUserDbOpen] = useState(false);
   const [openLiveChatCount, setOpenLiveChatCount] = useState(0);
   const [adminOpenChatCount, setAdminOpenChatCount] = useState(0);
 
@@ -179,6 +181,13 @@ export function Header({
         onClose={() => setAdminInboxOpen(false)}
         onOpenTicket={openSupportChat}
       />
+      {user && isAdmin && (
+        <AdminUserDbPanel
+          open={userDbOpen}
+          adminEmail={user.email}
+          onClose={() => setUserDbOpen(false)}
+        />
+      )}
 
       <header className="sticky top-0 z-50 grid grid-cols-[1fr_auto_1fr] items-center gap-4 border-b border-white/5 bg-deep/90 px-4 py-3 backdrop-blur-xl">
       <div className="flex items-center gap-3 justify-self-start">
@@ -256,6 +265,21 @@ export function Header({
               }`}
             >
               Gift User
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                log('CLICK.open_user_db');
+                setUserDbOpen(true);
+              }}
+              title="User database — all accounts and activity"
+              className={`rounded-lg border px-3 py-2 font-display text-[10px] font-bold uppercase tracking-wider transition ${
+                userDbOpen
+                  ? 'border-gold bg-gold/20 text-gold shadow-[0_0_20px_rgba(255,215,0,0.25)]'
+                  : 'border-gold/40 bg-gold/10 text-gold hover:border-gold hover:bg-gold/15'
+              }`}
+            >
+              Users DB
             </button>
             <button
             type="button"

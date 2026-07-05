@@ -1,11 +1,13 @@
 import type { RollResult } from './wheelMath';
 import { formatPrice } from './currency';
+import { logEventToDb, syncUserToDb } from './userDbApi';
 
 const LOG_PREFIX = 'blox-upgrader/user-log';
 
 export interface LogUser {
   userId: string;
   email: string;
+  nickname?: string;
 }
 
 function logKey(userId: string): string {
@@ -32,28 +34,48 @@ function sanitizeEmailForFile(email: string): string {
   return email.replace(/@/g, '_at_').replace(/[^a-zA-Z0-9._-]/g, '_');
 }
 
-function syncLineToDisk(email: string, line: string): void {
-  fetch('/api/user-log', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email, line }),
-  }).catch(() => { /* server offline */ });
+function syncLineToDisk(
+  user: LogUser,
+  line: string,
+  action: string,
+  details?: Record<string, string | number | boolean | null | undefined>,
+): void {
+  logEventToDb({
+    userId: user.userId,
+    email: user.email,
+    line,
+    action,
+    details,
+  });
+}
+
+export function syncUserAccount(
+  user: LogUser,
+  opts?: { nickname?: string; isNewAccount?: boolean },
+): void {
+  syncUserToDb({
+    userId: user.userId,
+    email: user.email,
+    nickname: opts?.nickname,
+    isNewAccount: opts?.isNewAccount,
+  });
 }
 
 export function initUserLogFile(user: LogUser, isNewAccount = false): void {
   const header = [
-    `# Blox Upgrader — Registro de actividad`,
-    `# Usuario: ${user.email}`,
+    `# Blox Upgrader — Activity log`,
+    `# User: ${user.email}`,
     `# ID: ${user.userId}`,
-    `# Cuenta creada en log: ${formatTimestamp()}`,
-    isNewAccount ? '# (Nueva cuenta)' : '# (Primera sesión registrada)',
+    `# Log started: ${formatTimestamp()}`,
+    isNewAccount ? '# (New account)' : '# (First logged session)',
     '',
   ].join('\n');
 
   const key = logKey(user.userId);
   if (!localStorage.getItem(key)) {
     localStorage.setItem(key, header);
-    syncLineToDisk(user.email, header);
+    syncUserAccount(user, { isNewAccount });
+    syncLineToDisk(user, header, 'META.init');
   }
 }
 
@@ -72,7 +94,7 @@ export function appendUserLog(
   try {
     const prev = localStorage.getItem(key) ?? '';
     localStorage.setItem(key, `${prev}${line}\n`);
-    syncLineToDisk(user.email, line);
+    syncLineToDisk(user, line, action, details);
   } catch {
     /* storage full */
   }
