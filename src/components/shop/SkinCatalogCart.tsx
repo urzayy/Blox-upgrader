@@ -19,6 +19,7 @@ interface Props {
   emptyError?: string;
   paginated?: boolean;
   priceSort?: 'asc' | 'desc';
+  maxItemQuantity?: number;
   validateSubmit?: (items: CatalogCartItem[], total: number) => { ok: boolean; error?: string };
   onSubmit: (items: CatalogCartItem[]) => boolean | void | Promise<boolean | void>;
 }
@@ -41,6 +42,7 @@ export function SkinCatalogCart({
   emptyError = 'Selecciona al menos una skin.',
   paginated = true,
   priceSort = 'asc',
+  maxItemQuantity = 99,
   validateSubmit,
   onSubmit,
 }: Props) {
@@ -135,7 +137,7 @@ export function SkinCatalogCart({
 
     setCart(prev => ({
       ...prev,
-      [skinId]: Math.min(99, (prev[skinId] ?? 1) + delta),
+      [skinId]: Math.min(maxItemQuantity, (prev[skinId] ?? 1) + delta),
     }));
     setActiveSkinId(skinId);
   };

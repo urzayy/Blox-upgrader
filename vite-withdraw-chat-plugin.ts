@@ -2,6 +2,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import type { Plugin } from 'vite';
 
+const MIN_DEPOSIT_TOTAL = 100;
+
 type WithdrawTicketStatus = 'open' | 'completed' | 'cancelled';
 
 interface WithdrawSkinSummary {
@@ -227,7 +229,7 @@ export function withdrawChatPlugin(chatsDir: string): Plugin {
             if (ticketType === 'deposit') {
               const skins = body.skins ?? [];
               const total = skins.reduce((sum, s) => sum + s.price, 0);
-              if (!skins.length || !Number.isFinite(total) || total <= 0) {
+              if (!skins.length || !Number.isFinite(total) || total < MIN_DEPOSIT_TOTAL) {
                 sendJson(res, 400, { error: 'invalid deposit' });
                 return;
               }

@@ -21,6 +21,7 @@ const STATE_FILE = path.join(STATE_DIR, 'state.json');
 const PORT = Number(process.env.PORT) || 4173;
 const SITE_URL = process.env.SITE_URL || `http://localhost:${PORT}`;
 const BASE_TOTAL_UPGRADES = 13_200;
+const MIN_DEPOSIT_TOTAL = 100;
 
 for (const dir of [LOGS_DIR, CHATS_DIR, GRANTS_DIR, BALANCE_GRANTS_DIR, STATE_DIR]) {
   if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
@@ -438,7 +439,7 @@ app.post('/api/withdraw/tickets', (req, res) => {
   if (ticketType === 'deposit') {
     const skins = body.skins ?? [];
     const total = skins.reduce((sum, s) => sum + s.price, 0);
-    if (!skins.length || !Number.isFinite(total) || total <= 0) {
+    if (!skins.length || !Number.isFinite(total) || total < MIN_DEPOSIT_TOTAL) {
       sendJson(res, 400, { error: 'invalid deposit' });
       return;
     }

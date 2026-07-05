@@ -24,6 +24,7 @@ import { useDocumentVisible } from './hooks/useDocumentVisible';
 import { getDisplayName, getProfileLabel, isAdmin } from './lib/auth';
 import { useAuth } from './context/AuthContext';
 import { createWithdrawTicket, createDepositTicket, fetchUserWithdrawTickets, getDepositCreditAmount, getPendingWithdrawSkinIds, getTicketType, type WithdrawTicket } from './lib/withdrawChat';
+import { validateDepositTotal } from './lib/deposit';
 import {
   acknowledgeInventoryGrants,
   fetchPendingInventoryGrants,
@@ -245,7 +246,8 @@ export default function App() {
   const handleDepositRequest = useCallback(async (items: DepositItem[]): Promise<string | null> => {
     if (!user || !items.length) return null;
     const total = items.reduce((sum, item) => sum + item.skin.price * item.quantity, 0);
-    if (total <= 0) return null;
+    const validation = validateDepositTotal(total);
+    if (!validation.ok) return null;
     try {
       const bundle = await createDepositTicket(user, getProfileLabel(user), items);
       log('DEPOSIT.request', {
