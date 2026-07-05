@@ -13,17 +13,28 @@ export interface LogEventPayload {
   details?: Record<string, string | number | boolean | null | undefined>;
 }
 
-async function postJson(url: string, body: unknown): Promise<boolean> {
-  try {
-    const res = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-    });
-    return res.ok;
-  } catch {
-    return false;
+async function postJson(url: string, body: unknown, attempts = 3): Promise<boolean> {
+  for (let i = 0; i < attempts; i += 1) {
+    try {
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      if (res.ok) return true;
+      if (i === attempts - 1) {
+        console.warn(`[UserDB] ${url} failed: HTTP ${res.status}`);
+      }
+    } catch (error) {
+      if (i === attempts - 1) {
+        console.warn(`[UserDB] ${url} failed:`, error);
+      }
+    }
+    if (i < attempts - 1) {
+      await new Promise(r => setTimeout(r, 800 * (i + 1)));
+    }
   }
+  return false;
 }
 
 export async function registerAccountOnServer(account: {
