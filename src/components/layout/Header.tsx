@@ -12,8 +12,7 @@ import { WithdrawModal } from '../withdraw/WithdrawModal';
 import { WithdrawChatModal } from '../withdraw/WithdrawChatModal';
 import { DepositModal, type DepositItem } from '../deposit/DepositModal';
 import { LiveChatsInbox } from '../support/LiveChatsInbox';
-import { fetchAdminInbox, fetchUserWithdrawTickets, type WithdrawTicket } from '../../lib/withdrawChat';
-import { getAdminLastReadMap } from '../../lib/adminChatRead';
+import { loadAdminInbox, fetchUserWithdrawTickets, type WithdrawTicket } from '../../lib/withdrawChat';
 import { useActivityLog } from '../../hooks/useActivityLog';
 import type { Skin } from '../../data/skins';
 
@@ -88,14 +87,14 @@ export function Header({
     if (!isAdmin) return;
     const load = async () => {
       try {
-        const items = await fetchAdminInbox(getAdminLastReadMap());
+        const items = await loadAdminInbox();
         setAdminUnreadChatCount(items.reduce((sum, item) => sum + item.unreadCount, 0));
       } catch {
         setAdminUnreadChatCount(0);
       }
     };
     void load();
-    const id = setInterval(() => { void load(); }, 8000);
+    const id = setInterval(() => { void load(); }, 4000);
     return () => clearInterval(id);
   }, [isAdmin, adminInboxOpen, supportChatOpen, supportChatTicketId]);
 

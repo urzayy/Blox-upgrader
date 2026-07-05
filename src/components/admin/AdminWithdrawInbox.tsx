@@ -1,8 +1,7 @@
 import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { CoinPrice } from '../ui/CoinPrice';
-import { getAdminLastReadMap } from '../../lib/adminChatRead';
-import { fetchAdminInbox, getTicketType, type AdminInboxItem } from '../../lib/withdrawChat';
+import { loadAdminInbox, getTicketType, type AdminInboxItem } from '../../lib/withdrawChat';
 
 interface Props {
   open: boolean;
@@ -18,7 +17,7 @@ export function AdminWithdrawInbox({ open, onClose, onOpenTicket }: Props) {
     if (!open) return;
     const load = async () => {
       try {
-        setItems(await fetchAdminInbox(getAdminLastReadMap()));
+        setItems(await loadAdminInbox());
         setError('');
       } catch {
         setError('No se pudieron cargar las solicitudes de withdraw.');

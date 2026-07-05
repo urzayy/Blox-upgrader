@@ -114,10 +114,13 @@ export function withdrawChatPlugin(chatsDir: string): Plugin {
           const lastUserMessageAt = userMessages.length
             ? Math.max(...userMessages.map(message => message.createdAt))
             : 0;
-          const lastRead = lastReadByTicket[ticket.id] ?? lastUserMessageAt;
+          const storedRead = lastReadByTicket[ticket.id];
+          const unreadCount = storedRead === undefined
+            ? 0
+            : countUnreadUserMessages(messages, storedRead);
           return {
             ticket,
-            unreadCount: countUnreadUserMessages(messages, lastRead),
+            unreadCount,
             lastUserMessageAt,
           };
         });

@@ -2,6 +2,7 @@ import type { Skin } from '../data/skins';
 import type { Session } from './auth';
 import { getDisplayName } from './auth';
 import { formatUSD } from './wheelMath';
+import { getAdminLastReadMap, markAdminTicketRead } from './adminChatRead';
 
 export type SupportTicketType = 'withdraw' | 'deposit';
 export type WithdrawTicketStatus = 'open' | 'completed' | 'cancelled';
@@ -166,6 +167,25 @@ export async function fetchAdminInbox(
     body: JSON.stringify({ lastReadByTicket }),
   });
   return data.items;
+}
+
+export async function loadAdminInbox(): Promise<AdminInboxItem[]> {
+  let lastRead = getAdminLastReadMap();
+  let items = await fetchAdminInbox(lastRead);
+
+  let needsRefetch = false;
+  for (const item of items) {
+    if (lastRead[item.ticket.id] !== undefined) continue;
+    markAdminTicketRead(item.ticket.id, item.lastUserMessageAt);
+    needsRefetch = true;
+  }
+
+  if (needsRefetch) {
+    lastRead = getAdminLastReadMap();
+    items = await fetchAdminInbox(lastRead);
+  }
+
+  return items;
 }
 
 export async function sendWithdrawChatMessage(
