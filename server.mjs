@@ -2,6 +2,11 @@ import express from 'express';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import {
+  createBotFeedItem,
+  enrichFeedItem,
+  FEED_STATE_VERSION,
+} from './src/lib/feedBot.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = __dirname;
@@ -16,10 +21,6 @@ const STATE_FILE = path.join(STATE_DIR, 'state.json');
 const PORT = Number(process.env.PORT) || 4173;
 const SITE_URL = process.env.SITE_URL || `http://localhost:${PORT}`;
 const BASE_TOTAL_UPGRADES = 13_200;
-const FEED_USERS = [
-  'NeonPulse', 'xKiller99', 'VortexAce', 'CyberWolf', 'BladeRunner',
-  'GhostOps', 'TitanSlayer', 'NovaStrike', 'IronFist', 'DarkMatter',
-];
 
 for (const dir of [LOGS_DIR, CHATS_DIR, GRANTS_DIR, BALANCE_GRANTS_DIR, STATE_DIR]) {
   if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
@@ -31,55 +32,6 @@ function sanitizeEmail(email) {
 
 function sendJson(res, status, data) {
   res.status(status).json(data);
-}
-
-const FEED_SKIN_CATALOG = [
-  { name: 'Karambit | Frostbite', image: 'https://bloxstrike.net/items/bloxstrike-live/79761341183165.png' },
-  { name: 'Karambit | Fade', image: 'https://bloxstrike.net/items/bloxstrike-live/74368007102644.png' },
-  { name: 'Butterfly | Fade', image: 'https://bloxstrike.net/items/bloxstrike-live/106697835426931.png' },
-  { name: 'Bayonet | Fade', image: 'https://bloxstrike.net/items/bloxstrike-live/80595388025959.png' },
-  { name: 'AWP | Beta', image: 'https://bloxstrike.net/items/bloxstrike-live/124416502090313.png' },
-  { name: 'Flip | Aurora', image: 'https://bloxstrike.net/items/bloxstrike-live/128576804864738.png' },
-  { name: 'Gut | Noir', image: 'https://bloxstrike.net/items/bloxstrike-live/98358735156670.png' },
-  { name: 'Skeleton | Fade', image: 'https://bloxstrike.net/items/bloxstrike-live/116910956316790.png' },
-  { name: 'Stiletto | Violet', image: 'https://bloxstrike.net/items/bloxstrike-live/87519753219275.png' },
-  { name: 'Sports Gloves | Imperial', image: 'https://bloxstrike.net/items/bloxstrike-live/75665163318076.png' },
-  { name: 'Karambit | Scarlet', image: 'https://bloxstrike.net/items/bloxstrike-live/93160113970136.png' },
-  { name: 'Bayonet | Scarlet', image: 'https://bloxstrike.net/items/bloxstrike-live/73019270186108.png' },
-  { name: 'Bayonet | Tiger Stripes', image: 'https://bloxstrike.net/items/bloxstrike-live/70463036776846.png' },
-  { name: 'Flip | Fade', image: 'https://bloxstrike.net/items/bloxstrike-live/122890588562444.png' },
-];
-
-const FEED_SKIN_IMAGE_BY_NAME = new Map(FEED_SKIN_CATALOG.map(s => [s.name, s.image]));
-
-const LEGACY_FEED_NAME_ALIASES = {
-  'AK-47 | Redline': 'Karambit | Scarlet',
-  'AWP | Asiimov': 'AWP | Beta',
-  'M4A4 | Howl': 'Karambit | Fade',
-  'Glock-18 | Fade': 'Flip | Fade',
-  'USP-S | Kill Confirmed': 'Stiletto | Violet',
-  'Desert Eagle | Blaze': 'Bayonet | Scarlet',
-  'Butterfly Knife | Doppler': 'Butterfly | Fade',
-  'AWP | Dragon Lore': 'AWP | Beta',
-  'M9 Bayonet | Tiger Tooth': 'Bayonet | Tiger Stripes',
-};
-
-function resolveFeedImageByName(name, storedImage) {
-  if (storedImage) return storedImage;
-  if (!name || name.includes(' skins · ')) return undefined;
-  const direct = FEED_SKIN_IMAGE_BY_NAME.get(name);
-  if (direct) return direct;
-  const alias = LEGACY_FEED_NAME_ALIASES[name];
-  if (alias) return FEED_SKIN_IMAGE_BY_NAME.get(alias);
-  return undefined;
-}
-
-function enrichFeedItem(item) {
-  return {
-    ...item,
-    inputImage: resolveFeedImageByName(item.inputSkin, item.inputImage),
-    targetImage: resolveFeedImageByName(item.targetSkin, item.targetImage),
-  };
 }
 
 function isFeedItem(value) {
@@ -97,29 +49,10 @@ function isFeedItem(value) {
   );
 }
 
-function createBotFeedItem() {
-  const input = FEED_SKIN_CATALOG[Math.floor(Math.random() * FEED_SKIN_CATALOG.length)];
-  let target = FEED_SKIN_CATALOG[Math.floor(Math.random() * FEED_SKIN_CATALOG.length)];
-  if (target.name === input.name) {
-    target = FEED_SKIN_CATALOG[(FEED_SKIN_CATALOG.indexOf(input) + 1) % FEED_SKIN_CATALOG.length];
-  }
-  const won = Math.random() < 0.76;
-  return {
-    id: `f_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
-    username: FEED_USERS[Math.floor(Math.random() * FEED_USERS.length)],
-    inputSkin: input.name,
-    targetSkin: target.name,
-    inputImage: input.image,
-    targetImage: target.image,
-    probability: Math.round((won ? 32 + Math.random() * 38 : 8 + Math.random() * 20) * 10) / 10,
-    won,
-    timestamp: Date.now(),
-  };
-}
-
 function createInitialState() {
   return {
-    feed: Array.from({ length: 24 }, createBotFeedItem),
+    feedVersion: FEED_STATE_VERSION,
+    feed: Array.from({ length: 24 }, () => createBotFeedItem()),
     totalUpgrades: BASE_TOTAL_UPGRADES,
     playersOnline: 500 + Math.floor(Math.random() * 300) + 1,
     updatedAt: Date.now(),
@@ -139,7 +72,21 @@ function loadState() {
       fs.writeFileSync(STATE_FILE, JSON.stringify(initial, null, 2), 'utf8');
       return initial;
     }
+    if ((parsed.feedVersion ?? 1) < FEED_STATE_VERSION) {
+      const initial = createInitialState();
+      initial.totalUpgrades = Math.max(
+        BASE_TOTAL_UPGRADES,
+        Math.floor(parsed.totalUpgrades ?? BASE_TOTAL_UPGRADES),
+      );
+      initial.playersOnline = Math.max(
+        480,
+        Math.min(820, Math.floor(parsed.playersOnline ?? 650)),
+      );
+      fs.writeFileSync(STATE_FILE, JSON.stringify(initial, null, 2), 'utf8');
+      return initial;
+    }
     return {
+      feedVersion: FEED_STATE_VERSION,
       feed: parsed.feed.slice(0, 40).map(enrichFeedItem),
       totalUpgrades: Math.max(BASE_TOTAL_UPGRADES, Math.floor(parsed.totalUpgrades ?? BASE_TOTAL_UPGRADES)),
       playersOnline: Math.max(480, Math.min(820, Math.floor(parsed.playersOnline ?? 650))),
@@ -154,6 +101,7 @@ function loadState() {
 
 function saveState(state) {
   const next = {
+    feedVersion: FEED_STATE_VERSION,
     feed: state.feed.slice(0, 40),
     totalUpgrades: Math.max(BASE_TOTAL_UPGRADES, Math.floor(state.totalUpgrades)),
     playersOnline: Math.max(480, Math.min(820, Math.floor(state.playersOnline))),
