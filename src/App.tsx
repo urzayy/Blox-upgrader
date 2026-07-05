@@ -8,7 +8,7 @@ import { TargetPanel } from './components/skins/TargetPanel';
 import { SelectedSkinSlot } from './components/skins/SelectedSkinSlot';
 import { ParticleField } from './components/effects/ParticleField';
 import { LoginModal } from './components/auth/LoginModal';
-import { TARGET_POOL, type Skin, type FeedItem } from './data/skins';
+import { TARGET_POOL, sortSkinsByPriceDesc, type Skin, type FeedItem } from './data/skins';
 import { useActivityLog } from './hooks/useActivityLog';
 import { logUpgradeResult } from './lib/userActivityLog';
 import { calcProbability, formatUSD, type RollResult } from './lib/wheelMath';
@@ -72,6 +72,12 @@ export default function App() {
   balanceRef.current = balance;
 
   const inputTotal = useMemo(() => inventoryTotal(inputSkins), [inputSkins]);
+
+  /** Sorted view for the inventory panel only (shop / withdraw keep storage order). */
+  const inventoryPanelSkins = useMemo(
+    () => sortSkinsByPriceDesc(inventory),
+    [inventory],
+  );
 
   const probability = useMemo(
     () => calcProbability(inputTotal, targetSkin?.price ?? 0),
@@ -578,7 +584,7 @@ export default function App() {
 
             <div className="grid min-h-0 flex-1 grid-cols-1 gap-2 lg:grid-cols-2">
               <InventoryShopPanel
-                skins={inventory}
+                skins={inventoryPanelSkins}
                 selected={inputSkins}
                 maxSelected={MAX_INPUT_SKINS}
                 lockedSkinIds={lockedSkinIds}

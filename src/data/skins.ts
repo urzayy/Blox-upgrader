@@ -38,7 +38,11 @@ export const RARITY: Record<RarityKey, { label: string; color: string; glow: str
 };
 
 export function sortSkinsByPriceDesc(skins: Skin[]): Skin[] {
-  return [...skins].sort((a, b) => b.price - a.price);
+  return [...skins].sort((a, b) => {
+    const byPrice = Number(b.price) - Number(a.price);
+    if (byPrice !== 0) return byPrice;
+    return a.name.localeCompare(b.name, 'es');
+  });
 }
 
 /** Bloxstrike catalog — 290 skins, sorted by price desc */
