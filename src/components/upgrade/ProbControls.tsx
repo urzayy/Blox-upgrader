@@ -1,13 +1,14 @@
 interface Props {
   multiplier: number | null;
   cap: number | null;
+  disabled?: boolean;
   onMultiplier: (m: number) => void;
   onCap: (c: number) => void;
 }
 
-export function ProbControls({ multiplier, cap, onMultiplier, onCap }: Props) {
+export function ProbControls({ multiplier, cap, disabled = false, onMultiplier, onCap }: Props) {
   return (
-    <div className="flex flex-col items-center gap-2">
+    <div className={`flex flex-col items-center gap-2 ${disabled ? 'pointer-events-none opacity-50' : ''}`}>
       <div className="flex flex-wrap justify-center gap-1.5">
         {[2, 3, 5].map(m => (
           <button

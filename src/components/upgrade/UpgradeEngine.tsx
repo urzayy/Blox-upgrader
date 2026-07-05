@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
 import gsap from 'gsap';
 import { ProbabilityWheel } from './ProbabilityWheel';
@@ -19,13 +19,14 @@ interface Props {
   onCap: (c: number) => void;
   onUpgradeStart?: () => void;
   onComplete: (won: boolean, roll: RollResult) => void;
+  onLockedChange?: (locked: boolean) => void;
 }
 
 type Phase = 'idle' | 'spin' | 'win' | 'lose';
 
 export function UpgradeEngine({
   probability, wheelSize, multiplier, cap,
-  canUpgrade, requiresLogin, onLoginRequired, turbo, onMultiplier, onCap, onUpgradeStart, onComplete,
+  canUpgrade, requiresLogin, onLoginRequired, turbo, onMultiplier, onCap, onUpgradeStart, onComplete, onLockedChange,
 }: Props) {
   const [arrowAngle, setArrowAngle] = useState(0);
   const [spinning, setSpinning] = useState(false);
@@ -33,9 +34,16 @@ export function UpgradeEngine({
   const [rollResult, setRollResult] = useState<RollResult | null>(null);
   const arrowRef = useRef(0);
   const spinAudioRef = useRef(new WheelSpinAudio());
+  const isLocked = phase !== 'idle';
+
+  useEffect(() => {
+    onLockedChange?.(isLocked);
+  }, [isLocked, onLockedChange]);
+
+  useEffect(() => () => onLockedChange?.(false), [onLockedChange]);
 
   const runUpgrade = useCallback(() => {
-    if (spinning || probability <= 0) return;
+    if (isLocked || probability <= 0) return;
 
     if (requiresLogin) {
       onLoginRequired?.();
@@ -79,7 +87,7 @@ export function UpgradeEngine({
         }, resultDelay);
       },
     });
-  }, [probability, spinning, turbo, onComplete, onUpgradeStart, requiresLogin, onLoginRequired]);
+  }, [probability, isLocked, turbo, onComplete, onUpgradeStart, requiresLogin, onLoginRequired]);
 
   return (
     <section className="relative flex w-full max-w-[400px] shrink-0 flex-col items-center px-2">
@@ -94,17 +102,23 @@ export function UpgradeEngine({
         />
       </div>
 
-      <ProbControls multiplier={multiplier} cap={cap} onMultiplier={onMultiplier} onCap={onCap} />
+      <ProbControls
+        multiplier={multiplier}
+        cap={cap}
+        disabled={isLocked}
+        onMultiplier={onMultiplier}
+        onCap={onCap}
+      />
 
       <motion.button
         type="button"
-        disabled={!canUpgrade || spinning}
+        disabled={!canUpgrade || isLocked}
         onClick={runUpgrade}
-        whileHover={canUpgrade && !spinning ? { scale: 1.02, boxShadow: '0 0 40px rgba(255,204,0,0.35)' } : {}}
-        whileTap={canUpgrade && !spinning ? { scale: 0.98 } : {}}
+        whileHover={canUpgrade && !isLocked ? { scale: 1.02, boxShadow: '0 0 40px rgba(255,204,0,0.35)' } : {}}
+        whileTap={canUpgrade && !isLocked ? { scale: 0.98 } : {}}
         className="mt-3 w-full max-w-[280px] rounded-xl bg-[#ffcc00] py-3.5 font-display text-base font-black tracking-wide text-black uppercase shadow-[0_4px_24px_rgba(255,204,0,0.35)] disabled:opacity-30 disabled:shadow-none"
       >
-        {spinning ? 'ROLLING...' : requiresLogin && canUpgrade ? 'Inicia sesión' : 'UPGRADE'}
+        {phase === 'spin' ? 'ROLLING...' : phase === 'win' ? 'WIN!' : phase === 'lose' ? 'LOSE' : requiresLogin && canUpgrade ? 'Inicia sesión' : 'UPGRADE'}
       </motion.button>
     </section>
   );
