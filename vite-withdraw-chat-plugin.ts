@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import type { Plugin } from 'vite';
 
-const MIN_DEPOSIT_TOTAL = 100;
+const MIN_DEPOSIT_TOTAL = 50;
 
 type WithdrawTicketStatus = 'open' | 'completed' | 'cancelled';
 
