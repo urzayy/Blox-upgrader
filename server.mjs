@@ -576,10 +576,18 @@ if (!fs.existsSync(DIST)) {
   process.exit(1);
 }
 
-app.use(express.static(DIST, { index: false, maxAge: '1d' }));
+app.use('/assets', express.static(path.join(DIST, 'assets'), {
+  maxAge: '1y',
+  immutable: true,
+}));
+
+app.use(express.static(DIST, { index: false, maxAge: '1h' }));
 
 app.get('*', (req, res, next) => {
   if (req.path.startsWith('/api/')) return next();
+  res.set('Cache-Control', 'no-store, no-cache, must-revalidate');
+  res.set('Pragma', 'no-cache');
+  res.set('Expires', '0');
   res.sendFile(path.join(DIST, 'index.html'));
 });
 
