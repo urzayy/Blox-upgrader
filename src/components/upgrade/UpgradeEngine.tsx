@@ -102,13 +102,7 @@ export function UpgradeEngine({
         />
       </div>
 
-      <ProbControls
-        multiplier={multiplier}
-        cap={cap}
-        disabled={isLocked}
-        onMultiplier={onMultiplier}
-        onCap={onCap}
-      />
+      <ProbControls multiplier={multiplier} cap={cap} onMultiplier={onMultiplier} onCap={onCap} />
 
       <motion.button
         type="button"

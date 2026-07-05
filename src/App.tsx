@@ -108,7 +108,6 @@ export default function App() {
   }, []);
 
   const handleMultiplier = useCallback((m: number) => {
-    if (upgradeLockedRef.current) return;
     const nextMult = multiplier === m ? null : m;
     log('CLICK.multiplier', { value: `x${m}`, active: nextMult !== null });
     setMultiplier(nextMult);
@@ -118,7 +117,6 @@ export default function App() {
   }, [multiplier, inputSkins, applyPresetTarget, log]);
 
   const handleCap = useCallback((p: number) => {
-    if (upgradeLockedRef.current) return;
     const nextCap = cap === p ? null : p;
     log('CLICK.cap', { value: `${p}%`, active: nextCap !== null });
     setMultiplier(null);
@@ -152,7 +150,7 @@ export default function App() {
   }, [lockedSkinIds, log]);
 
   const handleShopPurchase = useCallback((items: ShopPurchaseItem[]): boolean => {
-    if (upgradeLockedRef.current || !user) return false;
+    if (!user) return false;
     const total = items.reduce((sum, item) => sum + item.skin.price * item.quantity, 0);
     if (total <= 0) return false;
     if (balanceRef.current < total) return false;
@@ -535,14 +533,6 @@ export default function App() {
           durationMs={5000}
         />
 
-        {upgradeLocked && (
-          <div
-            className="fixed inset-0 z-[140] cursor-wait bg-black/50 backdrop-blur-[2px]"
-            aria-hidden="true"
-            role="presentation"
-          />
-        )}
-
         <Header
           inventory={inventory}
           balance={balance}
@@ -596,7 +586,6 @@ export default function App() {
                 skin={targetSkin}
                 variant="target"
                 onClear={() => {
-                  if (upgradeLockedRef.current) return;
                   log('CLICK.clear_target', { skin: targetSkin?.name ?? '' });
                   setTargetSkin(null);
                 }}
@@ -609,6 +598,7 @@ export default function App() {
                 selected={inputSkins}
                 maxSelected={MAX_INPUT_SKINS}
                 lockedSkinIds={lockedSkinIds}
+                inventoryLocked={upgradeLocked}
                 balance={balance}
                 requiresLogin={!user}
                 onLoginRequired={openLogin}
@@ -620,7 +610,6 @@ export default function App() {
                 skins={TARGET_POOL}
                 selected={targetSkin}
                 onSelect={s => {
-                  if (upgradeLockedRef.current) return;
                   if (targetSkin?.id === s.id) {
                     log('CLICK.deselect_target', { skin: s.name, price: formatUSD(s.price) });
                     sfx.select();
