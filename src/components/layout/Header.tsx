@@ -8,6 +8,7 @@ import { AdminGiftPanel } from '../admin/AdminGiftPanel';
 import { AdminGiftMoneyPanel } from '../admin/AdminGiftMoneyPanel';
 import { AdminWithdrawInbox } from '../admin/AdminWithdrawInbox';
 import { AdminUserDbPanel } from '../admin/AdminUserDbPanel';
+import { AdminSeePanel } from '../admin/AdminSeePanel';
 import { WithdrawModal } from '../withdraw/WithdrawModal';
 import { WithdrawChatModal } from '../withdraw/WithdrawChatModal';
 import { DepositModal, type DepositItem } from '../deposit/DepositModal';
@@ -60,6 +61,7 @@ export function Header({
   const [supportChatTicketId, setSupportChatTicketId] = useState<string | null>(null);
   const [adminInboxOpen, setAdminInboxOpen] = useState(false);
   const [userDbOpen, setUserDbOpen] = useState(false);
+  const [seeOpen, setSeeOpen] = useState(false);
   const [openLiveChatCount, setOpenLiveChatCount] = useState(0);
   const [adminUnreadChatCount, setAdminUnreadChatCount] = useState(0);
 
@@ -183,6 +185,13 @@ export function Header({
         onOpenTicket={openSupportChat}
       />
       {user && isAdmin && (
+        <AdminSeePanel
+          open={seeOpen}
+          adminEmail={user.email}
+          onClose={() => setSeeOpen(false)}
+        />
+      )}
+      {user && isAdmin && (
         <AdminUserDbPanel
           open={userDbOpen}
           adminEmail={user.email}
@@ -217,6 +226,21 @@ export function Header({
       <div className="flex items-center gap-2 justify-self-center">
         {isAdmin && (
           <>
+            <button
+              type="button"
+              onClick={() => {
+                log('CLICK.open_admin_see');
+                setSeeOpen(true);
+              }}
+              title="Ver inventario de un jugador por correo"
+              className={`rounded-lg border px-2 py-2 font-display text-[10px] font-bold uppercase tracking-wider transition ${
+                seeOpen
+                  ? 'border-white/40 bg-white/15 text-white shadow-[0_0_20px_rgba(255,255,255,0.15)]'
+                  : 'border-white/25 bg-white/10 text-white/90 hover:border-white/40 hover:bg-white/15'
+              }`}
+            >
+              See
+            </button>
             <button
               type="button"
               onClick={() => {

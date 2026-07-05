@@ -11,6 +11,7 @@ import { ParticleField } from './components/effects/ParticleField';
 import { LoginModal } from './components/auth/LoginModal';
 import { TARGET_POOL, sortSkinsByPriceDesc, type Skin, type FeedItem } from './data/skins';
 import { useActivityLog } from './hooks/useActivityLog';
+import { syncPlayerState } from './lib/playerStateApi';
 import { logUpgradeResult } from './lib/userActivityLog';
 import { calcProbability, formatUSD, type RollResult } from './lib/wheelMath';
 import { applyUpgradeToInventory, grantSkinToInventory, inventoryTotal, MAX_INPUT_SKINS, purchaseSkinCopies, sellSkinFromInventory, withdrawSkinsFromInventory } from './lib/inventory';
@@ -451,6 +452,19 @@ export default function App() {
   useEffect(() => {
     saveBalance(balance, userId);
   }, [balance, userId]);
+
+  useEffect(() => {
+    if (!user) return;
+    const timer = setTimeout(() => {
+      void syncPlayerState({
+        userId: user.userId,
+        email: user.email,
+        balance,
+        inventory,
+      });
+    }, 1200);
+    return () => clearTimeout(timer);
+  }, [user, inventory, balance]);
 
   useEffect(() => {
     if (!documentVisible) return;

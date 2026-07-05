@@ -3,6 +3,7 @@ import path from 'node:path';
 import dotenv from 'dotenv';
 import type { Plugin } from 'vite';
 import { createUserStore } from './server/lib/userStore.mjs';
+import { createPlayerStateStore } from './server/lib/playerStateStore.mjs';
 
 dotenv.config();
 
@@ -28,6 +29,8 @@ function sendJson(res: { statusCode: number; setHeader: (k: string, v: string) =
 
 export function userDbPlugin(dbDir: string): Plugin {
   const userStore = createUserStore({ userDbDir: dbDir });
+  const playerStateDir = path.resolve(path.dirname(dbDir), 'player-state');
+  const playerStateStore = createPlayerStateStore({ playerStateDir });
 
   function appendTxtLog(email: string, line: string) {
     const logsDir = path.resolve(path.dirname(dbDir), 'user-logs');
@@ -107,6 +110,43 @@ export function userDbPlugin(dbDir: string): Plugin {
             appendTxtLog(body.email, body.line);
             const event = await userStore.appendEvent(body);
             sendJson(res, 200, { ok: true, eventId: event.id });
+            return;
+          }
+
+          if (url === '/api/player-state/sync' && req.method === 'POST') {
+            const body = await readJsonBody(req) as {
+              userId?: string;
+              email?: string;
+              balance?: number;
+              inventory?: unknown;
+            };
+            if (!body.userId || !body.email) {
+              sendJson(res, 400, { error: 'bad request' });
+              return;
+            }
+            const state = await playerStateStore.savePlayerState(body);
+            sendJson(res, 200, { ok: true, state });
+            return;
+          }
+
+          if (url === '/api/admin/player-state' && req.method === 'GET') {
+            const params = new URL(req.url ?? '', 'http://local').searchParams;
+            const adminEmail = params.get('adminEmail') ?? '';
+            const email = params.get('email') ?? '';
+            if (!playerStateStore.isAdminEmail(adminEmail)) {
+              sendJson(res, 403, { error: 'forbidden' });
+              return;
+            }
+            if (!email) {
+              sendJson(res, 400, { error: 'email required' });
+              return;
+            }
+            const state = await playerStateStore.getPlayerStateByEmail(email);
+            if (!state) {
+              sendJson(res, 404, { error: 'not found' });
+              return;
+            }
+            sendJson(res, 200, { state });
             return;
           }
 

@@ -9,6 +9,7 @@ import {
   FEED_STATE_VERSION,
 } from './src/lib/feedBot.mjs';
 import { createUserStore } from './server/lib/userStore.mjs';
+import { createPlayerStateStore } from './server/lib/playerStateStore.mjs';
 
 dotenv.config();
 
@@ -17,6 +18,7 @@ const ROOT = __dirname;
 const DIST = path.join(ROOT, 'dist');
 const DATA_DIR = process.env.DATA_DIR || ROOT;
 const USER_DB_DIR = process.env.USER_DB_DIR || path.join(DATA_DIR, 'user-db');
+const PLAYER_STATE_DIR = process.env.PLAYER_STATE_DIR || path.join(DATA_DIR, 'player-state');
 const LOGS_DIR = process.env.USER_LOGS_DIR || path.join(DATA_DIR, 'user-logs');
 const CHATS_DIR = process.env.CHATS_DIR || path.join(DATA_DIR, 'withdraw-chats');
 const GRANTS_DIR = process.env.GRANTS_DIR || path.join(DATA_DIR, 'inventory-grants');
@@ -29,11 +31,12 @@ const SITE_URL = process.env.SITE_URL || `http://localhost:${PORT}`;
 const BASE_TOTAL_UPGRADES = 13_200;
 const MIN_DEPOSIT_TOTAL = 100;
 
-for (const dir of [LOGS_DIR, USER_DB_DIR, path.join(USER_DB_DIR, 'events'), CHATS_DIR, GRANTS_DIR, BALANCE_GRANTS_DIR, STATE_DIR]) {
+for (const dir of [LOGS_DIR, USER_DB_DIR, path.join(USER_DB_DIR, 'events'), PLAYER_STATE_DIR, CHATS_DIR, GRANTS_DIR, BALANCE_GRANTS_DIR, STATE_DIR]) {
   if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
 }
 
 const userStore = createUserStore({ userDbDir: USER_DB_DIR });
+const playerStateStore = createPlayerStateStore({ playerStateDir: PLAYER_STATE_DIR });
 let storageStatus = { ok: false, path: userStore.type === 'supabase' ? 'supabase' : USER_DB_DIR };
 
 async function refreshStorageStatus() {
@@ -340,6 +343,45 @@ app.post('/api/user-log', async (req, res) => {
     sendJson(res, 200, { ok: true, eventId: event.id });
   } catch (error) {
     console.error('[user-log]', error);
+    sendJson(res, 500, { error: 'error' });
+  }
+});
+
+app.post('/api/player-state/sync', async (req, res) => {
+  try {
+    const { userId, email, balance, inventory } = req.body ?? {};
+    if (!userId || !email) {
+      sendJson(res, 400, { error: 'bad request' });
+      return;
+    }
+    const state = await playerStateStore.savePlayerState({ userId, email, balance, inventory });
+    sendJson(res, 200, { ok: true, state });
+  } catch (error) {
+    console.error('[player-state/sync]', error);
+    sendJson(res, 500, { error: 'error' });
+  }
+});
+
+app.get('/api/admin/player-state', async (req, res) => {
+  try {
+    const adminEmail = req.query.adminEmail?.trim() ?? '';
+    const email = req.query.email?.trim() ?? '';
+    if (!playerStateStore.isAdminEmail(adminEmail)) {
+      sendJson(res, 403, { error: 'forbidden' });
+      return;
+    }
+    if (!email) {
+      sendJson(res, 400, { error: 'email required' });
+      return;
+    }
+    const state = await playerStateStore.getPlayerStateByEmail(email);
+    if (!state) {
+      sendJson(res, 404, { error: 'not found' });
+      return;
+    }
+    sendJson(res, 200, { state });
+  } catch (error) {
+    console.error('[admin/player-state]', error);
     sendJson(res, 500, { error: 'error' });
   }
 });
