@@ -12,6 +12,7 @@ import {
   type WithdrawTicket,
   type WithdrawTicketBundle,
 } from '../../lib/withdrawChat';
+import { markAdminTicketReadFromMessages } from '../../lib/adminChatRead';
 import { SkinImage } from '../skins/SkinImage';
 
 interface Props {
@@ -44,6 +45,9 @@ export function WithdrawChatModal({
       const next = await fetchWithdrawTicket(ticketId);
       setBundle(next);
       setError('');
+      if (isAdmin) {
+        markAdminTicketReadFromMessages(ticketId, next.messages);
+      }
       if (
         !isAdmin
         && next.ticket.status === 'completed'

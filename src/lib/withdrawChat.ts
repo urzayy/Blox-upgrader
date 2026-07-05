@@ -68,6 +68,12 @@ export interface WithdrawTicketBundle {
   messages: ChatMessage[];
 }
 
+export interface AdminInboxItem {
+  ticket: WithdrawTicket;
+  unreadCount: number;
+  lastUserMessageAt: number;
+}
+
 function summarizeSkin(skin: Skin): WithdrawSkinSummary {
   return {
     id: skin.id,
@@ -150,6 +156,16 @@ export async function fetchAdminWithdrawTickets(openOnly = true): Promise<Withdr
     `/api/withdraw/tickets?admin=1${openOnly ? '' : '&all=1'}`,
   );
   return data.tickets;
+}
+
+export async function fetchAdminInbox(
+  lastReadByTicket: Record<string, number> = {},
+): Promise<AdminInboxItem[]> {
+  const data = await api<{ items: AdminInboxItem[] }>('/api/withdraw/admin-inbox', {
+    method: 'POST',
+    body: JSON.stringify({ lastReadByTicket }),
+  });
+  return data.items;
 }
 
 export async function sendWithdrawChatMessage(

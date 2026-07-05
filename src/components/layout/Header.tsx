@@ -12,7 +12,8 @@ import { WithdrawModal } from '../withdraw/WithdrawModal';
 import { WithdrawChatModal } from '../withdraw/WithdrawChatModal';
 import { DepositModal, type DepositItem } from '../deposit/DepositModal';
 import { LiveChatsInbox } from '../support/LiveChatsInbox';
-import { fetchAdminWithdrawTickets, fetchUserWithdrawTickets, type WithdrawTicket } from '../../lib/withdrawChat';
+import { fetchAdminInbox, fetchUserWithdrawTickets, type WithdrawTicket } from '../../lib/withdrawChat';
+import { getAdminLastReadMap } from '../../lib/adminChatRead';
 import { useActivityLog } from '../../hooks/useActivityLog';
 import type { Skin } from '../../data/skins';
 
@@ -61,7 +62,7 @@ export function Header({
   const [adminInboxOpen, setAdminInboxOpen] = useState(false);
   const [userDbOpen, setUserDbOpen] = useState(false);
   const [openLiveChatCount, setOpenLiveChatCount] = useState(0);
-  const [adminOpenChatCount, setAdminOpenChatCount] = useState(0);
+  const [adminUnreadChatCount, setAdminUnreadChatCount] = useState(0);
 
   const openSupportChat = (ticketId: string) => {
     setSupportChatTicketId(ticketId);
@@ -87,15 +88,16 @@ export function Header({
     if (!isAdmin) return;
     const load = async () => {
       try {
-        setAdminOpenChatCount((await fetchAdminWithdrawTickets(true)).length);
+        const items = await fetchAdminInbox(getAdminLastReadMap());
+        setAdminUnreadChatCount(items.reduce((sum, item) => sum + item.unreadCount, 0));
       } catch {
-        setAdminOpenChatCount(0);
+        setAdminUnreadChatCount(0);
       }
     };
     void load();
     const id = setInterval(() => { void load(); }, 8000);
     return () => clearInterval(id);
-  }, [isAdmin, adminInboxOpen, supportChatOpen]);
+  }, [isAdmin, adminInboxOpen, supportChatOpen, supportChatTicketId]);
 
   return (
     <>
@@ -230,9 +232,9 @@ export function Header({
               }`}
             >
               CHATS
-              {adminOpenChatCount > 0 && (
+              {adminUnreadChatCount > 0 && (
                 <span className="absolute -right-1.5 -top-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-gold px-1 text-[9px] font-black text-deep">
-                  {adminOpenChatCount}
+                  {adminUnreadChatCount > 9 ? '9+' : adminUnreadChatCount}
                 </span>
               )}
             </button>

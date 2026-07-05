@@ -175,6 +175,28 @@ function listTickets(filter) {
   return tickets.sort((a, b) => b.updatedAt - a.updatedAt);
 }
 
+function countUnreadUserMessages(messages, lastReadAt) {
+  return messages.filter(message => message.senderRole === 'user' && message.createdAt > lastReadAt).length;
+}
+
+function buildAdminInbox(lastReadByTicket = {}) {
+  const tickets = listTickets({ openOnly: true });
+  return tickets.map(ticket => {
+    const bundle = loadBundle(ticket.id);
+    const messages = bundle?.messages ?? [];
+    const userMessages = messages.filter(message => message.senderRole === 'user');
+    const lastUserMessageAt = userMessages.length
+      ? Math.max(...userMessages.map(message => message.createdAt))
+      : 0;
+    const lastRead = lastReadByTicket[ticket.id] ?? lastUserMessageAt;
+    return {
+      ticket,
+      unreadCount: countUnreadUserMessages(messages, lastRead),
+      lastUserMessageAt,
+    };
+  });
+}
+
 function grantsPath(email) {
   return path.join(GRANTS_DIR, `${sanitizeEmail(email)}.json`);
 }
@@ -493,6 +515,11 @@ app.get('/api/withdraw/tickets', (req, res) => {
     ? listTickets(all ? undefined : { openOnly: true })
     : listTickets(userId ? { userId } : undefined);
   sendJson(res, 200, { tickets });
+});
+
+app.post('/api/withdraw/admin-inbox', (req, res) => {
+  const lastReadByTicket = req.body?.lastReadByTicket ?? {};
+  sendJson(res, 200, { items: buildAdminInbox(lastReadByTicket) });
 });
 
 app.get('/api/withdraw/tickets/:ticketId', (req, res) => {

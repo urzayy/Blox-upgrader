@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { CoinPrice } from '../ui/CoinPrice';
-import { fetchAdminWithdrawTickets, getTicketType, type WithdrawTicket } from '../../lib/withdrawChat';
+import { getAdminLastReadMap } from '../../lib/adminChatRead';
+import { fetchAdminInbox, getTicketType, type AdminInboxItem } from '../../lib/withdrawChat';
 
 interface Props {
   open: boolean;
@@ -10,14 +11,14 @@ interface Props {
 }
 
 export function AdminWithdrawInbox({ open, onClose, onOpenTicket }: Props) {
-  const [tickets, setTickets] = useState<WithdrawTicket[]>([]);
+  const [items, setItems] = useState<AdminInboxItem[]>([]);
   const [error, setError] = useState('');
 
   useEffect(() => {
     if (!open) return;
     const load = async () => {
       try {
-        setTickets(await fetchAdminWithdrawTickets());
+        setItems(await fetchAdminInbox(getAdminLastReadMap()));
         setError('');
       } catch {
         setError('No se pudieron cargar las solicitudes de withdraw.');
@@ -78,11 +79,11 @@ export function AdminWithdrawInbox({ open, onClose, onOpenTicket }: Props) {
                   {error}
                 </p>
               )}
-              {tickets.length === 0 ? (
+              {items.length === 0 ? (
                 <p className="py-16 text-center text-sm text-white/40">No hay chats abiertos.</p>
               ) : (
                 <div className="space-y-2">
-                  {tickets.map(ticket => (
+                  {items.map(({ ticket, unreadCount }) => (
                     <button
                       key={ticket.id}
                       type="button"
@@ -90,7 +91,11 @@ export function AdminWithdrawInbox({ open, onClose, onOpenTicket }: Props) {
                         onOpenTicket(ticket.id);
                         onClose();
                       }}
-                      className="flex w-full items-center justify-between gap-3 rounded-xl border border-white/10 bg-[#141820] px-3 py-3 text-left transition hover:border-win/40 hover:bg-win/5"
+                      className={`relative flex w-full items-center justify-between gap-3 rounded-xl border px-3 py-3 text-left transition ${
+                        unreadCount > 0
+                          ? 'border-gold/35 bg-gold/[0.06] hover:border-gold/50 hover:bg-gold/10'
+                          : 'border-white/10 bg-[#141820] hover:border-win/40 hover:bg-win/5'
+                      }`}
                     >
                       <div className="min-w-0">
                         <div className="flex flex-wrap items-center gap-2">
@@ -102,6 +107,11 @@ export function AdminWithdrawInbox({ open, onClose, onOpenTicket }: Props) {
                           >
                             {getTicketType(ticket) === 'deposit' ? 'Deposit' : 'Withdraw'}
                           </span>
+                          {unreadCount > 0 && (
+                            <span className="rounded-full border border-gold/40 bg-gold px-2 py-0.5 text-[9px] font-black text-deep">
+                              {unreadCount} nuevo{unreadCount === 1 ? '' : 's'}
+                            </span>
+                          )}
                         </div>
                         <p className="truncate text-sm font-semibold text-white">{ticket.userLabel}</p>
                         <p className="truncate text-[10px] text-white/40">{ticket.userEmail}</p>
@@ -112,6 +122,11 @@ export function AdminWithdrawInbox({ open, onClose, onOpenTicket }: Props) {
                         </p>
                       </div>
                       <div className="shrink-0 text-right">
+                        {unreadCount > 0 && (
+                          <span className="mb-1 inline-flex h-6 min-w-6 items-center justify-center rounded-full bg-gold px-1.5 text-[11px] font-black text-deep">
+                            {unreadCount > 9 ? '9+' : unreadCount}
+                          </span>
+                        )}
                         <CoinPrice
                           value={ticket.total}
                           iconClassName="h-3 w-3 justify-end"
@@ -119,7 +134,7 @@ export function AdminWithdrawInbox({ open, onClose, onOpenTicket }: Props) {
                           className="justify-end"
                         />
                         <p className="mt-1 text-[9px] text-white/30">
-                          {new Date(ticket.createdAt).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}
+                          {new Date(ticket.updatedAt).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}
                         </p>
                       </div>
                     </button>

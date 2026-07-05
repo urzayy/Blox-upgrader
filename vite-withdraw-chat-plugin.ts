@@ -102,11 +102,38 @@ export function withdrawChatPlugin(chatsDir: string): Plugin {
         return tickets.sort((a, b) => b.updatedAt - a.updatedAt);
       };
 
+      const countUnreadUserMessages = (messages: ChatMessage[], lastReadAt: number) =>
+        messages.filter(message => message.senderRole === 'user' && message.createdAt > lastReadAt).length;
+
+      const buildAdminInbox = (lastReadByTicket: Record<string, number> = {}) => {
+        const tickets = listTickets({ openOnly: true });
+        return tickets.map(ticket => {
+          const bundle = loadBundle(ticket.id);
+          const messages = bundle?.messages ?? [];
+          const userMessages = messages.filter(message => message.senderRole === 'user');
+          const lastUserMessageAt = userMessages.length
+            ? Math.max(...userMessages.map(message => message.createdAt))
+            : 0;
+          const lastRead = lastReadByTicket[ticket.id] ?? lastUserMessageAt;
+          return {
+            ticket,
+            unreadCount: countUnreadUserMessages(messages, lastRead),
+            lastUserMessageAt,
+          };
+        });
+      };
+
       server.middlewares.use(async (req, res, next) => {
         const url = req.url ?? '';
         if (!url.startsWith('/api/withdraw/')) return next();
 
         try {
+          if (req.method === 'POST' && url === '/api/withdraw/admin-inbox') {
+            const body = JSON.parse(await readBody(req)) as { lastReadByTicket?: Record<string, number> };
+            sendJson(res, 200, { items: buildAdminInbox(body.lastReadByTicket ?? {}) });
+            return;
+          }
+
           if (req.method === 'GET' && url.startsWith('/api/withdraw/tickets?')) {
             const query = new URL(url, 'http://local').searchParams;
             const userId = query.get('userId');
