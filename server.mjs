@@ -20,11 +20,6 @@ const FEED_USERS = [
   'NeonPulse', 'xKiller99', 'VortexAce', 'CyberWolf', 'BladeRunner',
   'GhostOps', 'TitanSlayer', 'NovaStrike', 'IronFist', 'DarkMatter',
 ];
-const FEED_SKINS = [
-  'AK-47 | Redline', 'AWP | Asiimov', 'M4A4 | Howl', 'Karambit | Fade',
-  'Glock-18 | Fade', 'USP-S | Kill Confirmed', 'Desert Eagle | Blaze',
-  'Butterfly Knife | Doppler', 'AWP | Dragon Lore', 'M9 Bayonet | Tiger Tooth',
-];
 
 for (const dir of [LOGS_DIR, CHATS_DIR, GRANTS_DIR, BALANCE_GRANTS_DIR, STATE_DIR]) {
   if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
@@ -38,6 +33,19 @@ function sendJson(res, status, data) {
   res.status(status).json(data);
 }
 
+const FEED_SKIN_CATALOG = [
+  { name: 'Karambit | Frostbite', image: 'https://bloxstrike.net/items/bloxstrike-live/79761341183165.png' },
+  { name: 'Karambit | Fade', image: 'https://bloxstrike.net/items/bloxstrike-live/74368007102644.png' },
+  { name: 'Butterfly | Fade', image: 'https://bloxstrike.net/items/bloxstrike-live/106697835426931.png' },
+  { name: 'Bayonet | Fade', image: 'https://bloxstrike.net/items/bloxstrike-live/80595388025959.png' },
+  { name: 'AWP | Beta', image: 'https://bloxstrike.net/items/bloxstrike-live/124416502090313.png' },
+  { name: 'Flip | Aurora', image: 'https://bloxstrike.net/items/bloxstrike-live/128576804864738.png' },
+  { name: 'Gut | Noir', image: 'https://bloxstrike.net/items/bloxstrike-live/98358735156670.png' },
+  { name: 'Skeleton | Fade', image: 'https://bloxstrike.net/items/bloxstrike-live/116910956316790.png' },
+  { name: 'Stiletto | Violet', image: 'https://bloxstrike.net/items/bloxstrike-live/87519753219275.png' },
+  { name: 'Sports Gloves | Imperial', image: 'https://bloxstrike.net/items/bloxstrike-live/75665163318076.png' },
+];
+
 function isFeedItem(value) {
   return (
     value
@@ -45,6 +53,8 @@ function isFeedItem(value) {
     && typeof value.username === 'string'
     && typeof value.inputSkin === 'string'
     && typeof value.targetSkin === 'string'
+    && (value.inputImage === undefined || typeof value.inputImage === 'string')
+    && (value.targetImage === undefined || typeof value.targetImage === 'string')
     && typeof value.probability === 'number'
     && typeof value.won === 'boolean'
     && typeof value.timestamp === 'number'
@@ -52,17 +62,19 @@ function isFeedItem(value) {
 }
 
 function createBotFeedItem() {
-  const inputSkin = FEED_SKINS[Math.floor(Math.random() * FEED_SKINS.length)];
-  let targetSkin = FEED_SKINS[Math.floor(Math.random() * FEED_SKINS.length)];
-  if (targetSkin === inputSkin) {
-    targetSkin = FEED_SKINS[(FEED_SKINS.indexOf(inputSkin) + 1) % FEED_SKINS.length];
+  const input = FEED_SKIN_CATALOG[Math.floor(Math.random() * FEED_SKIN_CATALOG.length)];
+  let target = FEED_SKIN_CATALOG[Math.floor(Math.random() * FEED_SKIN_CATALOG.length)];
+  if (target.name === input.name) {
+    target = FEED_SKIN_CATALOG[(FEED_SKIN_CATALOG.indexOf(input) + 1) % FEED_SKIN_CATALOG.length];
   }
   const won = Math.random() < 0.76;
   return {
     id: `f_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
     username: FEED_USERS[Math.floor(Math.random() * FEED_USERS.length)],
-    inputSkin,
-    targetSkin,
+    inputSkin: input.name,
+    targetSkin: target.name,
+    inputImage: input.image,
+    targetImage: target.image,
     probability: Math.round((won ? 32 + Math.random() * 38 : 8 + Math.random() * 20) * 10) / 10,
     won,
     timestamp: Date.now(),

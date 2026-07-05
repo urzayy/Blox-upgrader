@@ -489,6 +489,8 @@ export default function App() {
       username: getDisplayName(user),
       inputSkin: inputLabel,
       targetSkin: targetSkin.name,
+      inputImage: inputSkins.reduce((best, s) => (s.price > best.price ? s : best), inputSkins[0]).image,
+      targetImage: targetSkin.image,
       probability,
       won,
       timestamp: Date.now(),

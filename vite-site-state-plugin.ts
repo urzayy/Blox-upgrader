@@ -39,6 +39,8 @@ function isFeedItem(value: unknown): value is FeedItem {
     && typeof item.username === 'string'
     && typeof item.inputSkin === 'string'
     && typeof item.targetSkin === 'string'
+    && (item.inputImage === undefined || typeof item.inputImage === 'string')
+    && (item.targetImage === undefined || typeof item.targetImage === 'string')
     && typeof item.probability === 'number'
     && typeof item.won === 'boolean'
     && typeof item.timestamp === 'number'

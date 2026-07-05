@@ -36,6 +36,8 @@ export function createFeedItem(): FeedItem {
     username: FEED_USERS[Math.floor(Math.random() * FEED_USERS.length)],
     inputSkin: input.name,
     targetSkin: target.name,
+    inputImage: input.image,
+    targetImage: target.image,
     probability,
     won,
     timestamp: Date.now(),

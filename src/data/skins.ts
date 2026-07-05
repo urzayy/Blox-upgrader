@@ -22,6 +22,8 @@ export interface FeedItem {
   username: string;
   inputSkin: string;
   targetSkin: string;
+  inputImage?: string;
+  targetImage?: string;
   probability: number;
   won: boolean;
   timestamp: number;
@@ -343,6 +345,13 @@ export const STARTER_INVENTORY: Skin[] = [];
 export const TARGET_POOL: Skin[] = SKIN_CATALOG;
 export const INVENTORY: Skin[] = [];
 export const ALL_SKINS_CATALOG: Skin[] = SKIN_CATALOG;
+
+const skinImageByName = new Map(SKIN_CATALOG.map(s => [s.name, s.image]));
+
+/** Resolve catalog image URL from a skin display name (legacy feed rows). */
+export function findSkinImageByName(name: string): string | undefined {
+  return skinImageByName.get(name);
+}
 
 export const FEED_USERS = [
   'NeonPulse', 'xKiller99', 'VortexAce', 'CyberWolf', 'BladeRunner',

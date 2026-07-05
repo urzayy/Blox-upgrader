@@ -1,5 +1,5 @@
 import { memo } from 'react';
-import type { FeedItem } from '../../data/skins';
+import { findSkinImageByName, type FeedItem } from '../../data/skins';
 
 interface Props {
   items: FeedItem[];
@@ -34,6 +34,9 @@ export const LiveFeed = memo(function LiveFeed({ items, className = '' }: Props)
 }, (prev, next) => feedsEqual(prev.items, next.items) && prev.className === next.className);
 
 const FeedRow = memo(function FeedRow({ item }: { item: FeedItem }) {
+  const inputImage = item.inputImage ?? findSkinImageByName(item.inputSkin);
+  const targetImage = item.targetImage ?? findSkinImageByName(item.targetSkin);
+
   return (
     <div
       className={`mb-0 shrink-0 rounded-lg border p-2.5 xl:mb-2 xl:w-auto w-[240px] ${
@@ -41,14 +44,80 @@ const FeedRow = memo(function FeedRow({ item }: { item: FeedItem }) {
       }`}
     >
       <div className="flex items-center justify-between gap-2">
-        <span className="text-xs font-bold text-white">{item.username}</span>
-        <span className={`text-[10px] font-display font-bold ${item.won ? 'text-win' : 'text-risk'}`}>
+        <span className="truncate text-xs font-bold text-white">{item.username}</span>
+        <span className={`shrink-0 text-[10px] font-display font-bold ${item.won ? 'text-win' : 'text-risk'}`}>
           {item.won ? 'WIN' : 'LOSE'}
         </span>
       </div>
-      <div className="mt-1 truncate text-[10px] text-white/50">{item.inputSkin}</div>
-      <div className="truncate text-[10px] text-gold/80">→ {item.targetSkin}</div>
-      <div className="mt-1 text-[10px] font-display text-white/40">{item.probability}% chance</div>
+
+      <div className="mt-2 flex items-center justify-center gap-1.5">
+        <FeedSkinThumb
+          src={inputImage}
+          alt={item.inputSkin}
+          emphasis={!item.won}
+          tone={item.won ? 'muted' : 'lose'}
+        />
+        <span className="text-[11px] text-white/30">→</span>
+        <FeedSkinThumb
+          src={targetImage}
+          alt={item.targetSkin}
+          emphasis={item.won}
+          tone={item.won ? 'win' : 'muted'}
+        />
+      </div>
+
+      <div className="mt-1.5 truncate text-center text-[10px] text-white/50">{item.inputSkin}</div>
+      <div className="truncate text-center text-[10px] text-gold/80">→ {item.targetSkin}</div>
+      <div className="mt-1 text-center text-[10px] font-display text-white/40">{item.probability}% chance</div>
     </div>
   );
 });
+
+function FeedSkinThumb({
+  src,
+  alt,
+  emphasis = false,
+  tone = 'neutral',
+}: {
+  src?: string;
+  alt: string;
+  emphasis?: boolean;
+  tone?: 'win' | 'lose' | 'muted' | 'neutral';
+}) {
+  const box = 'h-9 w-9';
+
+  const ring =
+    tone === 'win'
+      ? 'ring-win/50'
+      : tone === 'lose'
+        ? 'ring-risk/50'
+        : tone === 'muted'
+          ? 'ring-white/10'
+          : 'ring-white/15';
+
+  const opacity = tone === 'muted' ? 'opacity-45' : emphasis ? 'opacity-100' : 'opacity-70';
+
+  return (
+    <div
+      className={`relative shrink-0 overflow-hidden rounded-md border border-white/10 bg-[#141820] ${box} ${
+        emphasis ? `ring-1 ${ring}` : ''
+      } ${opacity}`}
+      title={alt}
+    >
+      {src ? (
+        <img
+          src={src}
+          alt={alt}
+          loading="lazy"
+          draggable={false}
+          className="pointer-events-none h-full w-full object-contain p-0.5"
+          onError={e => {
+            (e.target as HTMLImageElement).style.opacity = '0.2';
+          }}
+        />
+      ) : (
+        <div className="flex h-full w-full items-center justify-center text-[8px] text-white/20">?</div>
+      )}
+    </div>
+  );
+}
