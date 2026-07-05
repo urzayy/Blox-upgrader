@@ -39,12 +39,17 @@ export function InventoryShopPanel({
   const atMax = selected.length >= maxSelected;
   const lockedCount = lockedSkinIds?.size ?? 0;
 
-  const totalPages = Math.max(1, Math.ceil(skins.length / PAGE_SIZE));
+  const sortedSkins = useMemo(
+    () => [...skins].sort((a, b) => b.price - a.price),
+    [skins],
+  );
+
+  const totalPages = Math.max(1, Math.ceil(sortedSkins.length / PAGE_SIZE));
   const safePage = Math.min(page, totalPages - 1);
 
   const visibleSkins = useMemo(
-    () => skins.slice(safePage * PAGE_SIZE, safePage * PAGE_SIZE + PAGE_SIZE),
-    [skins, safePage],
+    () => sortedSkins.slice(safePage * PAGE_SIZE, safePage * PAGE_SIZE + PAGE_SIZE),
+    [sortedSkins, safePage],
   );
 
   useEffect(() => {
