@@ -109,3 +109,19 @@ export async function fetchDbUserDetail(
 export function dbUserExportUrl(adminEmail: string, userId: string): string {
   return `/api/admin/user-db/users/${encodeURIComponent(userId)}/export.txt?adminEmail=${encodeURIComponent(adminEmail)}`;
 }
+
+export interface DbStatus {
+  storage: { ok: boolean; path: string; error?: string };
+  dataDir: string;
+  logsDir: string;
+  userCount: number;
+  registeredEmailCount: number;
+  registeredEmails: string[];
+  siteUrl: string;
+}
+
+export async function fetchDbStatus(adminEmail: string): Promise<DbStatus> {
+  const res = await fetch(`/api/admin/user-db/status?adminEmail=${encodeURIComponent(adminEmail)}`);
+  if (!res.ok) throw new Error('Could not load database status');
+  return res.json() as Promise<DbStatus>;
+}

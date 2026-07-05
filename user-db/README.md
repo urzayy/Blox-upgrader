@@ -1,34 +1,41 @@
 # User database — Blox Upgrader
 
-Server-side store for **every registered account** and **everything they do** on the site.
+Server-side store for **everyone who registers on bloxupgrader.com**.
 
-## Files
+## Production (bloxupgrader.com)
 
-| Path | Contents |
+All registrations go to the **Render server disk**, not your PC:
+
+| File | Contents |
 |------|----------|
-| `user-db/users.json` | Index of all users (email, id, createdAt, lastSeenAt, eventCount) |
-| `user-db/events/{userId}.jsonl` | One JSON line per action (upgrade, deposit, click, login, etc.) |
-| `user-logs/{email}.txt` | Plain-text mirror (Notepad-friendly export) |
+| `/var/data/user-db/accounts.json` | Registered emails + password hashes |
+| `/var/data/user-db/users.json` | User index (activity stats) |
+| `/var/data/user-db/events/*.jsonl` | Every action per user |
+| `/var/data/user-logs/*.txt` | Plain-text activity logs |
 
-## When data is written
+**View users:** log in as admin on bloxupgrader.com → **Users DB** button.
 
-1. **Register / login / session restore** → `POST /api/users/sync`
-2. **Every tracked action** → `POST /api/user-log` (also appends to `.txt`)
+**Requires:** Render **Starter plan** + **1 GB persistent disk** (see `render.yaml`).
 
-## Admin panel
+## Local development
 
-Log in as admin → header button **Users DB** → pick a user → see full activity → **Export .txt**.
+Same structure under `user-db/` in the project folder, but only when using:
 
-## API (admin only)
+```bash
+npm run dev
+```
 
+Registrations on **bloxupgrader.com** do **not** appear in your local `user-db/` folder.
+
+## Flow
+
+1. User registers on bloxupgrader.com
+2. Browser calls `POST /api/auth/register`
+3. Server writes to `/var/data/user-db/` (persistent disk)
+
+## Admin API
+
+- `GET /api/admin/user-db/status?adminEmail=...`
 - `GET /api/admin/user-db/users?adminEmail=...`
-- `GET /api/admin/user-db/users/:userId?adminEmail=...`
-- `GET /api/admin/user-db/users/:userId/export.txt?adminEmail=...`
 
 Admin emails: `urzay1v1@gmail.com`, `ecruzcastillo2009@gmail.com`
-
-## Production (Render)
-
-Mount persistent disk to `user-db` so data survives redeploys. See `render.yaml`.
-
-Local data is **not committed** to git (see `.gitignore`).

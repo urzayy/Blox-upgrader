@@ -2,8 +2,10 @@ import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   dbUserExportUrl,
+  fetchDbStatus,
   fetchDbUserDetail,
   fetchDbUsers,
+  type DbStatus,
   type DbUserEvent,
   type DbUserRecord,
 } from '../../lib/userDbApi';
@@ -20,6 +22,7 @@ function formatWhen(ts: number): string {
 
 export function AdminUserDbPanel({ open, adminEmail, onClose }: Props) {
   const [users, setUsers] = useState<DbUserRecord[]>([]);
+  const [status, setStatus] = useState<DbStatus | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [events, setEvents] = useState<DbUserEvent[]>([]);
   const [error, setError] = useState('');
@@ -28,7 +31,12 @@ export function AdminUserDbPanel({ open, adminEmail, onClose }: Props) {
     if (!open) return;
     const load = async () => {
       try {
-        setUsers(await fetchDbUsers(adminEmail));
+        const [nextUsers, nextStatus] = await Promise.all([
+          fetchDbUsers(adminEmail),
+          fetchDbStatus(adminEmail),
+        ]);
+        setUsers(nextUsers);
+        setStatus(nextStatus);
         setError('');
       } catch {
         setError('Could not load user database.');
@@ -90,8 +98,15 @@ export function AdminUserDbPanel({ open, adminEmail, onClose }: Props) {
                   User Database
                 </h2>
                 <p className="text-[11px] text-white/45">
-                  Every registered account and everything they do on the site
+                  Live database for everyone who registers on {status?.siteUrl ?? 'bloxupgrader.com'}
                 </p>
+                {status && (
+                  <p className={`mt-1 text-[10px] ${status.storage.ok ? 'text-win' : 'text-risk'}`}>
+                    {status.storage.ok
+                      ? `${status.registeredEmailCount} registered emails on server · ${status.dataDir}`
+                      : `Storage error on server — ${status.storage.error ?? 'cannot write database'}`}
+                  </p>
+                )}
               </div>
               <button
                 type="button"

@@ -6,7 +6,7 @@ import { ErrorBoundary } from './components/ErrorBoundary';
 import './index.css';
 
 if (import.meta.env.PROD) {
-  (window as Window & { __BLOX_BUILD?: string }).__BLOX_BUILD = '20260705-user-db-v3';
+  (window as Window & { __BLOX_BUILD?: string }).__BLOX_BUILD = '20260705-prod-userdb';
 }
 
 ReactDOM.createRoot(document.getElementById('root')!).render(

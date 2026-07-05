@@ -12,13 +12,13 @@ import { createUserDb } from './server/lib/userDb.mjs';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = __dirname;
 const DIST = path.join(ROOT, 'dist');
-const USER_DB_DIR = process.env.USER_DB_DIR || path.join(ROOT, 'user-db');
-const DATA_DIR = process.env.USER_DB_DIR ? path.dirname(USER_DB_DIR) : ROOT;
+const DATA_DIR = process.env.DATA_DIR || ROOT;
+const USER_DB_DIR = process.env.USER_DB_DIR || path.join(DATA_DIR, 'user-db');
 const LOGS_DIR = process.env.USER_LOGS_DIR || path.join(DATA_DIR, 'user-logs');
-const CHATS_DIR = path.join(ROOT, 'withdraw-chats');
-const GRANTS_DIR = path.join(ROOT, 'inventory-grants');
-const BALANCE_GRANTS_DIR = path.join(ROOT, 'balance-grants');
-const STATE_DIR = path.join(ROOT, 'site-state');
+const CHATS_DIR = process.env.CHATS_DIR || path.join(DATA_DIR, 'withdraw-chats');
+const GRANTS_DIR = process.env.GRANTS_DIR || path.join(DATA_DIR, 'inventory-grants');
+const BALANCE_GRANTS_DIR = process.env.BALANCE_GRANTS_DIR || path.join(DATA_DIR, 'balance-grants');
+const STATE_DIR = process.env.STATE_DIR || path.join(DATA_DIR, 'site-state');
 const STATE_FILE = path.join(STATE_DIR, 'state.json');
 
 const PORT = Number(process.env.PORT) || 4173;
@@ -31,6 +31,19 @@ for (const dir of [LOGS_DIR, USER_DB_DIR, path.join(USER_DB_DIR, 'events'), CHAT
 }
 
 const userDb = createUserDb(USER_DB_DIR);
+
+function checkPersistentStorage() {
+  try {
+    const probe = path.join(USER_DB_DIR, '.storage-probe');
+    fs.writeFileSync(probe, `${Date.now()}\n`, 'utf8');
+    fs.readFileSync(probe, 'utf8');
+    return { ok: true, path: USER_DB_DIR };
+  } catch (error) {
+    return { ok: false, path: USER_DB_DIR, error: error instanceof Error ? error.message : 'write failed' };
+  }
+}
+
+const storageStatus = checkPersistentStorage();
 
 function sanitizeEmail(email) {
   return email.replace(/@/g, '_at_').replace(/[^a-zA-Z0-9._-]/g, '_');
@@ -258,7 +271,8 @@ app.post('/api/auth/register', (req, res) => {
     });
     if (result?.line) appendUserTxtLog(email, result.line);
     sendJson(res, 200, { ok: true, user: result?.user ?? null });
-  } catch {
+  } catch (error) {
+    console.error('[auth/register]', error);
     sendJson(res, 500, { error: 'error' });
   }
 });
@@ -306,6 +320,25 @@ app.post('/api/user-log', (req, res) => {
   } catch {
     sendJson(res, 500, { error: 'error' });
   }
+});
+
+app.get('/api/admin/user-db/status', (req, res) => {
+  const adminEmail = String(req.query.adminEmail ?? '');
+  if (!userDb.isAdminEmail(adminEmail)) {
+    sendJson(res, 403, { error: 'forbidden' });
+    return;
+  }
+  const users = userDb.listUsers();
+  const emails = userDb.listRegisteredEmails();
+  sendJson(res, 200, {
+    storage: storageStatus,
+    dataDir: DATA_DIR,
+    logsDir: LOGS_DIR,
+    userCount: users.length,
+    registeredEmailCount: emails.length,
+    registeredEmails: emails,
+    siteUrl: SITE_URL,
+  });
 });
 
 app.get('/api/admin/user-db/users', (req, res) => {
@@ -669,4 +702,6 @@ setInterval(() => {
 
 app.listen(PORT, () => {
   console.log(`[BloxUpgrader.com] ${SITE_URL}`);
+  console.log(`[UserDB] data=${DATA_DIR} db=${USER_DB_DIR} logs=${LOGS_DIR}`);
+  console.log(`[UserDB] storage ${storageStatus.ok ? 'OK' : 'FAILED'}${storageStatus.error ? `: ${storageStatus.error}` : ''}`);
 });

@@ -25,6 +25,19 @@ function sendJson(res: { statusCode: number; setHeader: (k: string, v: string) =
 
 export function userDbPlugin(dbDir: string): Plugin {
   const db = createUserDb(dbDir);
+  const dataDir = path.dirname(dbDir);
+
+  function checkPersistentStorage() {
+    try {
+      const probe = path.join(dbDir, '.storage-probe');
+      fs.writeFileSync(probe, `${Date.now()}\n`, 'utf8');
+      return { ok: true, path: dbDir };
+    } catch (error) {
+      return { ok: false, path: dbDir, error: error instanceof Error ? error.message : 'write failed' };
+    }
+  }
+
+  const storageStatus = checkPersistentStorage();
 
   function appendTxtLog(email: string, line: string) {
     const logsDir = path.resolve(path.dirname(dbDir), 'user-logs');
@@ -134,6 +147,25 @@ export function userDbPlugin(dbDir: string): Plugin {
           } catch {
             sendJson(res, 500, { error: 'error' });
           }
+          return;
+        }
+
+        if (url === '/api/admin/user-db/status' && req.method === 'GET') {
+          const adminEmail = new URL(req.url ?? '', 'http://local').searchParams.get('adminEmail') ?? '';
+          if (!db.isAdminEmail(adminEmail)) {
+            sendJson(res, 403, { error: 'forbidden' });
+            return;
+          }
+          const users = db.listUsers();
+          sendJson(res, 200, {
+            storage: storageStatus,
+            dataDir,
+            logsDir: path.resolve(dataDir, 'user-logs'),
+            userCount: users.length,
+            registeredEmailCount: db.listRegisteredEmails().length,
+            registeredEmails: db.listRegisteredEmails(),
+            siteUrl: 'http://localhost:5173',
+          });
           return;
         }
 
