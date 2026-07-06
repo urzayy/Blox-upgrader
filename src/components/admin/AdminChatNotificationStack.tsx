@@ -11,13 +11,16 @@ interface Props {
 
 function toastTitle(toast: AdminChatToast): string {
   if (toast.kind === 'new_chat') {
+    if (toast.ticketType === 'help') return 'Nueva ayuda';
     return toast.ticketType === 'deposit' ? 'Nuevo depósito' : 'Nuevo retiro';
   }
+  if (toast.ticketType === 'help') return 'Mensaje · Ayuda';
   return toast.ticketType === 'deposit' ? 'Mensaje · Depósito' : 'Mensaje · Retiro';
 }
 
 function toastIcon(toast: AdminChatToast): string {
   if (toast.kind === 'new_chat') {
+    if (toast.ticketType === 'help') return '?';
     return toast.ticketType === 'deposit' ? '↓' : '↑';
   }
   return '💬';

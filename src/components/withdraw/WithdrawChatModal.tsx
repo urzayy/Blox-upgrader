@@ -8,6 +8,7 @@ import {
   sendWithdrawChatMessage,
   updateWithdrawTicketStatus,
   type ChatMessage,
+  type SupportTicketType,
   type WithdrawSkinSummary,
   type WithdrawTicket,
   type WithdrawTicketBundle,
@@ -115,6 +116,7 @@ export function WithdrawChatModal({
   const chatClosed = ticket?.status !== 'open';
   const ticketType = ticket ? getTicketType(ticket) : 'withdraw';
   const isDeposit = ticketType === 'deposit';
+  const isHelp = ticketType === 'help';
 
   return (
     <AnimatePresence>
@@ -164,27 +166,19 @@ export function WithdrawChatModal({
                     ? `Chat with ${ticket?.userLabel ?? 'user'} · Admins: urzay1v1 · ecruzcastillo2009`
                     : 'Chat en vivo con los administradores. Sigue sus instrucciones aquí.'}
                 </p>
-                {ticket && (
+                {ticket && !isHelp && (
                   <p className="mt-1 text-[10px] text-white/35">
-                    {isDeposit ? (
-                      <>
-                        {ticket.skins.length} skins ·{' '}
-                        <CoinPrice
-                          value={ticket.total}
-                          iconClassName="inline h-3 w-3 align-[-2px]"
-                          textClassName="inline font-display text-[10px] font-bold text-gold"
-                        />
-                      </>
-                    ) : (
-                      <>
-                        {ticket.skins.length} skins ·{' '}
-                        <CoinPrice
-                          value={ticket.total}
-                          iconClassName="inline h-3 w-3 align-[-2px]"
-                          textClassName="inline font-display text-[10px] font-bold text-gold"
-                        />
-                      </>
-                    )}
+                    {ticket.skins.length} skins ·{' '}
+                    <CoinPrice
+                      value={ticket.total}
+                      iconClassName="inline h-3 w-3 align-[-2px]"
+                      textClassName="inline font-display text-[10px] font-bold text-gold"
+                    />
+                  </p>
+                )}
+                {ticket && isHelp && (
+                  <p className="mt-1 text-[10px] text-white/35">
+                    Chat de ayuda en vivo
                   </p>
                 )}
               </div>
@@ -230,7 +224,7 @@ export function WithdrawChatModal({
                     onClick={() => { void handleStatus('completed'); }}
                     className="rounded-lg border border-win/40 bg-win/15 px-3 py-1.5 text-[10px] font-bold uppercase tracking-wide text-win transition hover:bg-win/25 disabled:opacity-40"
                   >
-                    Complete {isDeposit ? 'deposit' : 'withdrawal'}
+                    Complete {isDeposit ? 'deposit' : isHelp ? 'chat' : 'withdrawal'}
                   </button>
                   <button
                     type="button"
@@ -238,7 +232,7 @@ export function WithdrawChatModal({
                     onClick={() => { void handleStatus('cancelled'); }}
                     className="rounded-lg border border-risk/40 bg-risk/10 px-3 py-1.5 text-[10px] font-bold uppercase tracking-wide text-risk transition hover:bg-risk/20 disabled:opacity-40"
                   >
-                    Cancel request
+                    {isHelp ? 'Close chat' : 'Cancel request'}
                   </button>
                 </div>
               )}
@@ -373,15 +367,21 @@ function TicketSkinsGallery({ skins }: { skins: WithdrawSkinSummary[] }) {
   );
 }
 
-function TypeBadge({ type }: { type: 'withdraw' | 'deposit' }) {
+function TypeBadge({ type }: { type: SupportTicketType }) {
+  const styles = {
+    deposit: 'border-gold/30 bg-gold/10 text-gold',
+    withdraw: 'border-white/20 bg-white/10 text-white/80',
+    help: 'border-win/30 bg-win/10 text-win',
+  } as const;
+  const labels = {
+    deposit: 'Deposit',
+    withdraw: 'Withdraw',
+    help: 'Help',
+  } as const;
+
   return (
-    <span className={`rounded-full border px-2 py-0.5 text-[9px] font-bold uppercase ${
-      type === 'deposit'
-        ? 'border-gold/30 bg-gold/10 text-gold'
-        : 'border-white/20 bg-white/10 text-white/80'
-    }`}
-    >
-      {type === 'deposit' ? 'Deposit' : 'Withdraw'}
+    <span className={`rounded-full border px-2 py-0.5 text-[9px] font-bold uppercase ${styles[type]}`}>
+      {labels[type]}
     </span>
   );
 }

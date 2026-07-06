@@ -694,11 +694,15 @@ app.patch('/api/withdraw/tickets/:ticketId', (req, res) => {
   const statusText = status === 'completed'
     ? ticketType === 'deposit'
       ? 'Deposit completed. The amount has been added to your SALDO.'
-      : 'Withdrawal completed. The selected skins have been removed from your inventory.'
+      : ticketType === 'help'
+        ? 'Support chat closed. Thanks for contacting us.'
+        : 'Withdrawal completed. The selected skins have been removed from your inventory.'
     : status === 'cancelled'
       ? ticketType === 'deposit'
         ? 'Deposit request cancelled.'
-        : 'Withdrawal request cancelled. Your skins remain in your inventory.'
+        : ticketType === 'help'
+          ? 'Support chat cancelled.'
+          : 'Withdrawal request cancelled. Your skins remain in your inventory.'
       : 'Request reopened.';
   bundle.messages.push({
     id: `msg_${now}_sys`,
@@ -778,6 +782,38 @@ app.post('/api/withdraw/tickets', (req, res) => {
         senderRole: 'system',
         senderLabel: 'System',
         text: `Deposit request received (${creditLine}).\n\n${skinList}\n\nAn administrator will assist you live. Follow their payment instructions here.`,
+        createdAt: now,
+      }],
+    };
+    saveBundle(bundle);
+    sendJson(res, 200, bundle);
+    return;
+  }
+
+  if (ticketType === 'help') {
+    const ticketId = `hp_${now}_${Math.random().toString(36).slice(2, 8)}`;
+    const ticket = {
+      id: ticketId,
+      userId: body.userId,
+      userEmail: body.userEmail,
+      userLabel: body.userLabel || body.userEmail,
+      type: 'help',
+      skins: [],
+      total: 0,
+      status: 'open',
+      createdAt: now,
+      updatedAt: now,
+    };
+    const bundle = {
+      ticket,
+      messages: [{
+        id: `msg_${now}_welcome`,
+        ticketId,
+        senderId: 'system',
+        senderEmail: 'system@blox-upgrader',
+        senderRole: 'system',
+        senderLabel: 'System',
+        text: 'Welcome to live support. An administrator will assist you shortly. Describe your question here.',
         createdAt: now,
       }],
     };

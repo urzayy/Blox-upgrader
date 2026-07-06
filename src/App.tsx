@@ -27,7 +27,7 @@ import { useWheelSize } from './hooks/useWheelSize';
 import { useDocumentVisible } from './hooks/useDocumentVisible';
 import { getDisplayName, getProfileLabel, isAdmin } from './lib/auth';
 import { useAuth } from './context/AuthContext';
-import { createWithdrawTicket, createDepositTicket, fetchUserWithdrawTickets, getDepositCreditAmount, getPendingWithdrawSkinIds, getTicketType, type WithdrawTicket } from './lib/withdrawChat';
+import { createWithdrawTicket, createDepositTicket, fetchUserWithdrawTickets, getDepositCreditAmount, getPendingWithdrawSkinIds, getTicketType, openOrCreateHelpTicket, type WithdrawTicket } from './lib/withdrawChat';
 import type { AppliedDepositBonus } from './lib/depositBonusCode';
 import { validateDepositTotal } from './lib/deposit';
 import {
@@ -48,11 +48,13 @@ import {
   loadProcessedWithdrawTickets,
 } from './lib/processedWithdrawStorage';
 import { ThanksToast } from './components/ui/ThanksToast';
+import { LiveHelpFloating } from './components/support/LiveHelpFloating';
 import type { ShopPurchaseItem } from './components/shop/ShopPanel';
 import type { DepositItem } from './components/deposit/DepositModal';
 
 export default function App() {
   const { user, logout: authLogout, openLogin } = useAuth();
+  const userIsAdmin = isAdmin(user);
   const { log, logUser } = useActivityLog();
   const userId = user?.userId ?? null;
 
@@ -75,6 +77,9 @@ export default function App() {
   const inventoryRef = useRef(inventory);
   const balanceRef = useRef(balance);
   const userIdRef = useRef(userId);
+  const openSupportChatRef = useRef<(ticketId: string) => void>(() => {});
+  const [liveHelpLoading, setLiveHelpLoading] = useState(false);
+  const [liveHelpError, setLiveHelpError] = useState('');
   const initialWithdrawSyncRef = useRef(true);
   const giftSyncInFlightRef = useRef(false);
   const balanceGiftSyncInFlightRef = useRef(false);
@@ -359,12 +364,35 @@ export default function App() {
   }, [user, log]);
 
   const handleSupportTicketCompleted = useCallback((ticket: WithdrawTicket) => {
+    if (getTicketType(ticket) === 'help') return;
     if (getTicketType(ticket) === 'deposit') {
       applyDepositCompletion(ticket);
       return;
     }
     handleWithdrawTicketCompleted(ticket);
   }, [applyDepositCompletion, handleWithdrawTicketCompleted]);
+
+  const handleLiveHelp = useCallback(async () => {
+    if (!user) {
+      openLogin();
+      return;
+    }
+    setLiveHelpLoading(true);
+    setLiveHelpError('');
+    try {
+      const ticketId = await openOrCreateHelpTicket(user, getProfileLabel(user) ?? user.email);
+      if (!openSupportChatRef.current) {
+        setLiveHelpError('No se pudo abrir el chat. Recarga la página.');
+        return;
+      }
+      openSupportChatRef.current(ticketId);
+    } catch {
+      setLiveHelpError('No se pudo conectar con soporte. Inténtalo de nuevo.');
+      log('HELP.request_failed');
+    } finally {
+      setLiveHelpLoading(false);
+    }
+  }, [user, openLogin, log]);
 
   useEffect(() => {
     if (!user) {
@@ -383,6 +411,7 @@ export default function App() {
 
         for (const ticket of tickets) {
           if (ticket.status !== 'completed') continue;
+          if (getTicketType(ticket) === 'help') continue;
           if (getTicketType(ticket) === 'deposit') {
             applyDepositCompletion(ticket);
           } else {
@@ -765,6 +794,21 @@ export default function App() {
           durationMs={5000}
         />
 
+        <ThanksToast
+          show={!!liveHelpError}
+          title="Error de ayuda"
+          subtitle={liveHelpError}
+          variant="error"
+          onDismiss={() => setLiveHelpError('')}
+          durationMs={6000}
+        />
+
+        <LiveHelpFloating
+          onClick={() => { void handleLiveHelp(); }}
+          loading={liveHelpLoading}
+          className={userIsAdmin ? 'bottom-24 right-4' : 'bottom-4 right-4'}
+        />
+
         <Header
           inventory={inventory}
           balance={balance}
@@ -781,6 +825,9 @@ export default function App() {
           onWithdrawRequest={handleWithdrawRequest}
           onDepositRequest={handleDepositRequest}
           onSupportTicketCompleted={handleSupportTicketCompleted}
+          onRegisterOpenSupportChat={openChat => {
+            openSupportChatRef.current = openChat;
+          }}
           onAccountCleared={handleAccountCleared}
         />
 
@@ -843,6 +890,8 @@ export default function App() {
               <TargetPanel
                 skins={TARGET_POOL}
                 selected={targetSkin}
+                onLiveHelp={() => { void handleLiveHelp(); }}
+                liveHelpLoading={liveHelpLoading}
                 onSelect={s => {
                   if (targetSkin?.id === s.id) {
                     log('CLICK.deselect_target', { skin: s.name, price: formatUSD(s.price) });

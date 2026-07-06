@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { inventoryTotal } from '../../lib/inventory';
 import { CoinPrice } from '../ui/CoinPrice';
 import { useAuth } from '../../context/AuthContext';
@@ -33,6 +33,7 @@ interface Props {
   onWithdrawRequest: (skins: Skin[]) => Promise<string | null>;
   onDepositRequest: (items: DepositItem[]) => Promise<string | null>;
   onSupportTicketCompleted: (ticket: WithdrawTicket) => void;
+  onRegisterOpenSupportChat?: (openChat: (ticketId: string) => void) => void;
   onAdminGiftSent?: (targetEmail: string, skin: Skin, quantity: number) => void;
   onAccountCleared?: (email: string) => void;
 }
@@ -50,6 +51,7 @@ export function Header({
   onWithdrawRequest,
   onDepositRequest,
   onSupportTicketCompleted,
+  onRegisterOpenSupportChat,
   onAdminGiftSent,
   onAccountCleared,
 }: Props) {
@@ -80,10 +82,14 @@ export function Header({
     activeTicketId: activeAdminTicketId,
   });
 
-  const openSupportChat = (ticketId: string) => {
+  const openSupportChat = useCallback((ticketId: string) => {
     setSupportChatTicketId(ticketId);
     setSupportChatOpen(true);
-  };
+  }, []);
+
+  useEffect(() => {
+    onRegisterOpenSupportChat?.(openSupportChat);
+  }, [onRegisterOpenSupportChat, openSupportChat]);
 
   useEffect(() => {
     if (!user) return;

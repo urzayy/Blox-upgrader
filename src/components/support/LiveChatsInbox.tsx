@@ -4,6 +4,7 @@ import { CoinPrice } from '../ui/CoinPrice';
 import {
   fetchUserWithdrawTickets,
   getTicketType,
+  type SupportTicketType,
   type WithdrawTicket,
 } from '../../lib/withdrawChat';
 
@@ -85,7 +86,7 @@ export function LiveChatsInbox({ open, userId, onClose, onOpenTicket }: Props) {
               )}
               {tickets.length === 0 ? (
                 <p className="py-16 text-center text-sm text-white/40">
-                  Aún no tienes chats. Usa Deposit o Withdraw para abrir uno.
+                  Aún no tienes chats. Usa Deposit, Withdraw o el botón Ayuda para abrir uno.
                 </p>
               ) : (
                 <div className="space-y-2">
@@ -105,20 +106,24 @@ export function LiveChatsInbox({ open, userId, onClose, onOpenTicket }: Props) {
                           <StatusBadge status={ticket.status} />
                         </div>
                         <p className="mt-1 text-[11px] text-white/70">
-                          {getTicketType(ticket) === 'deposit'
-                            ? `${ticket.skins.length} skins para depositar`
-                            : `${ticket.skins.length} skins para retirar`}
+                          {getTicketType(ticket) === 'help'
+                            ? 'Chat de ayuda en vivo'
+                            : getTicketType(ticket) === 'deposit'
+                              ? `${ticket.skins.length} skins para depositar`
+                              : `${ticket.skins.length} skins para retirar`}
                         </p>
                         <p className="mt-0.5 text-[10px] text-white/35">
                           {new Date(ticket.createdAt).toLocaleString('es-ES')}
                         </p>
                       </div>
-                      <CoinPrice
-                        value={ticket.total}
-                        iconClassName="h-3 w-3"
-                        textClassName="font-display text-xs font-bold text-gold"
-                        className="shrink-0 justify-end"
-                      />
+                      {getTicketType(ticket) !== 'help' && (
+                        <CoinPrice
+                          value={ticket.total}
+                          iconClassName="h-3 w-3"
+                          textClassName="font-display text-xs font-bold text-gold"
+                          className="shrink-0 justify-end"
+                        />
+                      )}
                     </button>
                   ))}
                 </div>
@@ -131,16 +136,21 @@ export function LiveChatsInbox({ open, userId, onClose, onOpenTicket }: Props) {
   );
 }
 
-function TypeBadge({ type }: { type: 'withdraw' | 'deposit' }) {
-  const label = type === 'deposit' ? 'Deposit' : 'Withdraw';
+function TypeBadge({ type }: { type: SupportTicketType }) {
+  const styles = {
+    deposit: 'border-gold/30 bg-gold/10 text-gold',
+    withdraw: 'border-white/20 bg-white/10 text-white/80',
+    help: 'border-win/30 bg-win/10 text-win',
+  } as const;
+  const labels = {
+    deposit: 'Deposit',
+    withdraw: 'Withdraw',
+    help: 'Help',
+  } as const;
+
   return (
-    <span className={`rounded-full border px-2 py-0.5 text-[9px] font-bold uppercase ${
-      type === 'deposit'
-        ? 'border-gold/30 bg-gold/10 text-gold'
-        : 'border-white/20 bg-white/10 text-white/80'
-    }`}
-    >
-      {label}
+    <span className={`rounded-full border px-2 py-0.5 text-[9px] font-bold uppercase ${styles[type]}`}>
+      {labels[type]}
     </span>
   );
 }

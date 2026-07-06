@@ -34,7 +34,9 @@ interface Options {
 
 function buildNewChatPreview(item: AdminInboxItem): string {
   const skinCount = item.ticket.skins.length;
-  if (getTicketType(item.ticket) === 'deposit') {
+  const type = getTicketType(item.ticket);
+  if (type === 'help') return 'Nuevo chat de ayuda';
+  if (type === 'deposit') {
     return skinCount > 0
       ? `Nuevo chat de depósito · ${skinCount} skins`
       : 'Nuevo chat de depósito';

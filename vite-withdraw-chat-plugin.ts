@@ -21,7 +21,7 @@ interface WithdrawTicket {
   userId: string;
   userEmail: string;
   userLabel: string;
-  type?: 'withdraw' | 'deposit';
+  type?: 'withdraw' | 'deposit' | 'help';
   skins: WithdrawSkinSummary[];
   total: number;
   creditTotal?: number;
@@ -225,11 +225,15 @@ export function withdrawChatPlugin(chatsDir: string): Plugin {
               const statusText = body.status === 'completed'
                 ? ticketType === 'deposit'
                   ? 'Deposit completed. The amount has been added to your SALDO.'
-                  : 'Withdrawal completed. The selected skins have been removed from your inventory.'
+                  : ticketType === 'help'
+                    ? 'Support chat closed. Thanks for contacting us.'
+                    : 'Withdrawal completed. The selected skins have been removed from your inventory.'
                 : body.status === 'cancelled'
                   ? ticketType === 'deposit'
                     ? 'Deposit request cancelled.'
-                    : 'Withdrawal request cancelled. Your skins remain in your inventory.'
+                    : ticketType === 'help'
+                      ? 'Support chat cancelled.'
+                      : 'Withdrawal request cancelled. Your skins remain in your inventory.'
                   : 'Request reopened.';
               bundle.messages.push({
                 id: `msg_${now}_sys`,
@@ -249,7 +253,7 @@ export function withdrawChatPlugin(chatsDir: string): Plugin {
 
           if (req.method === 'POST' && url === '/api/withdraw/tickets') {
             const body = JSON.parse(await readBody(req)) as {
-              type?: 'withdraw' | 'deposit';
+              type?: 'withdraw' | 'deposit' | 'help';
               userId: string;
               userEmail: string;
               userLabel: string;
@@ -323,6 +327,36 @@ export function withdrawChatPlugin(chatsDir: string): Plugin {
                 senderRole: 'system',
                 senderLabel: 'System',
                 text: `Deposit request received (${creditLine}).\n\n${skinList}\n\nAn administrator will assist you live. Follow their payment instructions here.`,
+                createdAt: now,
+              }];
+              const bundle: TicketBundle = { ticket, messages };
+              saveBundle(bundle);
+              sendJson(res, 200, bundle);
+              return;
+            }
+
+            if (ticketType === 'help') {
+              const ticketId = `hp_${now}_${Math.random().toString(36).slice(2, 8)}`;
+              const ticket: WithdrawTicket = {
+                id: ticketId,
+                userId: body.userId,
+                userEmail: body.userEmail,
+                userLabel: body.userLabel || body.userEmail,
+                type: 'help',
+                skins: [],
+                total: 0,
+                status: 'open',
+                createdAt: now,
+                updatedAt: now,
+              };
+              const messages: ChatMessage[] = [{
+                id: `msg_${now}_welcome`,
+                ticketId,
+                senderId: 'system',
+                senderEmail: 'system@blox-upgrader',
+                senderRole: 'system',
+                senderLabel: 'System',
+                text: 'Welcome to live support. An administrator will assist you shortly. Describe your question here.',
                 createdAt: now,
               }];
               const bundle: TicketBundle = { ticket, messages };

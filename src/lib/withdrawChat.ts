@@ -4,7 +4,7 @@ import { getDisplayName } from './auth';
 import { formatUSD } from './wheelMath';
 import { getAdminLastReadMap } from './adminChatRead';
 
-export type SupportTicketType = 'withdraw' | 'deposit';
+export type SupportTicketType = 'withdraw' | 'deposit' | 'help';
 export type WithdrawTicketStatus = 'open' | 'completed' | 'cancelled';
 
 export interface WithdrawSkinSummary {
@@ -218,7 +218,38 @@ export async function updateWithdrawTicketStatus(
   });
 }
 
+export async function createHelpTicket(
+  session: Session,
+  userLabel: string,
+): Promise<WithdrawTicketBundle> {
+  return api<WithdrawTicketBundle>('/api/withdraw/tickets', {
+    method: 'POST',
+    body: JSON.stringify({
+      type: 'help',
+      userId: session.userId,
+      userEmail: session.email,
+      userLabel,
+      skins: [],
+      total: 0,
+    }),
+  });
+}
+
+export async function openOrCreateHelpTicket(
+  session: Session,
+  userLabel: string,
+): Promise<string> {
+  const tickets = await fetchUserWithdrawTickets(session.userId);
+  const existing = tickets.find(ticket => getTicketType(ticket) === 'help' && ticket.status === 'open');
+  if (existing) return existing.id;
+  const bundle = await createHelpTicket(session, userLabel);
+  return bundle.ticket.id;
+}
+
 export function formatWithdrawSummary(ticket: WithdrawTicket): string {
+  if (getTicketType(ticket) === 'help') {
+    return 'Live help chat';
+  }
   if (getTicketType(ticket) === 'deposit') {
     const count = ticket.skins.length;
     const names = ticket.skins.map(s => s.name).slice(0, 2).join(' · ');
@@ -232,5 +263,8 @@ export function formatWithdrawSummary(ticket: WithdrawTicket): string {
 }
 
 export function formatTicketTypeLabel(ticket: WithdrawTicket): string {
-  return getTicketType(ticket) === 'deposit' ? 'Deposit' : 'Withdraw';
+  const type = getTicketType(ticket);
+  if (type === 'deposit') return 'Deposit';
+  if (type === 'help') return 'Help';
+  return 'Withdraw';
 }

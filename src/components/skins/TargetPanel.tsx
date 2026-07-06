@@ -3,12 +3,16 @@ import { RARITY, type RarityKey, type Skin } from '../../data/skins';
 import { CoinPrice } from '../ui/CoinPrice';
 import { SkinImage } from './SkinImage';
 
+import { LiveHelpButton } from '../support/LiveHelpButton';
+
 const PAGE_SIZE = 18;
 
 interface Props {
   skins: Skin[];
   selected: Skin | null;
   onSelect: (s: Skin) => void;
+  onLiveHelp?: () => void;
+  liveHelpLoading?: boolean;
 }
 
 function wearShort(wear: string): string {
@@ -22,7 +26,7 @@ function wearShort(wear: string): string {
   return map[wear] ?? wear.slice(0, 2).toUpperCase();
 }
 
-export function TargetPanel({ skins, selected, onSelect }: Props) {
+export function TargetPanel({ skins, selected, onSelect, onLiveHelp, liveHelpLoading }: Props) {
   const [min, setMin] = useState('');
   const [max, setMax] = useState('');
   const [rarity, setRarity] = useState('');
@@ -101,7 +105,7 @@ export function TargetPanel({ skins, selected, onSelect }: Props) {
         </div>
       </div>
 
-      <div className="flex shrink-0 items-center justify-center gap-2 border-t border-white/5 px-3 py-2">
+      <div className="flex shrink-0 items-center justify-center gap-3 border-t border-white/5 px-3 py-2">
         <button
           type="button"
           disabled={safePage <= 0}
@@ -121,6 +125,9 @@ export function TargetPanel({ skins, selected, onSelect }: Props) {
         >
           ›
         </button>
+        {onLiveHelp && (
+          <LiveHelpButton onClick={onLiveHelp} loading={liveHelpLoading} />
+        )}
       </div>
     </section>
   );

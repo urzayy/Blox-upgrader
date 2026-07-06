@@ -104,10 +104,16 @@ export function AdminWithdrawInbox({ open, onClose, onOpenTicket }: Props) {
                           <span className={`rounded-full border px-2 py-0.5 text-[9px] font-bold uppercase ${
                             getTicketType(ticket) === 'deposit'
                               ? 'border-gold/30 bg-gold/10 text-gold'
-                              : 'border-white/20 bg-white/10 text-white/80'
+                              : getTicketType(ticket) === 'help'
+                                ? 'border-win/30 bg-win/10 text-win'
+                                : 'border-white/20 bg-white/10 text-white/80'
                           }`}
                           >
-                            {getTicketType(ticket) === 'deposit' ? 'Deposit' : 'Withdraw'}
+                            {getTicketType(ticket) === 'deposit'
+                              ? 'Deposit'
+                              : getTicketType(ticket) === 'help'
+                                ? 'Help'
+                                : 'Withdraw'}
                           </span>
                           {attentionCount > 0 && (
                             <span className="rounded-full border border-gold/40 bg-gold px-2 py-0.5 text-[9px] font-black text-deep">
@@ -118,8 +124,8 @@ export function AdminWithdrawInbox({ open, onClose, onOpenTicket }: Props) {
                         <p className="truncate text-sm font-semibold text-white">{ticket.userLabel}</p>
                         <p className="truncate text-[10px] text-white/40">{ticket.userEmail}</p>
                         <p className="mt-1 text-[10px] text-white/55">
-                          {getTicketType(ticket) === 'deposit'
-                            ? `${ticket.skins.length} skins · ${ticket.skins.map(s => s.name).slice(0, 2).join(', ')}${ticket.skins.length > 2 ? '…' : ''}`
+                          {getTicketType(ticket) === 'help'
+                            ? 'Live help chat'
                             : `${ticket.skins.length} skins · ${ticket.skins.map(s => s.name).slice(0, 2).join(', ')}${ticket.skins.length > 2 ? '…' : ''}`}
                         </p>
                       </div>
@@ -129,12 +135,14 @@ export function AdminWithdrawInbox({ open, onClose, onOpenTicket }: Props) {
                             {attentionCount > 9 ? '9+' : attentionCount}
                           </span>
                         )}
-                        <CoinPrice
-                          value={ticket.total}
-                          iconClassName="h-3 w-3 justify-end"
-                          textClassName="font-display text-xs font-bold text-gold"
-                          className="justify-end"
-                        />
+                        {getTicketType(ticket) !== 'help' && (
+                          <CoinPrice
+                            value={ticket.total}
+                            iconClassName="h-3 w-3 justify-end"
+                            textClassName="font-display text-xs font-bold text-gold"
+                            className="justify-end"
+                          />
+                        )}
                         <p className="mt-1 text-[9px] text-white/30">
                           {new Date(ticket.updatedAt).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}
                         </p>
