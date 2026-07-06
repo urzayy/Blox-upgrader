@@ -15,6 +15,20 @@ export interface PlayerStateSyncResult {
   state?: PlayerStateSnapshot;
 }
 
+export async function fetchPendingAccountReset(email: string): Promise<number | null> {
+  try {
+    const res = await fetch(
+      `/api/player-state/reset-pending?email=${encodeURIComponent(email.trim().toLowerCase())}`,
+    );
+    if (!res.ok) return null;
+    const data = await res.json() as { resetAt?: number | null };
+    const resetAt = Number(data.resetAt ?? 0);
+    return Number.isFinite(resetAt) && resetAt > 0 ? resetAt : null;
+  } catch {
+    return null;
+  }
+}
+
 export async function syncPlayerState(payload: {
   userId: string;
   email: string;

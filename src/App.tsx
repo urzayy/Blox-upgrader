@@ -11,7 +11,7 @@ import { ParticleField } from './components/effects/ParticleField';
 import { LoginModal } from './components/auth/LoginModal';
 import { TARGET_POOL, sortSkinsByPriceDesc, type Skin, type FeedItem } from './data/skins';
 import { useActivityLog } from './hooks/useActivityLog';
-import { syncPlayerState } from './lib/playerStateApi';
+import { syncPlayerState, fetchPendingAccountReset } from './lib/playerStateApi';
 import { logUpgradeResult } from './lib/userActivityLog';
 import { calcProbability, formatUSD, type RollResult } from './lib/wheelMath';
 import { applyUpgradeToInventory, grantSkinToInventory, inventoryTotal, MAX_INPUT_SKINS, purchaseSkinCopies, sellSkinFromInventory, withdrawSkinsFromInventory } from './lib/inventory';
@@ -75,6 +75,7 @@ export default function App() {
   const initialWithdrawSyncRef = useRef(true);
   const giftSyncInFlightRef = useRef(false);
   const balanceGiftSyncInFlightRef = useRef(false);
+  const lastResetAckRef = useRef<number | null>(null);
   inventoryRef.current = inventory;
   balanceRef.current = balance;
 
@@ -104,6 +105,8 @@ export default function App() {
   const wipeLocalPlayerProgress = useCallback((targetUserId: string) => {
     clearInventoryForUserId(targetUserId);
     clearBalanceForUserId(targetUserId);
+    inventoryRef.current = [];
+    balanceRef.current = 0;
     setInventory([]);
     setBalance(0);
     setInputSkins([]);
@@ -115,6 +118,7 @@ export default function App() {
   const handleAccountCleared = useCallback((email: string) => {
     if (!user) return;
     if (normalizeGrantEmail(user.email) !== normalizeGrantEmail(email)) return;
+    lastResetAckRef.current = Date.now();
     wipeLocalPlayerProgress(user.userId);
   }, [user, wipeLocalPlayerProgress]);
 
@@ -132,6 +136,7 @@ export default function App() {
       resetAck,
     });
     if (result.forceReset && result.resetAt) {
+      lastResetAckRef.current = result.resetAt;
       wipeLocalPlayerProgress(user.userId);
       await syncPlayerState({
         userId: user.userId,
@@ -141,6 +146,20 @@ export default function App() {
         resetAck: result.resetAt,
       });
     }
+  }, [user, wipeLocalPlayerProgress]);
+
+  const applyPendingAccountReset = useCallback(async (resetAt: number) => {
+    if (!user) return;
+    if (lastResetAckRef.current === resetAt) return;
+    lastResetAckRef.current = resetAt;
+    wipeLocalPlayerProgress(user.userId);
+    await syncPlayerState({
+      userId: user.userId,
+      email: user.email,
+      balance: 0,
+      inventory: [],
+      resetAck: resetAt,
+    });
   }, [user, wipeLocalPlayerProgress]);
 
   const applyPresetTarget = useCallback((inputs: Skin[], mult: number | null, capVal: number | null) => {
@@ -508,6 +527,20 @@ export default function App() {
     }, 800);
     return () => clearTimeout(timer);
   }, [user, inventory, balance, pushPlayerStateSync]);
+
+  useEffect(() => {
+    if (!user || !documentVisible) return;
+
+    const pollReset = async () => {
+      const resetAt = await fetchPendingAccountReset(user.email);
+      if (!resetAt || lastResetAckRef.current === resetAt) return;
+      await applyPendingAccountReset(resetAt);
+    };
+
+    void pollReset();
+    const id = setInterval(() => { void pollReset(); }, 500);
+    return () => clearInterval(id);
+  }, [user, documentVisible, applyPendingAccountReset]);
 
   useEffect(() => {
     if (!documentVisible) return;

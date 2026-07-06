@@ -156,6 +156,16 @@ export function userDbPlugin(dbDir: string): Plugin {
             return;
           }
 
+          if (url === '/api/player-state/reset-pending' && req.method === 'GET') {
+            const email = new URL(req.url ?? '', 'http://local').searchParams.get('email')?.trim().toLowerCase() ?? '';
+            if (!email) {
+              sendJson(res, 400, { error: 'email required' });
+              return;
+            }
+            sendJson(res, 200, { resetAt: resetMarkerStore.getResetAt(email) });
+            return;
+          }
+
           if (url === '/api/admin/player-state' && req.method === 'GET') {
             const params = new URL(req.url ?? '', 'http://local').searchParams;
             const adminEmail = params.get('adminEmail') ?? '';

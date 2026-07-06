@@ -387,6 +387,15 @@ app.post('/api/player-state/sync', async (req, res) => {
   }
 });
 
+app.get('/api/player-state/reset-pending', (req, res) => {
+  const email = req.query.email?.trim().toLowerCase();
+  if (!email) {
+    sendJson(res, 400, { error: 'email required' });
+    return;
+  }
+  sendJson(res, 200, { resetAt: resetMarkerStore.getResetAt(email) });
+});
+
 app.get('/api/admin/player-state', async (req, res) => {
   try {
     const adminEmail = req.query.adminEmail?.trim() ?? '';
