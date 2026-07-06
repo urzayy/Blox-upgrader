@@ -11,6 +11,7 @@ import {
 import { createUserStore } from './server/lib/userStore.mjs';
 import { createPlayerStateStore } from './server/lib/playerStateStore.mjs';
 import { clearAccountByEmail as resetAccountByEmail } from './server/lib/accountReset.mjs';
+import { createAccountResetMarkerStore } from './server/lib/accountResetMarker.mjs';
 
 dotenv.config();
 
@@ -20,6 +21,7 @@ const DIST = path.join(ROOT, 'dist');
 const DATA_DIR = process.env.DATA_DIR || ROOT;
 const USER_DB_DIR = process.env.USER_DB_DIR || path.join(DATA_DIR, 'user-db');
 const PLAYER_STATE_DIR = process.env.PLAYER_STATE_DIR || path.join(DATA_DIR, 'player-state');
+const ACCOUNT_RESETS_DIR = process.env.ACCOUNT_RESETS_DIR || path.join(DATA_DIR, 'account-resets');
 const LOGS_DIR = process.env.USER_LOGS_DIR || path.join(DATA_DIR, 'user-logs');
 const CHATS_DIR = process.env.CHATS_DIR || path.join(DATA_DIR, 'withdraw-chats');
 const GRANTS_DIR = process.env.GRANTS_DIR || path.join(DATA_DIR, 'inventory-grants');
@@ -32,12 +34,13 @@ const SITE_URL = process.env.SITE_URL || `http://localhost:${PORT}`;
 const BASE_TOTAL_UPGRADES = 13_200;
 const MIN_DEPOSIT_TOTAL = 40;
 
-for (const dir of [LOGS_DIR, USER_DB_DIR, path.join(USER_DB_DIR, 'events'), PLAYER_STATE_DIR, CHATS_DIR, GRANTS_DIR, BALANCE_GRANTS_DIR, STATE_DIR]) {
+for (const dir of [LOGS_DIR, USER_DB_DIR, path.join(USER_DB_DIR, 'events'), PLAYER_STATE_DIR, ACCOUNT_RESETS_DIR, CHATS_DIR, GRANTS_DIR, BALANCE_GRANTS_DIR, STATE_DIR]) {
   if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
 }
 
 const userStore = createUserStore({ userDbDir: USER_DB_DIR });
 const playerStateStore = createPlayerStateStore({ playerStateDir: PLAYER_STATE_DIR });
+const resetMarkerStore = createAccountResetMarkerStore(ACCOUNT_RESETS_DIR);
 let storageStatus = { ok: false, path: userStore.type === 'supabase' ? 'supabase' : USER_DB_DIR };
 
 async function refreshStorageStatus() {
@@ -350,11 +353,29 @@ app.post('/api/user-log', async (req, res) => {
 
 app.post('/api/player-state/sync', async (req, res) => {
   try {
-    const { userId, email, balance, inventory } = req.body ?? {};
+    const { userId, email, balance, inventory, resetAck } = req.body ?? {};
     if (!userId || !email) {
       sendJson(res, 400, { error: 'bad request' });
       return;
     }
+    const normalizedEmail = String(email).trim().toLowerCase();
+    const pendingResetAt = resetMarkerStore.getResetAt(normalizedEmail);
+
+    if (pendingResetAt && Number(resetAck) !== pendingResetAt) {
+      const state = await playerStateStore.savePlayerState({
+        userId,
+        email: normalizedEmail,
+        balance: 0,
+        inventory: [],
+      });
+      sendJson(res, 200, { ok: true, forceReset: true, resetAt: pendingResetAt, state });
+      return;
+    }
+
+    if (pendingResetAt && Number(resetAck) === pendingResetAt) {
+      resetMarkerStore.clearReset(normalizedEmail);
+    }
+
     const state = await playerStateStore.savePlayerState({ userId, email, balance, inventory });
     sendJson(res, 200, { ok: true, state });
   } catch (error) {
@@ -407,6 +428,7 @@ app.post('/api/admin/clear-account', async (req, res) => {
     const result = await resetAccountByEmail(email, {
       userStore,
       playerStateStore,
+      resetMarkerStore,
       logsDir: LOGS_DIR,
       grantsDir: GRANTS_DIR,
       balanceGrantsDir: BALANCE_GRANTS_DIR,

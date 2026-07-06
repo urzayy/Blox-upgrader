@@ -34,6 +34,7 @@ function clearWithdrawChatsForEmail(chatsDir, email) {
 export async function clearAccountByEmail(email, {
   userStore,
   playerStateStore,
+  resetMarkerStore,
   logsDir,
   grantsDir,
   balanceGrantsDir,
@@ -47,7 +48,7 @@ export async function clearAccountByEmail(email, {
     throw new Error('Cannot reset admin accounts');
   }
 
-  const userResult = await userStore.clearUserByEmail(normalizedEmail);
+  const resetAt = resetMarkerStore?.markReset(normalizedEmail) ?? Date.now();
   await playerStateStore.clearByEmail(normalizedEmail);
 
   deleteFileIfExists(path.join(logsDir, `${sanitizeEmail(normalizedEmail)}.txt`));
@@ -55,11 +56,17 @@ export async function clearAccountByEmail(email, {
   deleteFileIfExists(path.join(balanceGrantsDir, `${sanitizeEmail(normalizedEmail)}.json`));
   const chatsRemoved = clearWithdrawChatsForEmail(chatsDir, normalizedEmail);
 
+  const userResult = await userStore.clearUserByEmail(normalizedEmail);
+  await playerStateStore.clearByEmail(normalizedEmail);
+
   return {
     ok: true,
     email: normalizedEmail,
     userId: userResult.userId,
     clearedAccount: userResult.cleared,
     chatsRemoved,
+    resetAt,
+    balance: 0,
+    inventoryCount: 0,
   };
 }

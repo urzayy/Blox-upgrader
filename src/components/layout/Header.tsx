@@ -32,6 +32,7 @@ interface Props {
   onDepositRequest: (items: DepositItem[]) => Promise<string | null>;
   onSupportTicketCompleted: (ticket: WithdrawTicket) => void;
   onAdminGiftSent?: (targetEmail: string, skin: Skin, quantity: number) => void;
+  onAccountCleared?: (email: string) => void;
 }
 
 export function Header({
@@ -48,6 +49,7 @@ export function Header({
   onDepositRequest,
   onSupportTicketCompleted,
   onAdminGiftSent,
+  onAccountCleared,
 }: Props) {
   const { user, profileLabel, openLogin, isAdmin } = useAuth();
   const { log } = useActivityLog();
@@ -191,6 +193,7 @@ export function Header({
           open={clearOpen}
           adminEmail={user.email}
           onClose={() => setClearOpen(false)}
+          onAccountCleared={onAccountCleared}
         />
       )}
       {user && isAdmin && (

@@ -15,8 +15,9 @@ import { syncPlayerState } from './lib/playerStateApi';
 import { logUpgradeResult } from './lib/userActivityLog';
 import { calcProbability, formatUSD, type RollResult } from './lib/wheelMath';
 import { applyUpgradeToInventory, grantSkinToInventory, inventoryTotal, MAX_INPUT_SKINS, purchaseSkinCopies, sellSkinFromInventory, withdrawSkinsFromInventory } from './lib/inventory';
-import { loadInventory, saveInventory } from './lib/inventoryStorage';
-import { loadBalance, saveBalance } from './lib/balanceStorage';
+import { loadInventory, saveInventory, clearInventoryForUserId } from './lib/inventoryStorage';
+import { loadBalance, saveBalance, clearBalanceForUserId } from './lib/balanceStorage';
+import { normalizeGrantEmail } from './lib/inventoryGrants';
 import { BASE_TOTAL_UPGRADES } from './lib/feed';
 import { applySiteState, fetchSiteState, publishFeedEvent } from './lib/siteStateApi';
 import { findTargetForPreset } from './lib/upgradePresets';
@@ -99,6 +100,48 @@ export default function App() {
     saveInventory(inventory, userId);
     authLogout();
   }, [inventory, userId, authLogout]);
+
+  const wipeLocalPlayerProgress = useCallback((targetUserId: string) => {
+    clearInventoryForUserId(targetUserId);
+    clearBalanceForUserId(targetUserId);
+    setInventory([]);
+    setBalance(0);
+    setInputSkins([]);
+    setTargetSkin(null);
+    setMultiplier(null);
+    setCap(null);
+  }, []);
+
+  const handleAccountCleared = useCallback((email: string) => {
+    if (!user) return;
+    if (normalizeGrantEmail(user.email) !== normalizeGrantEmail(email)) return;
+    wipeLocalPlayerProgress(user.userId);
+  }, [user, wipeLocalPlayerProgress]);
+
+  const pushPlayerStateSync = useCallback(async (
+    nextInventory: Skin[],
+    nextBalance: number,
+    resetAck?: number,
+  ) => {
+    if (!user) return;
+    const result = await syncPlayerState({
+      userId: user.userId,
+      email: user.email,
+      balance: nextBalance,
+      inventory: nextInventory,
+      resetAck,
+    });
+    if (result.forceReset && result.resetAt) {
+      wipeLocalPlayerProgress(user.userId);
+      await syncPlayerState({
+        userId: user.userId,
+        email: user.email,
+        balance: 0,
+        inventory: [],
+        resetAck: result.resetAt,
+      });
+    }
+  }, [user, wipeLocalPlayerProgress]);
 
   const applyPresetTarget = useCallback((inputs: Skin[], mult: number | null, capVal: number | null) => {
     const total = inventoryTotal(inputs);
@@ -455,26 +498,16 @@ export default function App() {
 
   useEffect(() => {
     if (!user) return;
-    void syncPlayerState({
-      userId: user.userId,
-      email: user.email,
-      balance,
-      inventory,
-    });
-  }, [user?.userId]);
+    void pushPlayerStateSync(inventory, balance);
+  }, [user?.userId, pushPlayerStateSync]);
 
   useEffect(() => {
     if (!user) return;
     const timer = setTimeout(() => {
-      void syncPlayerState({
-        userId: user.userId,
-        email: user.email,
-        balance,
-        inventory,
-      });
+      void pushPlayerStateSync(inventory, balance);
     }, 800);
     return () => clearTimeout(timer);
-  }, [user, inventory, balance]);
+  }, [user, inventory, balance, pushPlayerStateSync]);
 
   useEffect(() => {
     if (!documentVisible) return;
@@ -597,6 +630,7 @@ export default function App() {
           onWithdrawRequest={handleWithdrawRequest}
           onDepositRequest={handleDepositRequest}
           onSupportTicketCompleted={handleSupportTicketCompleted}
+          onAccountCleared={handleAccountCleared}
         />
 
         <div className="mx-auto flex min-h-0 w-full max-w-[1920px] flex-1 gap-2 px-2 pb-2 lg:px-4">

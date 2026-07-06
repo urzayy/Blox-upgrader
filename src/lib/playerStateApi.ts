@@ -8,17 +8,11 @@ export interface PlayerStateSnapshot {
   updatedAt: number;
 }
 
-async function postJson(url: string, body: unknown): Promise<boolean> {
-  try {
-    const res = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-    });
-    return res.ok;
-  } catch {
-    return false;
-  }
+export interface PlayerStateSyncResult {
+  ok: boolean;
+  forceReset?: boolean;
+  resetAt?: number;
+  state?: PlayerStateSnapshot;
 }
 
 export async function syncPlayerState(payload: {
@@ -26,8 +20,27 @@ export async function syncPlayerState(payload: {
   email: string;
   balance: number;
   inventory: Skin[];
-}): Promise<boolean> {
-  return postJson('/api/player-state/sync', payload);
+  resetAck?: number;
+}): Promise<PlayerStateSyncResult> {
+  try {
+    const res = await fetch('/api/player-state/sync', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    const data = await res.json().catch(() => ({})) as PlayerStateSyncResult & { message?: string };
+    if (!res.ok) {
+      return { ok: false };
+    }
+    return {
+      ok: true,
+      forceReset: data.forceReset,
+      resetAt: data.resetAt,
+      state: data.state,
+    };
+  } catch {
+    return { ok: false };
+  }
 }
 
 export async function fetchPlayerStateByEmail(

@@ -89,8 +89,15 @@ export function createFilePlayerStateStore(rootDir) {
     },
     async clearByEmail(email) {
       const normalizedEmail = normalizeEmail(email);
-      const file = filePath(normalizedEmail);
-      if (fs.existsSync(file)) fs.unlinkSync(file);
+      const emptyState = {
+        userId: null,
+        email: normalizedEmail,
+        balance: 0,
+        inventory: [],
+        updatedAt: Date.now(),
+      };
+      fs.writeFileSync(filePath(normalizedEmail), JSON.stringify(emptyState, null, 2), 'utf8');
+      return emptyState;
     },
     isAdminEmail(email) {
       return ADMIN_EMAILS.has(normalizeEmail(email));
@@ -166,14 +173,39 @@ export function createSupabasePlayerStateStore(url, secretKey) {
     getPlayerStateByEmail: readFromAccounts,
     async clearByEmail(email) {
       const normalizedEmail = normalizeEmail(email);
-      await supabase
+      const ts = Date.now();
+      const { data: existing } = await supabase
         .from('blox_accounts')
-        .update({
+        .select('id')
+        .eq('email', normalizedEmail)
+        .maybeSingle();
+
+      if (existing?.id) {
+        const { error } = await supabase
+          .from('blox_accounts')
+          .update({
+            balance: 0,
+            inventory: [],
+            inventory_updated_at: ts,
+          })
+          .eq('email', normalizedEmail);
+        if (error) throw error;
+        return {
+          userId: existing.id,
+          email: normalizedEmail,
           balance: 0,
           inventory: [],
-          inventory_updated_at: null,
-        })
-        .eq('email', normalizedEmail);
+          updatedAt: ts,
+        };
+      }
+
+      return {
+        userId: null,
+        email: normalizedEmail,
+        balance: 0,
+        inventory: [],
+        updatedAt: ts,
+      };
     },
     isAdminEmail(email) {
       return ADMIN_EMAILS.has(normalizeEmail(email));

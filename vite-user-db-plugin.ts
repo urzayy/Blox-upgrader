@@ -5,6 +5,7 @@ import type { Plugin } from 'vite';
 import { createUserStore } from './server/lib/userStore.mjs';
 import { createPlayerStateStore } from './server/lib/playerStateStore.mjs';
 import { clearAccountByEmail as resetAccountByEmail } from './server/lib/accountReset.mjs';
+import { createAccountResetMarkerStore } from './server/lib/accountResetMarker.mjs';
 
 dotenv.config();
 
@@ -32,6 +33,8 @@ export function userDbPlugin(dbDir: string): Plugin {
   const userStore = createUserStore({ userDbDir: dbDir });
   const playerStateDir = path.resolve(path.dirname(dbDir), 'player-state');
   const playerStateStore = createPlayerStateStore({ playerStateDir });
+  const accountResetsDir = path.resolve(path.dirname(dbDir), 'account-resets');
+  const resetMarkerStore = createAccountResetMarkerStore(accountResetsDir);
   const logsDir = path.resolve(path.dirname(dbDir), 'user-logs');
   const chatsDir = path.resolve(path.dirname(dbDir), 'withdraw-chats');
   const grantsDir = path.resolve(path.dirname(dbDir), 'inventory-grants');
@@ -124,11 +127,30 @@ export function userDbPlugin(dbDir: string): Plugin {
               email?: string;
               balance?: number;
               inventory?: unknown;
+              resetAck?: number;
             };
             if (!body.userId || !body.email) {
               sendJson(res, 400, { error: 'bad request' });
               return;
             }
+            const normalizedEmail = String(body.email).trim().toLowerCase();
+            const pendingResetAt = resetMarkerStore.getResetAt(normalizedEmail);
+
+            if (pendingResetAt && Number(body.resetAck) !== pendingResetAt) {
+              const state = await playerStateStore.savePlayerState({
+                userId: body.userId,
+                email: normalizedEmail,
+                balance: 0,
+                inventory: [],
+              });
+              sendJson(res, 200, { ok: true, forceReset: true, resetAt: pendingResetAt, state });
+              return;
+            }
+
+            if (pendingResetAt && Number(body.resetAck) === pendingResetAt) {
+              resetMarkerStore.clearReset(normalizedEmail);
+            }
+
             const state = await playerStateStore.savePlayerState(body);
             sendJson(res, 200, { ok: true, state });
             return;
@@ -168,6 +190,7 @@ export function userDbPlugin(dbDir: string): Plugin {
             const result = await resetAccountByEmail(body.email, {
               userStore,
               playerStateStore,
+              resetMarkerStore,
               logsDir,
               grantsDir,
               balanceGrantsDir,

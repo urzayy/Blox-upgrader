@@ -7,9 +7,10 @@ interface Props {
   open: boolean;
   adminEmail: string;
   onClose: () => void;
+  onAccountCleared?: (email: string) => void;
 }
 
-export function AdminClearPanel({ open, adminEmail, onClose }: Props) {
+export function AdminClearPanel({ open, adminEmail, onClose, onAccountCleared }: Props) {
   const [targetEmail, setTargetEmail] = useState('');
   const [confirmText, setConfirmText] = useState('');
   const [loading, setLoading] = useState(false);
@@ -47,10 +48,11 @@ export function AdminClearPanel({ open, adminEmail, onClose }: Props) {
     setSuccess('');
     try {
       const result = await clearAccountByEmail(adminEmail, email);
+      onAccountCleared?.(result.email);
       setSuccess(
         result.clearedAccount
-          ? `Cuenta de ${result.email} borrada por completo. Chats eliminados: ${result.chatsRemoved}.`
-          : `No había cuenta registrada para ${result.email}, pero se limpiaron datos locales y chats (${result.chatsRemoved}).`,
+          ? `Cuenta de ${result.email} borrada. Inventario: 0 skins. Saldo: 0 coins. Chats eliminados: ${result.chatsRemoved}.`
+          : `Datos de ${result.email} reseteados. Inventario y saldo a 0. Chats eliminados: ${result.chatsRemoved}.`,
       );
       setTargetEmail('');
       setConfirmText('');
@@ -93,7 +95,7 @@ export function AdminClearPanel({ open, adminEmail, onClose }: Props) {
                   Clear Account
                 </h2>
                 <p className="text-[11px] text-white/45">
-                  Borra cuenta, inventario, saldo, logs, grants y chats del correo indicado
+                  Borra cuenta, inventario (0 skins), saldo (0 coins), logs, grants y chats
                 </p>
               </div>
               <button

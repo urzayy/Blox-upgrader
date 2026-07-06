@@ -41,3 +41,7 @@ export function saveBalance(balance: number, userId: string | null = null): void
     /* storage blocked */
   }
 }
+
+export function clearBalanceForUserId(userId: string): void {
+  saveBalance(0, userId);
+}
