@@ -301,6 +301,42 @@ export function createUserDb(rootDir = process.env.USER_DB_DIR || defaultDbRoot(
       .sort((a, b) => a.localeCompare(b));
   }
 
+  function clearUserByEmail(email) {
+    const normalizedEmail = normalizeEmail(email);
+    if (ADMIN_EMAILS.has(normalizedEmail)) {
+      throw new Error('Cannot reset admin accounts');
+    }
+
+    const store = loadAccountsStore();
+    let userId = store.byEmail[normalizedEmail] ?? null;
+    if (!userId) {
+      const user = getUserByEmail(normalizedEmail);
+      userId = user?.id ?? null;
+    }
+
+    if (userId && store.accounts[userId]) {
+      delete store.accounts[userId];
+      saveAccountsStore(store);
+    }
+    if (store.byEmail[normalizedEmail]) {
+      delete store.byEmail[normalizedEmail];
+      saveAccountsStore(store);
+    }
+
+    const index = loadUsersIndex();
+    if (userId && index.users[userId]) {
+      delete index.users[userId];
+      saveUsersIndex(index);
+    }
+
+    if (userId) {
+      const evPath = eventsPath(userId);
+      if (fs.existsSync(evPath)) fs.unlinkSync(evPath);
+    }
+
+    return { cleared: Boolean(userId), userId };
+  }
+
   return {
     rootDir,
     upsertUser,
@@ -313,6 +349,7 @@ export function createUserDb(rootDir = process.env.USER_DB_DIR || defaultDbRoot(
     getUserByEmail,
     getUserEvents,
     exportUserTxt,
+    clearUserByEmail,
     isAdminEmail,
     ADMIN_EMAILS: [...ADMIN_EMAILS],
   };

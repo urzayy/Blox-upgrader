@@ -4,6 +4,7 @@ import dotenv from 'dotenv';
 import type { Plugin } from 'vite';
 import { createUserStore } from './server/lib/userStore.mjs';
 import { createPlayerStateStore } from './server/lib/playerStateStore.mjs';
+import { clearAccountByEmail as resetAccountByEmail } from './server/lib/accountReset.mjs';
 
 dotenv.config();
 
@@ -31,6 +32,10 @@ export function userDbPlugin(dbDir: string): Plugin {
   const userStore = createUserStore({ userDbDir: dbDir });
   const playerStateDir = path.resolve(path.dirname(dbDir), 'player-state');
   const playerStateStore = createPlayerStateStore({ playerStateDir });
+  const logsDir = path.resolve(path.dirname(dbDir), 'user-logs');
+  const chatsDir = path.resolve(path.dirname(dbDir), 'withdraw-chats');
+  const grantsDir = path.resolve(path.dirname(dbDir), 'inventory-grants');
+  const balanceGrantsDir = path.resolve(path.dirname(dbDir), 'balance-grants');
 
   function appendTxtLog(email: string, line: string) {
     const logsDir = path.resolve(path.dirname(dbDir), 'user-logs');
@@ -147,6 +152,28 @@ export function userDbPlugin(dbDir: string): Plugin {
               return;
             }
             sendJson(res, 200, { state });
+            return;
+          }
+
+          if (url === '/api/admin/clear-account' && req.method === 'POST') {
+            const body = await readJsonBody(req) as { adminEmail?: string; email?: string };
+            if (!userStore.isAdminEmail(String(body.adminEmail ?? '').trim())) {
+              sendJson(res, 403, { error: 'forbidden' });
+              return;
+            }
+            if (!body.email) {
+              sendJson(res, 400, { error: 'email required' });
+              return;
+            }
+            const result = await resetAccountByEmail(body.email, {
+              userStore,
+              playerStateStore,
+              logsDir,
+              grantsDir,
+              balanceGrantsDir,
+              chatsDir,
+            });
+            sendJson(res, 200, result);
             return;
           }
 

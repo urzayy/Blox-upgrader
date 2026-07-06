@@ -295,6 +295,28 @@ export function createSupabaseDb(url, secretKey) {
     return { ok: true, path: 'supabase' };
   }
 
+  async function clearUserByEmail(email) {
+    const normalizedEmail = normalizeEmail(email);
+    if (ADMIN_EMAILS.has(normalizedEmail)) {
+      throw new Error('Cannot reset admin accounts');
+    }
+
+    const { data: account } = await supabase
+      .from('blox_accounts')
+      .select('id')
+      .eq('email', normalizedEmail)
+      .maybeSingle();
+
+    const userId = account?.id ?? null;
+    if (userId) {
+      await supabase.from('blox_user_events').delete().eq('user_id', userId);
+    }
+    await supabase.from('blox_user_events').delete().eq('email', normalizedEmail);
+    await supabase.from('blox_accounts').delete().eq('email', normalizedEmail);
+
+    return { cleared: Boolean(userId), userId };
+  }
+
   function isAdminEmail(email) {
     return ADMIN_EMAILS.has(normalizeEmail(email));
   }
@@ -312,6 +334,7 @@ export function createSupabaseDb(url, secretKey) {
     getUserEvents,
     exportUserTxt,
     checkConnection,
+    clearUserByEmail,
     isAdminEmail,
     ADMIN_EMAILS: [...ADMIN_EMAILS],
   };

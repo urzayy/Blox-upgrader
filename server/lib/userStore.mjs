@@ -21,6 +21,7 @@ function wrapSync(db) {
     getUser: async (userId) => db.getUser(userId),
     getUserEvents: async (userId, limit) => db.getUserEvents(userId, limit),
     exportUserTxt: async (userId) => db.exportUserTxt(userId),
+    clearUserByEmail: async (email) => db.clearUserByEmail(email),
     isAdminEmail: (email) => db.isAdminEmail(email),
     ADMIN_EMAILS: db.ADMIN_EMAILS,
   };

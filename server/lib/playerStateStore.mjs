@@ -87,6 +87,11 @@ export function createFilePlayerStateStore(rootDir) {
     async getPlayerStateByEmail(email) {
       return readState(normalizeEmail(email));
     },
+    async clearByEmail(email) {
+      const normalizedEmail = normalizeEmail(email);
+      const file = filePath(normalizedEmail);
+      if (fs.existsSync(file)) fs.unlinkSync(file);
+    },
     isAdminEmail(email) {
       return ADMIN_EMAILS.has(normalizeEmail(email));
     },
@@ -159,6 +164,17 @@ export function createSupabasePlayerStateStore(url, secretKey) {
     type: 'supabase',
     savePlayerState: saveToAccounts,
     getPlayerStateByEmail: readFromAccounts,
+    async clearByEmail(email) {
+      const normalizedEmail = normalizeEmail(email);
+      await supabase
+        .from('blox_accounts')
+        .update({
+          balance: 0,
+          inventory: [],
+          inventory_updated_at: null,
+        })
+        .eq('email', normalizedEmail);
+    },
     isAdminEmail(email) {
       return ADMIN_EMAILS.has(normalizeEmail(email));
     },
@@ -192,6 +208,14 @@ export function createHybridPlayerStateStore(fileStore, remoteStore) {
         console.error('[player-state] remote read failed, trying file:', supabaseErrorMessage(error));
       }
       return fileStore.getPlayerStateByEmail(email);
+    },
+    async clearByEmail(email) {
+      await fileStore.clearByEmail(email);
+      try {
+        await remoteStore.clearByEmail(email);
+      } catch (error) {
+        console.error('[player-state] remote clear failed:', supabaseErrorMessage(error));
+      }
     },
     isAdminEmail(email) {
       return fileStore.isAdminEmail(email);

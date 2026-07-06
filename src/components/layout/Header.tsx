@@ -9,6 +9,7 @@ import { AdminGiftMoneyPanel } from '../admin/AdminGiftMoneyPanel';
 import { AdminWithdrawInbox } from '../admin/AdminWithdrawInbox';
 import { AdminUserDbPanel } from '../admin/AdminUserDbPanel';
 import { AdminSeePanel } from '../admin/AdminSeePanel';
+import { AdminClearPanel } from '../admin/AdminClearPanel';
 import { WithdrawModal } from '../withdraw/WithdrawModal';
 import { WithdrawChatModal } from '../withdraw/WithdrawChatModal';
 import { DepositModal, type DepositItem } from '../deposit/DepositModal';
@@ -62,6 +63,7 @@ export function Header({
   const [adminInboxOpen, setAdminInboxOpen] = useState(false);
   const [userDbOpen, setUserDbOpen] = useState(false);
   const [seeOpen, setSeeOpen] = useState(false);
+  const [clearOpen, setClearOpen] = useState(false);
   const [openLiveChatCount, setOpenLiveChatCount] = useState(0);
   const [adminUnreadChatCount, setAdminUnreadChatCount] = useState(0);
 
@@ -185,6 +187,13 @@ export function Header({
         onOpenTicket={openSupportChat}
       />
       {user && isAdmin && (
+        <AdminClearPanel
+          open={clearOpen}
+          adminEmail={user.email}
+          onClose={() => setClearOpen(false)}
+        />
+      )}
+      {user && isAdmin && (
         <AdminSeePanel
           open={seeOpen}
           adminEmail={user.email}
@@ -229,9 +238,24 @@ export function Header({
         </div>
       </div>
 
-      <div className="flex items-center gap-2 justify-self-center">
+      <div className="flex min-w-0 items-center gap-2 justify-self-center overflow-x-auto">
         {isAdmin && (
           <>
+            <button
+              type="button"
+              onClick={() => {
+                log('CLICK.open_admin_clear');
+                setClearOpen(true);
+              }}
+              title="Resetear cuenta por correo — borra todo"
+              className={`shrink-0 rounded-lg border-2 px-2.5 py-2 font-display text-[10px] font-black uppercase tracking-wider transition ${
+                clearOpen
+                  ? 'border-[#ff3344] bg-[#ff3344] text-white shadow-[0_0_20px_rgba(255,51,68,0.45)]'
+                  : 'border-[#ff3344] bg-[#ff3344]/20 text-[#ff6677] hover:bg-[#ff3344]/35 hover:text-white'
+              }`}
+            >
+              CLEAR
+            </button>
             <button
               type="button"
               onClick={() => {
@@ -239,7 +263,7 @@ export function Header({
                 setSeeOpen(true);
               }}
               title="Ver inventario de un jugador por correo"
-              className={`rounded-lg border px-2 py-2 font-display text-[10px] font-bold uppercase tracking-wider transition ${
+              className={`shrink-0 rounded-lg border px-2 py-2 font-display text-[10px] font-bold uppercase tracking-wider transition ${
                 seeOpen
                   ? 'border-white/40 bg-white/15 text-white shadow-[0_0_20px_rgba(255,255,255,0.15)]'
                   : 'border-white/25 bg-white/10 text-white/90 hover:border-white/40 hover:bg-white/15'

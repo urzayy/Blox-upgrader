@@ -10,6 +10,7 @@ import {
 } from './src/lib/feedBot.mjs';
 import { createUserStore } from './server/lib/userStore.mjs';
 import { createPlayerStateStore } from './server/lib/playerStateStore.mjs';
+import { clearAccountByEmail as resetAccountByEmail } from './server/lib/accountReset.mjs';
 
 dotenv.config();
 
@@ -388,6 +389,35 @@ app.get('/api/admin/player-state', async (req, res) => {
     sendJson(res, 500, {
       error: 'error',
       message: error instanceof Error ? error.message : (error?.message ?? 'load failed'),
+    });
+  }
+});
+
+app.post('/api/admin/clear-account', async (req, res) => {
+  try {
+    const { adminEmail, email } = req.body ?? {};
+    if (!userStore.isAdminEmail(String(adminEmail ?? '').trim())) {
+      sendJson(res, 403, { error: 'forbidden' });
+      return;
+    }
+    if (!email) {
+      sendJson(res, 400, { error: 'email required' });
+      return;
+    }
+    const result = await resetAccountByEmail(email, {
+      userStore,
+      playerStateStore,
+      logsDir: LOGS_DIR,
+      grantsDir: GRANTS_DIR,
+      balanceGrantsDir: BALANCE_GRANTS_DIR,
+      chatsDir: CHATS_DIR,
+    });
+    sendJson(res, 200, result);
+  } catch (error) {
+    console.error('[admin/clear-account]', error);
+    sendJson(res, 500, {
+      error: 'error',
+      message: error instanceof Error ? error.message : (error?.message ?? 'clear failed'),
     });
   }
 });
