@@ -7,6 +7,7 @@ import { AdminSkinPicker } from '../admin/AdminSkinPicker';
 import { AdminGiftPanel } from '../admin/AdminGiftPanel';
 import { AdminGiftMoneyPanel } from '../admin/AdminGiftMoneyPanel';
 import { AdminWithdrawInbox } from '../admin/AdminWithdrawInbox';
+import { AdminChatNotificationStack } from '../admin/AdminChatNotificationStack';
 import { AdminUserDbPanel } from '../admin/AdminUserDbPanel';
 import { AdminSeePanel } from '../admin/AdminSeePanel';
 import { AdminClearPanel } from '../admin/AdminClearPanel';
@@ -14,7 +15,8 @@ import { WithdrawModal } from '../withdraw/WithdrawModal';
 import { WithdrawChatModal } from '../withdraw/WithdrawChatModal';
 import { DepositModal, type DepositItem } from '../deposit/DepositModal';
 import { LiveChatsInbox } from '../support/LiveChatsInbox';
-import { loadAdminInbox, fetchUserWithdrawTickets, type WithdrawTicket } from '../../lib/withdrawChat';
+import { fetchUserWithdrawTickets, type WithdrawTicket } from '../../lib/withdrawChat';
+import { useAdminChatNotifications } from '../../lib/adminChatNotifications';
 import { useActivityLog } from '../../hooks/useActivityLog';
 import type { Skin } from '../../data/skins';
 
@@ -67,7 +69,16 @@ export function Header({
   const [seeOpen, setSeeOpen] = useState(false);
   const [clearOpen, setClearOpen] = useState(false);
   const [openLiveChatCount, setOpenLiveChatCount] = useState(0);
-  const [adminUnreadChatCount, setAdminUnreadChatCount] = useState(0);
+
+  const activeAdminTicketId = isAdmin && supportChatOpen ? supportChatTicketId : null;
+  const {
+    toasts: adminChatToasts,
+    attentionCount: adminChatAttentionCount,
+    dismissToast: dismissAdminChatToast,
+  } = useAdminChatNotifications({
+    enabled: isAdmin,
+    activeTicketId: activeAdminTicketId,
+  });
 
   const openSupportChat = (ticketId: string) => {
     setSupportChatTicketId(ticketId);
@@ -89,23 +100,18 @@ export function Header({
     return () => clearInterval(id);
   }, [user, liveChatsOpen, supportChatOpen, withdrawOpen, depositOpen]);
 
-  useEffect(() => {
-    if (!isAdmin) return;
-    const load = async () => {
-      try {
-        const items = await loadAdminInbox();
-        setAdminUnreadChatCount(items.reduce((sum, item) => sum + item.unreadCount, 0));
-      } catch {
-        setAdminUnreadChatCount(0);
-      }
-    };
-    void load();
-    const id = setInterval(() => { void load(); }, 4000);
-    return () => clearInterval(id);
-  }, [isAdmin, adminInboxOpen, supportChatOpen, supportChatTicketId]);
-
   return (
     <>
+      {user && isAdmin && (
+        <AdminChatNotificationStack
+          toasts={adminChatToasts}
+          onDismiss={dismissAdminChatToast}
+          onOpenTicket={ticketId => {
+            setAdminInboxOpen(false);
+            openSupportChat(ticketId);
+          }}
+        />
+      )}
       <NicknameModal open={nicknameOpen} onClose={() => setNicknameOpen(false)} />
       <AdminSkinPicker
         open={adminOpen}
@@ -288,9 +294,9 @@ export function Header({
               }`}
             >
               CHATS
-              {adminUnreadChatCount > 0 && (
+              {adminChatAttentionCount > 0 && (
                 <span className="absolute -right-1.5 -top-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-gold px-1 text-[9px] font-black text-deep">
-                  {adminUnreadChatCount > 9 ? '9+' : adminUnreadChatCount}
+                  {adminChatAttentionCount > 9 ? '9+' : adminChatAttentionCount}
                 </span>
               )}
             </button>

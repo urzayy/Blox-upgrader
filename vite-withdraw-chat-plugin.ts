@@ -111,17 +111,22 @@ export function withdrawChatPlugin(chatsDir: string): Plugin {
           const bundle = loadBundle(ticket.id);
           const messages = bundle?.messages ?? [];
           const userMessages = messages.filter(message => message.senderRole === 'user');
-          const lastUserMessageAt = userMessages.length
-            ? Math.max(...userMessages.map(message => message.createdAt))
-            : 0;
+          const lastUserMessage = userMessages.length
+            ? userMessages.reduce((latest, message) => (
+              message.createdAt > latest.createdAt ? message : latest
+            ))
+            : null;
+          const lastUserMessageAt = lastUserMessage?.createdAt ?? 0;
           const storedRead = lastReadByTicket[ticket.id];
           const unreadCount = storedRead === undefined
-            ? 0
+            ? Math.max(1, userMessages.length)
             : countUnreadUserMessages(messages, storedRead);
           return {
             ticket,
             unreadCount,
             lastUserMessageAt,
+            lastUserMessageText: lastUserMessage?.text?.slice(0, 160) ?? null,
+            isUnseen: storedRead === undefined,
           };
         });
       };

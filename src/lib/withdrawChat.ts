@@ -2,7 +2,7 @@ import type { Skin } from '../data/skins';
 import type { Session } from './auth';
 import { getDisplayName } from './auth';
 import { formatUSD } from './wheelMath';
-import { getAdminLastReadMap, markAdminTicketRead } from './adminChatRead';
+import { getAdminLastReadMap } from './adminChatRead';
 
 export type SupportTicketType = 'withdraw' | 'deposit';
 export type WithdrawTicketStatus = 'open' | 'completed' | 'cancelled';
@@ -73,6 +73,8 @@ export interface AdminInboxItem {
   ticket: WithdrawTicket;
   unreadCount: number;
   lastUserMessageAt: number;
+  lastUserMessageText?: string | null;
+  isUnseen?: boolean;
 }
 
 function summarizeSkin(skin: Skin): WithdrawSkinSummary {
@@ -170,22 +172,15 @@ export async function fetchAdminInbox(
 }
 
 export async function loadAdminInbox(): Promise<AdminInboxItem[]> {
-  let lastRead = getAdminLastReadMap();
-  let items = await fetchAdminInbox(lastRead);
+  return fetchAdminInbox(getAdminLastReadMap());
+}
 
-  let needsRefetch = false;
-  for (const item of items) {
-    if (lastRead[item.ticket.id] !== undefined) continue;
-    markAdminTicketRead(item.ticket.id, item.lastUserMessageAt);
-    needsRefetch = true;
-  }
+export function getTicketAttentionCount(item: AdminInboxItem): number {
+  return item.unreadCount;
+}
 
-  if (needsRefetch) {
-    lastRead = getAdminLastReadMap();
-    items = await fetchAdminInbox(lastRead);
-  }
-
-  return items;
+export function getAdminInboxAttentionCount(items: AdminInboxItem[]): number {
+  return items.reduce((sum, item) => sum + getTicketAttentionCount(item), 0);
 }
 
 export async function sendWithdrawChatMessage(
