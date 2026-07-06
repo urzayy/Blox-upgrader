@@ -3,7 +3,7 @@ import { RARITY, type RarityKey, type Skin } from '../../data/skins';
 import { CoinPrice } from '../ui/CoinPrice';
 import { SkinImage } from './SkinImage';
 
-import { LiveHelpButton } from '../support/LiveHelpButton';
+import { LiveHelpControl } from '../support/LiveHelpControl';
 
 const PAGE_SIZE = 18;
 
@@ -128,7 +128,7 @@ export function TargetPanel({ skins, selected, onSelect, onLiveHelp, liveHelpLoa
           </button>
         </div>
         {onLiveHelp && (
-          <LiveHelpButton onClick={onLiveHelp} loading={liveHelpLoading} />
+          <LiveHelpControl onConfirm={onLiveHelp} loading={liveHelpLoading} />
         )}
       </div>
     </section>
