@@ -10,10 +10,14 @@ export function LiveHelpButton({ onClick, loading }: Props) {
       onClick={onClick}
       disabled={loading}
       title="Chat en vivo con soporte"
-      className="flex items-center gap-1.5 rounded-lg border border-win/30 bg-win/10 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-win transition hover:border-win/50 hover:bg-win/20 disabled:cursor-wait disabled:opacity-50"
+      aria-label="Abrir chat de ayuda en vivo"
+      className="flex shrink-0 items-center gap-1.5 rounded-lg border border-win/40 bg-win/10 px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-wide text-win shadow-[0_0_16px_rgba(52,211,153,0.12)] transition hover:border-win/60 hover:bg-win/20 disabled:cursor-wait disabled:opacity-50"
     >
-      <span className="h-1.5 w-1.5 shrink-0 animate-pulse rounded-full bg-win" />
-      {loading ? '…' : 'Ayuda'}
+      <span className="relative flex h-2 w-2 shrink-0">
+        <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-win opacity-60" />
+        <span className="relative inline-flex h-2 w-2 rounded-full bg-win" />
+      </span>
+      {loading ? 'Conectando…' : 'Ayuda en vivo'}
     </button>
   );
 }

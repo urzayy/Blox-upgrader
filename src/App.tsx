@@ -48,13 +48,11 @@ import {
   loadProcessedWithdrawTickets,
 } from './lib/processedWithdrawStorage';
 import { ThanksToast } from './components/ui/ThanksToast';
-import { LiveHelpFloating } from './components/support/LiveHelpFloating';
 import type { ShopPurchaseItem } from './components/shop/ShopPanel';
 import type { DepositItem } from './components/deposit/DepositModal';
 
 export default function App() {
   const { user, logout: authLogout, openLogin } = useAuth();
-  const userIsAdmin = isAdmin(user);
   const { log, logUser } = useActivityLog();
   const userId = user?.userId ?? null;
 
@@ -801,12 +799,6 @@ export default function App() {
           variant="error"
           onDismiss={() => setLiveHelpError('')}
           durationMs={6000}
-        />
-
-        <LiveHelpFloating
-          onClick={() => { void handleLiveHelp(); }}
-          loading={liveHelpLoading}
-          className={userIsAdmin ? 'bottom-24 right-4' : 'bottom-4 right-4'}
         />
 
         <Header

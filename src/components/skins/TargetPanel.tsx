@@ -105,26 +105,28 @@ export function TargetPanel({ skins, selected, onSelect, onLiveHelp, liveHelpLoa
         </div>
       </div>
 
-      <div className="flex shrink-0 items-center justify-center gap-3 border-t border-white/5 px-3 py-2">
-        <button
-          type="button"
-          disabled={safePage <= 0}
-          onClick={() => setPage(p => Math.max(0, p - 1))}
-          className="flex h-7 w-7 items-center justify-center rounded-lg border border-white/10 text-white/50 transition enabled:hover:border-white/25 enabled:hover:text-white disabled:opacity-30"
-        >
-          ‹
-        </button>
-        <span className="min-w-[4rem] text-center text-[10px] text-white/40">
-          {safePage + 1} / {totalPages}
-        </span>
-        <button
-          type="button"
-          disabled={safePage >= totalPages - 1}
-          onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))}
-          className="flex h-7 w-7 items-center justify-center rounded-lg border border-white/10 text-white/50 transition enabled:hover:border-white/25 enabled:hover:text-white disabled:opacity-30"
-        >
-          ›
-        </button>
+      <div className="flex shrink-0 items-center justify-between gap-2 border-t border-white/5 px-3 py-2">
+        <div className="flex flex-1 items-center justify-center gap-2">
+          <button
+            type="button"
+            disabled={safePage <= 0}
+            onClick={() => setPage(p => Math.max(0, p - 1))}
+            className="flex h-7 w-7 items-center justify-center rounded-lg border border-white/10 text-white/50 transition enabled:hover:border-white/25 enabled:hover:text-white disabled:opacity-30"
+          >
+            ‹
+          </button>
+          <span className="min-w-[4rem] text-center text-[10px] text-white/40">
+            {safePage + 1} / {totalPages}
+          </span>
+          <button
+            type="button"
+            disabled={safePage >= totalPages - 1}
+            onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))}
+            className="flex h-7 w-7 items-center justify-center rounded-lg border border-white/10 text-white/50 transition enabled:hover:border-white/25 enabled:hover:text-white disabled:opacity-30"
+          >
+            ›
+          </button>
+        </div>
         {onLiveHelp && (
           <LiveHelpButton onClick={onLiveHelp} loading={liveHelpLoading} />
         )}
