@@ -6,21 +6,28 @@ export function inventoryTotal(skins: Skin[]): number {
   return skins.reduce((sum, skin) => sum + skin.price, 0);
 }
 
+export function commitUpgradeStake(inventory: Skin[], inputs: Skin[]): Skin[] {
+  const inputIds = new Set(inputs.map(s => s.id));
+  return inventory.filter(s => !inputIds.has(s.id));
+}
+
+export function applyUpgradeWin(inventory: Skin[], target: Skin): Skin[] {
+  const wonSkin: Skin = {
+    ...target,
+    id: `inv_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+  };
+  return [...inventory, wonSkin];
+}
+
 export function applyUpgradeToInventory(
   inventory: Skin[],
   inputs: Skin[],
   target: Skin,
   won: boolean,
 ): Skin[] {
-  const inputIds = new Set(inputs.map(s => s.id));
-  const next = inventory.filter(s => !inputIds.has(s.id));
-  if (!won) return next;
-
-  const wonSkin: Skin = {
-    ...target,
-    id: `inv_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
-  };
-  return [...next, wonSkin];
+  const afterStake = commitUpgradeStake(inventory, inputs);
+  if (!won) return afterStake;
+  return applyUpgradeWin(afterStake, target);
 }
 
 export function grantSkinToInventory(inventory: Skin[], template: Skin): Skin[] {

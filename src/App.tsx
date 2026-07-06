@@ -14,9 +14,10 @@ import { useActivityLog } from './hooks/useActivityLog';
 import { syncPlayerState, fetchPendingAccountReset } from './lib/playerStateApi';
 import { logUpgradeResult } from './lib/userActivityLog';
 import { calcProbability, formatUSD, type RollResult } from './lib/wheelMath';
-import { applyUpgradeToInventory, grantSkinToInventory, inventoryTotal, MAX_INPUT_SKINS, purchaseSkinCopies, sellSkinFromInventory, withdrawSkinsFromInventory } from './lib/inventory';
+import { applyUpgradeWin, commitUpgradeStake, grantSkinToInventory, inventoryTotal, MAX_INPUT_SKINS, purchaseSkinCopies, sellSkinFromInventory, withdrawSkinsFromInventory } from './lib/inventory';
 import { loadInventory, saveInventory, clearInventoryForUserId } from './lib/inventoryStorage';
 import { loadBalance, saveBalance, clearBalanceForUserId } from './lib/balanceStorage';
+import { clearPendingUpgrade, loadPendingUpgrade, savePendingUpgrade } from './lib/upgradePendingStorage';
 import { normalizeGrantEmail } from './lib/inventoryGrants';
 import { BASE_TOTAL_UPGRADES } from './lib/feed';
 import { applySiteState, fetchSiteState, publishFeedEvent } from './lib/siteStateApi';
@@ -68,6 +69,7 @@ export default function App() {
   const [isUpgradeRolling, setIsUpgradeRolling] = useState(false);
   const isUpgradeRollingRef = useRef(false);
   const rollingInputIdsRef = useRef<string[]>([]);
+  const rollingInputsRef = useRef<Skin[]>([]);
   const [thanksToastVisible, setThanksToastVisible] = useState(false);
   const inventoryRef = useRef(inventory);
   const balanceRef = useRef(balance);
@@ -105,6 +107,7 @@ export default function App() {
   const wipeLocalPlayerProgress = useCallback((targetUserId: string) => {
     clearInventoryForUserId(targetUserId);
     clearBalanceForUserId(targetUserId);
+    clearPendingUpgrade(targetUserId);
     inventoryRef.current = [];
     balanceRef.current = 0;
     setInventory([]);
@@ -566,72 +569,169 @@ export default function App() {
   }, [documentVisible]);
 
   useEffect(() => {
+    if (isUpgradeRolling) return;
     setInputSkins(prev => prev.filter(s => inventory.some(i => i.id === s.id)));
-  }, [inventory]);
+  }, [inventory, isUpgradeRolling]);
 
-  const onUpgradeComplete = useCallback((won: boolean, roll: RollResult) => {
-    if (!user || !inputSkins.length || !targetSkin) return;
-
-    isUpgradeRollingRef.current = false;
-    rollingInputIdsRef.current = [];
-    setIsUpgradeRolling(false);
-
-    setInventory(prev => applyUpgradeToInventory(prev, inputSkins, targetSkin, won));
-
-    const inputLabel = inputSkins.length === 1
-      ? inputSkins[0].name
-      : `${inputSkins.length} skins · ${formatUSD(inputTotal)}`;
+  const finalizeUpgrade = useCallback((data: {
+    won: boolean;
+    roll: RollResult;
+    inputLabel: string;
+    inputImage: string;
+    inputTotal: number;
+    targetSkin: Skin;
+    probability: number;
+  }) => {
+    if (!user) return;
 
     logUpgradeResult(logUser, {
-      won,
-      probability,
-      inputLabel,
-      targetName: targetSkin.name,
-      inputTotal,
-      targetPrice: targetSkin.price,
-      roll,
+      won: data.won,
+      probability: data.probability,
+      inputLabel: data.inputLabel,
+      targetName: data.targetSkin.name,
+      inputTotal: data.inputTotal,
+      targetPrice: data.targetSkin.price,
+      roll: data.roll,
     });
 
     const feedItem: FeedItem = {
       id: `f_${user.userId}_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
       username: getDisplayName(user),
-      inputSkin: inputLabel,
-      targetSkin: targetSkin.name,
-      inputImage: inputSkins.reduce((best, s) => (s.price > best.price ? s : best), inputSkins[0]).image,
-      targetImage: targetSkin.image,
-      probability,
-      won,
+      inputSkin: data.inputLabel,
+      targetSkin: data.targetSkin.name,
+      inputImage: data.inputImage,
+      targetImage: data.targetSkin.image,
+      probability: data.probability,
+      won: data.won,
       timestamp: Date.now(),
     };
 
     void publishFeedEvent(feedItem)
       .then(state => applySiteState(state, { setFeed, setTotalUpgrades, setPlayersOnline }))
       .catch(() => { /* polling will catch up */ });
+  }, [user, logUser]);
+
+  useEffect(() => {
+    if (!user) return;
+    const pending = loadPendingUpgrade(user.userId);
+    if (!pending) return;
+
+    clearPendingUpgrade(user.userId);
+
+    if (pending.won) {
+      setInventory(prev => {
+        const next = applyUpgradeWin(prev, pending.targetSkin);
+        inventoryRef.current = next;
+        saveInventory(next, user.userId);
+        return next;
+      });
+      void pushPlayerStateSync(inventoryRef.current, balanceRef.current);
+    }
+
+    finalizeUpgrade({
+      won: pending.won,
+      roll: pending.roll,
+      inputLabel: pending.inputLabel,
+      inputImage: pending.inputImage ?? pending.targetSkin.image,
+      inputTotal: pending.inputTotal,
+      targetSkin: pending.targetSkin,
+      probability: pending.probability,
+    });
+  }, [user?.userId, finalizeUpgrade, pushPlayerStateSync]);
+
+  const onUpgradeComplete = useCallback((won: boolean, roll: RollResult) => {
+    if (!user || !targetSkin) return;
+    const inputs = rollingInputsRef.current;
+    if (!inputs.length) return;
+
+    isUpgradeRollingRef.current = false;
+    rollingInputIdsRef.current = [];
+    rollingInputsRef.current = [];
+    setIsUpgradeRolling(false);
+
+    if (won) {
+      setInventory(prev => applyUpgradeWin(prev, targetSkin));
+    }
+
+    clearPendingUpgrade(user.userId);
+
+    const inputLabel = inputs.length === 1
+      ? inputs[0].name
+      : `${inputs.length} skins · ${formatUSD(inventoryTotal(inputs))}`;
+    const inputImage = inputs.reduce(
+      (best, skin) => (skin.price > best.price ? skin : best),
+      inputs[0],
+    ).image;
+
+    finalizeUpgrade({
+      won,
+      roll,
+      inputLabel,
+      inputImage,
+      inputTotal: inventoryTotal(inputs),
+      targetSkin,
+      probability,
+    });
 
     setInputSkins([]);
     setTargetSkin(null);
     setMultiplier(null);
     setCap(null);
-  }, [inputSkins, targetSkin, probability, inputTotal, user, logUser]);
+  }, [user, targetSkin, probability, finalizeUpgrade]);
 
-  const handleUpgradeStart = useCallback(() => {
+  const handleUpgradeStart = useCallback((roll: RollResult) => {
     if (!user || !inputSkins.length || !targetSkin) return;
-    const ids = inputSkins.map(s => s.id);
+
+    const inputs = inputSkins.slice();
+    const ids = inputs.map(s => s.id);
+    rollingInputsRef.current = inputs;
     rollingInputIdsRef.current = ids;
     isUpgradeRollingRef.current = true;
-    flushSync(() => setIsUpgradeRolling(true));
-    const inputLabel = inputSkins.length === 1
-      ? inputSkins[0].name
-      : `${inputSkins.length} skins · ${formatUSD(inputTotal)}`;
+
+    const stakeTotal = inventoryTotal(inputs);
+    const inputLabel = inputs.length === 1
+      ? inputs[0].name
+      : `${inputs.length} skins · ${formatUSD(stakeTotal)}`;
+    const inputImage = inputs.reduce(
+      (best, skin) => (skin.price > best.price ? skin : best),
+      inputs[0],
+    ).image;
+
+    flushSync(() => {
+      setIsUpgradeRolling(true);
+      setInventory(prev => {
+        const next = commitUpgradeStake(prev, inputs);
+        inventoryRef.current = next;
+        saveInventory(next, user.userId);
+        return next;
+      });
+    });
+
+    void pushPlayerStateSync(inventoryRef.current, balanceRef.current);
+
+    savePendingUpgrade(user.userId, {
+      targetSkin,
+      inputImage,
+      won: roll.won,
+      roll,
+      probability,
+      inputLabel,
+      inputTotal: stakeTotal,
+      targetPrice: targetSkin.price,
+      timestamp: Date.now(),
+    });
+
     log('UPGRADE.start', {
       input: inputLabel,
-      inputValue: formatUSD(inputTotal),
+      inputValue: formatUSD(stakeTotal),
       target: targetSkin.name,
       targetValue: formatUSD(targetSkin.price),
       probability: `${probability}%`,
       turbo,
+      roll: roll.roll,
+      won: roll.won,
     });
-  }, [user, inputSkins, targetSkin, inputTotal, probability, turbo, log]);
+  }, [user, inputSkins, targetSkin, probability, turbo, log, pushPlayerStateSync]);
 
   return (
     <LayoutGroup>

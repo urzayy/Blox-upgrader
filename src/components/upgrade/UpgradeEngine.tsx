@@ -17,7 +17,7 @@ interface Props {
   turbo: boolean;
   onMultiplier: (m: number) => void;
   onCap: (c: number) => void;
-  onUpgradeStart?: () => void;
+  onUpgradeStart?: (roll: RollResult) => void;
   onComplete: (won: boolean, roll: RollResult) => void;
 }
 
@@ -42,14 +42,14 @@ export function UpgradeEngine({
       return;
     }
 
-    onUpgradeStart?.();
+    const result = resolveRoll(probability);
+    onUpgradeStart?.(result);
     setSpinning(true);
     setPhase('spin');
     setRollResult(null);
     sfx.upgradeStart();
     spinAudioRef.current.reset(arrowRef.current);
 
-    const result = resolveRoll(probability);
     const { finalArrow } = computeFinalArrowAngle(arrowRef.current, probability, result.won);
     const anim = { val: arrowRef.current };
     const spinDuration = turbo ? 1.1 + Math.random() * 0.35 : 4.5 + Math.random() * 1.5;
