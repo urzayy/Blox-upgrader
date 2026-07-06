@@ -17,7 +17,8 @@ interface Props {
   turbo: boolean;
   onMultiplier: (m: number) => void;
   onCap: (c: number) => void;
-  onUpgradeStart?: (roll: RollResult) => void;
+  onUpgradeStart?: () => void;
+  onUpgradeRollLocked?: (roll: RollResult) => void;
   onComplete: (won: boolean, roll: RollResult) => void;
 }
 
@@ -25,7 +26,8 @@ type Phase = 'idle' | 'spin' | 'win' | 'lose';
 
 export function UpgradeEngine({
   probability, wheelSize, multiplier, cap,
-  canUpgrade, requiresLogin, onLoginRequired, turbo, onMultiplier, onCap, onUpgradeStart, onComplete,
+  canUpgrade, requiresLogin, onLoginRequired, turbo, onMultiplier, onCap,
+  onUpgradeStart, onUpgradeRollLocked, onComplete,
 }: Props) {
   const [arrowAngle, setArrowAngle] = useState(0);
   const [spinning, setSpinning] = useState(false);
@@ -42,8 +44,9 @@ export function UpgradeEngine({
       return;
     }
 
+    onUpgradeStart?.();
     const result = resolveRoll(probability);
-    onUpgradeStart?.(result);
+    onUpgradeRollLocked?.(result);
     setSpinning(true);
     setPhase('spin');
     setRollResult(null);
@@ -79,7 +82,7 @@ export function UpgradeEngine({
         }, resultDelay);
       },
     });
-  }, [probability, spinning, turbo, onComplete, onUpgradeStart, requiresLogin, onLoginRequired]);
+  }, [probability, spinning, turbo, onComplete, onUpgradeStart, onUpgradeRollLocked, requiresLogin, onLoginRequired]);
 
   return (
     <section className="relative flex w-full max-w-[400px] shrink-0 flex-col items-center px-2">

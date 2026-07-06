@@ -17,7 +17,7 @@ import { calcProbability, formatUSD, type RollResult } from './lib/wheelMath';
 import { applyUpgradeWin, commitUpgradeStake, grantSkinToInventory, inventoryTotal, MAX_INPUT_SKINS, purchaseSkinCopies, sellSkinFromInventory, withdrawSkinsFromInventory } from './lib/inventory';
 import { loadInventory, saveInventory, clearInventoryForUserId } from './lib/inventoryStorage';
 import { loadBalance, saveBalance, clearBalanceForUserId } from './lib/balanceStorage';
-import { clearPendingUpgrade, loadPendingUpgrade, savePendingUpgrade } from './lib/upgradePendingStorage';
+import { clearPendingUpgrade, loadPendingUpgrade, lockPendingUpgradeRoll, savePendingUpgrade } from './lib/upgradePendingStorage';
 import { normalizeGrantEmail } from './lib/inventoryGrants';
 import { BASE_TOTAL_UPGRADES } from './lib/feed';
 import { applySiteState, fetchSiteState, publishFeedEvent } from './lib/siteStateApi';
@@ -78,6 +78,7 @@ export default function App() {
   const giftSyncInFlightRef = useRef(false);
   const balanceGiftSyncInFlightRef = useRef(false);
   const lastResetAckRef = useRef<number | null>(null);
+  const pendingUpgradeRecoveredRef = useRef<string | null>(null);
   inventoryRef.current = inventory;
   balanceRef.current = balance;
 
@@ -569,6 +570,11 @@ export default function App() {
   }, [documentVisible]);
 
   useEffect(() => {
+    if (user) return;
+    pendingUpgradeRecoveredRef.current = null;
+  }, [user]);
+
+  useEffect(() => {
     if (isUpgradeRolling) return;
     setInputSkins(prev => prev.filter(s => inventory.some(i => i.id === s.id)));
   }, [inventory, isUpgradeRolling]);
@@ -613,8 +619,11 @@ export default function App() {
 
   useEffect(() => {
     if (!user) return;
+    if (pendingUpgradeRecoveredRef.current === user.userId) return;
+
     const pending = loadPendingUpgrade(user.userId);
-    if (!pending) return;
+    pendingUpgradeRecoveredRef.current = user.userId;
+    if (!pending?.roll) return;
 
     clearPendingUpgrade(user.userId);
 
@@ -629,7 +638,7 @@ export default function App() {
     }
 
     finalizeUpgrade({
-      won: pending.won,
+      won: Boolean(pending.won),
       roll: pending.roll,
       inputLabel: pending.inputLabel,
       inputImage: pending.inputImage ?? pending.targetSkin.image,
@@ -637,7 +646,8 @@ export default function App() {
       targetSkin: pending.targetSkin,
       probability: pending.probability,
     });
-  }, [user?.userId, finalizeUpgrade, pushPlayerStateSync]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- recover interrupted upgrade once per login
+  }, [user?.userId]);
 
   const onUpgradeComplete = useCallback((won: boolean, roll: RollResult) => {
     if (!user || !targetSkin) return;
@@ -679,7 +689,7 @@ export default function App() {
     setCap(null);
   }, [user, targetSkin, probability, finalizeUpgrade]);
 
-  const handleUpgradeStart = useCallback((roll: RollResult) => {
+  const handleUpgradeStart = useCallback(() => {
     if (!user || !inputSkins.length || !targetSkin) return;
 
     const inputs = inputSkins.slice();
@@ -712,12 +722,10 @@ export default function App() {
     savePendingUpgrade(user.userId, {
       targetSkin,
       inputImage,
-      won: roll.won,
-      roll,
-      probability,
       inputLabel,
       inputTotal: stakeTotal,
       targetPrice: targetSkin.price,
+      probability,
       timestamp: Date.now(),
     });
 
@@ -728,10 +736,13 @@ export default function App() {
       targetValue: formatUSD(targetSkin.price),
       probability: `${probability}%`,
       turbo,
-      roll: roll.roll,
-      won: roll.won,
     });
   }, [user, inputSkins, targetSkin, probability, turbo, log, pushPlayerStateSync]);
+
+  const handleUpgradeRollLocked = useCallback((roll: RollResult) => {
+    if (!user) return;
+    lockPendingUpgradeRoll(user.userId, roll);
+  }, [user]);
 
   return (
     <LayoutGroup>
@@ -794,6 +805,7 @@ export default function App() {
                 onMultiplier={handleMultiplier}
                 onCap={handleCap}
                 onUpgradeStart={handleUpgradeStart}
+                onUpgradeRollLocked={handleUpgradeRollLocked}
                 onComplete={onUpgradeComplete}
               />
 

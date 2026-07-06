@@ -4,12 +4,12 @@ import type { RollResult } from './wheelMath';
 export interface PendingUpgrade {
   targetSkin: Skin;
   inputImage: string;
-  won: boolean;
-  roll: RollResult;
-  probability: number;
   inputLabel: string;
   inputTotal: number;
   targetPrice: number;
+  probability: number;
+  roll?: RollResult;
+  won?: boolean;
   timestamp: number;
 }
 
@@ -30,11 +30,21 @@ export function loadPendingUpgrade(userId: string): PendingUpgrade | null {
     const raw = localStorage.getItem(storageKey(userId));
     if (!raw) return null;
     const parsed = JSON.parse(raw) as PendingUpgrade;
-    if (!parsed || typeof parsed.won !== 'boolean' || !parsed.targetSkin?.id) return null;
+    if (!parsed || !parsed.targetSkin?.id) return null;
     return parsed;
   } catch {
     return null;
   }
+}
+
+export function lockPendingUpgradeRoll(userId: string, roll: RollResult): void {
+  const pending = loadPendingUpgrade(userId);
+  if (!pending) return;
+  savePendingUpgrade(userId, {
+    ...pending,
+    roll,
+    won: roll.won,
+  });
 }
 
 export function clearPendingUpgrade(userId: string): void {
