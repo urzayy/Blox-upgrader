@@ -51,13 +51,14 @@ export function PanelTabButton({ active, label, onClick, children }: TabButtonPr
       aria-label={label}
       aria-pressed={active}
       onClick={onClick}
-      className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border transition ${
+      className={`flex h-8 shrink-0 items-center gap-1.5 rounded-lg border px-2.5 transition ${
         active
           ? 'border-gold/50 bg-gold/20 text-gold shadow-[0_0_16px_rgba(255,215,0,0.28)]'
           : 'border-white/10 bg-[#141820] text-white/45 hover:border-white/25 hover:text-white/75'
       }`}
     >
       {children}
+      <span className="font-display text-[10px] font-bold uppercase tracking-wide">{label}</span>
     </button>
   );
 }
