@@ -12,6 +12,7 @@ import { createUserStore } from './server/lib/userStore.mjs';
 import { createPlayerStateStore } from './server/lib/playerStateStore.mjs';
 import { clearAccountByEmail as resetAccountByEmail } from './server/lib/accountReset.mjs';
 import { createAccountResetMarkerStore } from './server/lib/accountResetMarker.mjs';
+import { resolveDepositBonus } from './server/lib/depositBonus.mjs';
 
 dotenv.config();
 
@@ -730,6 +731,11 @@ app.post('/api/withdraw/tickets', (req, res) => {
       sendJson(res, 400, { error: 'invalid deposit' });
       return;
     }
+    const bonusResult = resolveDepositBonus(body, total);
+    if (bonusResult.error) {
+      sendJson(res, 400, { error: bonusResult.error });
+      return;
+    }
     const ticketId = `dp_${now}_${Math.random().toString(36).slice(2, 8)}`;
     const ticket = {
       id: ticketId,
@@ -739,6 +745,13 @@ app.post('/api/withdraw/tickets', (req, res) => {
       type: 'deposit',
       skins,
       total,
+      ...(bonusResult.bonusCode
+        ? {
+          creditTotal: bonusResult.creditTotal,
+          bonusCode: bonusResult.bonusCode,
+          bonusPercent: bonusResult.bonusPercent,
+        }
+        : {}),
       status: 'open',
       createdAt: now,
       updatedAt: now,
@@ -752,6 +765,9 @@ app.post('/api/withdraw/tickets', (req, res) => {
     const skinList = Array.from(grouped.values())
       .map(s => `• ${s.qty > 1 ? `${s.qty}× ` : ''}${s.name} (${(s.price * s.qty).toLocaleString('es-ES')})`)
       .join('\n');
+    const creditLine = bonusResult.bonusCode
+      ? `${total.toLocaleString('es-ES')} coins + ${bonusResult.bonusPercent}% bonus = ${bonusResult.creditTotal.toLocaleString('es-ES')} coins credit`
+      : `${total.toLocaleString('es-ES')} coins`;
     const bundle = {
       ticket,
       messages: [{
@@ -761,7 +777,7 @@ app.post('/api/withdraw/tickets', (req, res) => {
         senderEmail: 'system@blox-upgrader',
         senderRole: 'system',
         senderLabel: 'System',
-        text: `Deposit request received (${total.toLocaleString('es-ES')} coins).\n\n${skinList}\n\nAn administrator will assist you live. Follow their payment instructions here.`,
+        text: `Deposit request received (${creditLine}).\n\n${skinList}\n\nAn administrator will assist you live. Follow their payment instructions here.`,
         createdAt: now,
       }],
     };

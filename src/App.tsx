@@ -28,6 +28,7 @@ import { useDocumentVisible } from './hooks/useDocumentVisible';
 import { getDisplayName, getProfileLabel, isAdmin } from './lib/auth';
 import { useAuth } from './context/AuthContext';
 import { createWithdrawTicket, createDepositTicket, fetchUserWithdrawTickets, getDepositCreditAmount, getPendingWithdrawSkinIds, getTicketType, type WithdrawTicket } from './lib/withdrawChat';
+import type { AppliedDepositBonus } from './lib/depositBonusCode';
 import { validateDepositTotal } from './lib/deposit';
 import {
   acknowledgeInventoryGrants,
@@ -330,17 +331,23 @@ export default function App() {
     applyWithdrawCompletion(ticket, true);
   }, [applyWithdrawCompletion]);
 
-  const handleDepositRequest = useCallback(async (items: DepositItem[]): Promise<string | null> => {
+  const handleDepositRequest = useCallback(async (
+    items: DepositItem[],
+    bonus?: AppliedDepositBonus,
+  ): Promise<string | null> => {
     if (!user || !items.length) return null;
     const total = items.reduce((sum, item) => sum + item.skin.price * item.quantity, 0);
     const validation = validateDepositTotal(total);
     if (!validation.ok) return null;
     try {
-      const bundle = await createDepositTicket(user, getProfileLabel(user), items);
+      const bundle = await createDepositTicket(user, getProfileLabel(user), items, bonus);
       log('DEPOSIT.request', {
         ticketId: bundle.ticket.id,
         count: items.reduce((sum, item) => sum + item.quantity, 0),
         total: formatUSD(total),
+        creditTotal: formatUSD(getDepositCreditAmount(bundle.ticket)),
+        bonusCode: bonus?.code,
+        bonusPercent: bonus?.percent,
         skins: items.map(item => `${item.quantity}× ${item.skin.name}`).join(' · '),
       });
       sfx.select();

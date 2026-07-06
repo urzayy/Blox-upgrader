@@ -24,6 +24,9 @@ export interface WithdrawTicket {
   type?: SupportTicketType;
   skins: WithdrawSkinSummary[];
   total: number;
+  creditTotal?: number;
+  bonusCode?: string;
+  bonusPercent?: number;
   status: WithdrawTicketStatus;
   createdAt: number;
   updatedAt: number;
@@ -35,6 +38,7 @@ export function getTicketType(ticket: WithdrawTicket): SupportTicketType {
 
 /** Exact SALDO credit for a completed deposit ticket. */
 export function getDepositCreditAmount(ticket: WithdrawTicket): number {
+  if (ticket.creditTotal != null && ticket.creditTotal > 0) return ticket.creditTotal;
   const fromSkins = ticket.skins.reduce((sum, s) => sum + s.price, 0);
   return fromSkins > 0 ? fromSkins : ticket.total;
 }
@@ -121,6 +125,7 @@ export async function createDepositTicket(
   session: Session,
   userLabel: string,
   items: { skin: Skin; quantity: number }[],
+  bonus?: { code: string; percent: number },
 ): Promise<WithdrawTicketBundle> {
   const skins: WithdrawSkinSummary[] = [];
   for (const item of items) {
@@ -139,6 +144,8 @@ export async function createDepositTicket(
       userLabel,
       skins,
       total,
+      bonusCode: bonus?.code,
+      bonusPercent: bonus?.percent,
     }),
   });
 }

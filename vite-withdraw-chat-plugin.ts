@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import type { Plugin } from 'vite';
+import { resolveDepositBonus } from './server/lib/depositBonus.mjs';
 
 const MIN_DEPOSIT_TOTAL = 40;
 
@@ -23,6 +24,9 @@ interface WithdrawTicket {
   type?: 'withdraw' | 'deposit';
   skins: WithdrawSkinSummary[];
   total: number;
+  creditTotal?: number;
+  bonusCode?: string;
+  bonusPercent?: number;
   status: WithdrawTicketStatus;
   createdAt: number;
   updatedAt: number;
@@ -252,6 +256,8 @@ export function withdrawChatPlugin(chatsDir: string): Plugin {
               skins?: WithdrawSkinSummary[];
               amount?: number;
               total?: number;
+              bonusCode?: string;
+              bonusPercent?: number;
             };
             if (!body.userId) {
               sendJson(res, 400, { error: 'invalid ticket' });
@@ -268,6 +274,11 @@ export function withdrawChatPlugin(chatsDir: string): Plugin {
                 sendJson(res, 400, { error: 'invalid deposit' });
                 return;
               }
+              const bonusResult = resolveDepositBonus(body, total);
+              if (bonusResult.error) {
+                sendJson(res, 400, { error: bonusResult.error });
+                return;
+              }
               const ticketId = `dp_${now}_${Math.random().toString(36).slice(2, 8)}`;
               const ticket: WithdrawTicket = {
                 id: ticketId,
@@ -277,6 +288,13 @@ export function withdrawChatPlugin(chatsDir: string): Plugin {
                 type: 'deposit',
                 skins,
                 total,
+                ...(bonusResult.bonusCode
+                  ? {
+                    creditTotal: bonusResult.creditTotal,
+                    bonusCode: bonusResult.bonusCode,
+                    bonusPercent: bonusResult.bonusPercent,
+                  }
+                  : {}),
                 status: 'open',
                 createdAt: now,
                 updatedAt: now,
@@ -294,6 +312,9 @@ export function withdrawChatPlugin(chatsDir: string): Plugin {
               const skinList = Array.from(grouped.values())
                 .map(s => `• ${s.qty > 1 ? `${s.qty}× ` : ''}${s.name} (${(s.price * s.qty).toLocaleString('es-ES')})`)
                 .join('\n');
+              const creditLine = bonusResult.bonusCode
+                ? `${total.toLocaleString('es-ES')} coins + ${bonusResult.bonusPercent}% bonus = ${bonusResult.creditTotal.toLocaleString('es-ES')} coins credit`
+                : `${total.toLocaleString('es-ES')} coins`;
               const messages: ChatMessage[] = [{
                 id: `msg_${now}_welcome`,
                 ticketId,
@@ -301,7 +322,7 @@ export function withdrawChatPlugin(chatsDir: string): Plugin {
                 senderEmail: 'system@blox-upgrader',
                 senderRole: 'system',
                 senderLabel: 'System',
-                text: `Deposit request received (${total.toLocaleString('es-ES')} coins).\n\n${skinList}\n\nAn administrator will assist you live. Follow their payment instructions here.`,
+                text: `Deposit request received (${creditLine}).\n\n${skinList}\n\nAn administrator will assist you live. Follow their payment instructions here.`,
                 createdAt: now,
               }];
               const bundle: TicketBundle = { ticket, messages };

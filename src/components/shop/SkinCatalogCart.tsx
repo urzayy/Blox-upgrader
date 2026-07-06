@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { ALL_SKINS_CATALOG, RARITY, type Skin } from '../../data/skins';
 import { CoinPrice } from '../ui/CoinPrice';
 import { SkinImage } from '../skins/SkinImage';
@@ -21,6 +21,9 @@ interface Props {
   priceSort?: 'asc' | 'desc';
   maxItemQuantity?: number;
   minSubmitTotal?: number;
+  checkoutTotal?: number;
+  footerLeft?: ReactNode;
+  onCartTotalChange?: (total: number) => void;
   validateSubmit?: (items: CatalogCartItem[], total: number) => { ok: boolean; error?: string };
   onSubmit: (items: CatalogCartItem[]) => boolean | void | Promise<boolean | void>;
 }
@@ -45,6 +48,9 @@ export function SkinCatalogCart({
   priceSort = 'asc',
   maxItemQuantity = 99,
   minSubmitTotal,
+  checkoutTotal,
+  footerLeft,
+  onCartTotalChange,
   validateSubmit,
   onSubmit,
 }: Props) {
@@ -104,8 +110,13 @@ export function SkinCatalogCart({
   );
 
   const cartCount = cartItems.reduce((sum, item) => sum + item.quantity, 0);
+  const submitTotal = checkoutTotal ?? cartTotal;
   const belowMinTotal = minSubmitTotal != null && cartCount > 0 && cartTotal < minSubmitTotal;
   const canSubmit = cartCount > 0 && !belowMinTotal;
+
+  useEffect(() => {
+    onCartTotalChange?.(cartTotal);
+  }, [cartTotal, onCartTotalChange]);
 
   const deselectSkin = (skinId: string) => {
     setCart(prev => {
@@ -264,8 +275,10 @@ export function SkinCatalogCart({
         )}
       </div>
 
-      <div className={`flex shrink-0 flex-wrap items-center gap-2 border-t border-white/10 bg-[#0a0c12]/90 px-2 py-2 ${paginated ? 'justify-between' : 'justify-end'}`}>
-        {paginated && (
+      <div className={`flex shrink-0 flex-wrap items-center gap-2 border-t border-white/10 bg-[#0a0c12]/90 px-2 py-2 ${footerLeft || paginated ? 'justify-between' : 'justify-end'}`}>
+        {footerLeft ? (
+          <div className="min-w-0 flex-1 basis-[220px]">{footerLeft}</div>
+        ) : paginated ? (
           <div className="flex items-center gap-1">
             <button
               type="button"
@@ -287,6 +300,8 @@ export function SkinCatalogCart({
               ›
             </button>
           </div>
+        ) : (
+          <div />
         )}
 
         <div className="flex flex-wrap items-center gap-2">
@@ -316,7 +331,7 @@ export function SkinCatalogCart({
                 className="pointer-events-none absolute inset-0 bg-gradient-to-r from-[#ffe566] via-[#ffcc00] to-[#ffb800] opacity-95"
               />
               <CoinPrice
-                value={cartTotal}
+                value={submitTotal}
                 iconClassName="relative z-10 h-3.5 w-3.5"
                 textClassName="relative z-10 font-display text-sm font-bold text-[#1a1400]"
               />
@@ -332,7 +347,7 @@ export function SkinCatalogCart({
               className="flex min-w-[148px] items-center justify-between gap-2 rounded-lg border border-gold/45 bg-gold/15 px-3 py-2 transition enabled:hover:bg-gold/25 disabled:cursor-not-allowed disabled:opacity-35"
             >
               <CoinPrice
-                value={cartTotal}
+                value={submitTotal}
                 iconClassName="h-3.5 w-3.5"
                 textClassName="font-display text-sm font-bold text-gold"
               />

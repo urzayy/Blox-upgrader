@@ -1,18 +1,59 @@
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { MIN_DEPOSIT_TOTAL, validateDepositTotal } from '../../lib/deposit';
+import {
+  calcDepositCreditTotal,
+  validateDepositBonusCode,
+  type AppliedDepositBonus,
+} from '../../lib/depositBonusCode';
 import { SkinCatalogCart, type CatalogCartItem } from '../shop/SkinCatalogCart';
+import { DepositBonusCodeField } from './DepositBonusCodeField';
 
 export type DepositItem = CatalogCartItem;
 
 interface Props {
   open: boolean;
   onClose: () => void;
-  onRequestDeposit: (items: DepositItem[]) => Promise<string | null>;
+  onRequestDeposit: (items: DepositItem[], bonus?: AppliedDepositBonus) => Promise<string | null>;
 }
 
 export function DepositModal({ open, onClose, onRequestDeposit }: Props) {
   const [error, setError] = useState('');
+  const [codeInput, setCodeInput] = useState('');
+  const [codeError, setCodeError] = useState('');
+  const [appliedBonus, setAppliedBonus] = useState<AppliedDepositBonus | null>(null);
+  const [cartTotal, setCartTotal] = useState(0);
+
+  const checkoutTotal = useMemo(
+    () => (appliedBonus
+      ? calcDepositCreditTotal(cartTotal, appliedBonus.percent)
+      : cartTotal),
+    [appliedBonus, cartTotal],
+  );
+
+  useEffect(() => {
+    if (!open) {
+      setError('');
+      setCodeInput('');
+      setCodeError('');
+      setAppliedBonus(null);
+      setCartTotal(0);
+    }
+  }, [open]);
+
+  const handleApplyCode = () => {
+    setCodeError('');
+    const result = validateDepositBonusCode(codeInput);
+    if (!result.valid) {
+      setAppliedBonus(null);
+      setCodeError(result.error ?? 'Invalid code.');
+      return;
+    }
+    setAppliedBonus({
+      code: codeInput.trim().toUpperCase(),
+      percent: result.percent,
+    });
+  };
 
   return (
     <AnimatePresence>
@@ -70,9 +111,29 @@ export function DepositModal({ open, onClose, onRequestDeposit }: Props) {
               priceSort="desc"
               maxItemQuantity={999}
               minSubmitTotal={MIN_DEPOSIT_TOTAL}
+              checkoutTotal={checkoutTotal}
               submitIcon="chat"
               submitLabel="Live chat"
               emptyError="Select at least one skin to deposit."
+              footerLeft={(
+                <DepositBonusCodeField
+                  code={codeInput}
+                  applied={Boolean(appliedBonus)}
+                  bonusPercent={appliedBonus?.percent ?? 0}
+                  error={codeError}
+                  onCodeChange={value => {
+                    setCodeInput(value);
+                    setCodeError('');
+                  }}
+                  onApply={handleApplyCode}
+                  onClear={() => {
+                    setAppliedBonus(null);
+                    setCodeInput('');
+                    setCodeError('');
+                  }}
+                />
+              )}
+              onCartTotalChange={setCartTotal}
               validateSubmit={(_, total) => validateDepositTotal(total)}
               onSubmit={async items => {
                 setError('');
@@ -82,7 +143,16 @@ export function DepositModal({ open, onClose, onRequestDeposit }: Props) {
                   setError(validation.error ?? 'Invalid deposit.');
                   return false;
                 }
-                const ticketId = await onRequestDeposit(items);
+                if (appliedBonus) {
+                  const recheck = validateDepositBonusCode(appliedBonus.code);
+                  if (!recheck.valid) {
+                    setAppliedBonus(null);
+                    setCodeError(recheck.error ?? 'Invalid code.');
+                    setError('The bonus code is no longer valid.');
+                    return false;
+                  }
+                }
+                const ticketId = await onRequestDeposit(items, appliedBonus ?? undefined);
                 if (!ticketId) {
                   setError('Could not create the deposit request. Please try again.');
                   return false;
