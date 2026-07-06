@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { CoinPrice } from '../ui/CoinPrice';
-import { loadAdminInbox, getTicketAttentionCount, getTicketType, type AdminInboxItem } from '../../lib/withdrawChat';
+import { loadAdminInbox, getTicketAttentionCount, getTicketType, formatWithdrawSummary, isRobuxDeposit, type AdminInboxItem } from '../../lib/withdrawChat';
 
 interface Props {
   open: boolean;
@@ -124,9 +124,7 @@ export function AdminWithdrawInbox({ open, onClose, onOpenTicket }: Props) {
                         <p className="truncate text-sm font-semibold text-white">{ticket.userLabel}</p>
                         <p className="truncate text-[10px] text-white/40">{ticket.userEmail}</p>
                         <p className="mt-1 text-[10px] text-white/55">
-                          {getTicketType(ticket) === 'help'
-                            ? 'Live help chat'
-                            : `${ticket.skins.length} skins · ${ticket.skins.map(s => s.name).slice(0, 2).join(', ')}${ticket.skins.length > 2 ? '…' : ''}`}
+                          {formatWithdrawSummary(ticket)}
                         </p>
                       </div>
                       <div className="shrink-0 text-right">
@@ -135,7 +133,20 @@ export function AdminWithdrawInbox({ open, onClose, onOpenTicket }: Props) {
                             {attentionCount > 9 ? '9+' : attentionCount}
                           </span>
                         )}
-                        {getTicketType(ticket) !== 'help' && (
+                        {getTicketType(ticket) !== 'help' && isRobuxDeposit(ticket) && (
+                          <div className="text-right">
+                            <p className="font-display text-[10px] font-bold text-win">
+                              {ticket.robuxAmount!.toLocaleString('en-US')} R$
+                            </p>
+                            <CoinPrice
+                              value={ticket.total}
+                              iconClassName="h-3 w-3 justify-end"
+                              textClassName="font-display text-xs font-bold text-gold"
+                              className="mt-0.5 justify-end"
+                            />
+                          </div>
+                        )}
+                        {getTicketType(ticket) !== 'help' && !isRobuxDeposit(ticket) && (
                           <CoinPrice
                             value={ticket.total}
                             iconClassName="h-3 w-3 justify-end"

@@ -14,6 +14,9 @@ import { AdminClearPanel } from '../admin/AdminClearPanel';
 import { WithdrawModal } from '../withdraw/WithdrawModal';
 import { WithdrawChatModal } from '../withdraw/WithdrawChatModal';
 import { DepositModal, type DepositItem } from '../deposit/DepositModal';
+import { DepositMethodModal } from '../deposit/DepositMethodModal';
+import { RobuxDepositModal } from '../deposit/RobuxDepositModal';
+import type { AppliedDepositBonus } from '../../lib/depositBonusCode';
 import { LiveChatsInbox } from '../support/LiveChatsInbox';
 import { fetchUserWithdrawTickets, type WithdrawTicket } from '../../lib/withdrawChat';
 import { useAdminChatNotifications } from '../../lib/adminChatNotifications';
@@ -34,6 +37,7 @@ interface Props {
   onAdminGrantSkin: (skin: Skin) => void;
   onWithdrawRequest: (skins: Skin[]) => Promise<string | null>;
   onDepositRequest: (items: DepositItem[]) => Promise<string | null>;
+  onRobuxDepositRequest?: (robuxAmount: number, bonus?: AppliedDepositBonus) => Promise<string | null>;
   onSupportTicketCompleted: (ticket: WithdrawTicket) => void;
   onRegisterOpenSupportChat?: (openChat: (ticketId: string) => void) => void;
   onAdminGiftSent?: (targetEmail: string, skin: Skin, quantity: number) => void;
@@ -52,6 +56,7 @@ export function Header({
   onAdminGrantSkin,
   onWithdrawRequest,
   onDepositRequest,
+  onRobuxDepositRequest,
   onSupportTicketCompleted,
   onRegisterOpenSupportChat,
   onAdminGiftSent,
@@ -65,6 +70,8 @@ export function Header({
   const [giftMoneyOpen, setGiftMoneyOpen] = useState(false);
   const [withdrawOpen, setWithdrawOpen] = useState(false);
   const [depositOpen, setDepositOpen] = useState(false);
+  const [depositMethodOpen, setDepositMethodOpen] = useState(false);
+  const [robuxDepositOpen, setRobuxDepositOpen] = useState(false);
   const [liveChatsOpen, setLiveChatsOpen] = useState(false);
   const [supportChatOpen, setSupportChatOpen] = useState(false);
   const [supportChatTicketId, setSupportChatTicketId] = useState<string | null>(null);
@@ -88,6 +95,11 @@ export function Header({
     setSupportChatTicketId(ticketId);
     setSupportChatOpen(true);
   }, []);
+
+  const openDepositFlow = useCallback(() => {
+    log('CLICK.open_deposit');
+    setDepositMethodOpen(true);
+  }, [log]);
 
   useEffect(() => {
     onRegisterOpenSupportChat?.(openSupportChat);
@@ -170,6 +182,23 @@ export function Header({
           return ticketId;
         }}
       />
+      <DepositMethodModal
+        open={depositMethodOpen}
+        onClose={() => setDepositMethodOpen(false)}
+        onSelectRobux={() => setRobuxDepositOpen(true)}
+        onSelectSkins={() => setDepositOpen(true)}
+      />
+      {onRobuxDepositRequest && (
+        <RobuxDepositModal
+          open={robuxDepositOpen}
+          onClose={() => setRobuxDepositOpen(false)}
+          onSubmit={async (amount, bonus) => {
+            const ticketId = await onRobuxDepositRequest(amount, bonus);
+            if (ticketId) openSupportChat(ticketId);
+            return ticketId;
+          }}
+        />
+      )}
       <DepositModal
         open={depositOpen}
         onClose={() => setDepositOpen(false)}
@@ -264,10 +293,7 @@ export function Header({
             log('CLICK.open_live_chats');
             setLiveChatsOpen(true);
           }}
-          onOpenDeposit={() => {
-            log('CLICK.open_deposit');
-            setDepositOpen(true);
-          }}
+          onOpenDeposit={openDepositFlow}
           onOpenWithdraw={() => {
             log('CLICK.open_withdraw');
             setWithdrawOpen(true);
@@ -493,10 +519,7 @@ export function Header({
               </button>
             <button
               type="button"
-              onClick={() => {
-                log('CLICK.open_deposit');
-                setDepositOpen(true);
-              }}
+              onClick={openDepositFlow}
               className="group relative overflow-hidden rounded-lg border border-gold/45 px-3.5 py-1.5 font-display text-[11px] font-bold uppercase tracking-[0.14em] text-[#1a1400] shadow-[0_0_28px_rgba(255,215,0,0.35),inset_0_1px_0_rgba(255,255,255,0.35)] backdrop-blur-xl transition hover:border-gold hover:shadow-[0_0_40px_rgba(255,215,0,0.55),inset_0_1px_0_rgba(255,255,255,0.45)]"
             >
               <span

@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import type { Plugin } from 'vite';
-import { resolveDepositBonus } from './server/lib/depositBonus.mjs';
+import { resolveDepositBonus, resolveRobuxDepositBonus } from './server/lib/depositBonus.mjs';
 
 const MIN_DEPOSIT_TOTAL = 40;
 
@@ -27,6 +27,7 @@ interface WithdrawTicket {
   creditTotal?: number;
   bonusCode?: string;
   bonusPercent?: number;
+  robuxAmount?: number;
   status: WithdrawTicketStatus;
   createdAt: number;
   updatedAt: number;
@@ -262,6 +263,7 @@ export function withdrawChatPlugin(chatsDir: string): Plugin {
               total?: number;
               bonusCode?: string;
               bonusPercent?: number;
+              robuxAmount?: number;
             };
             if (!body.userId) {
               sendJson(res, 400, { error: 'invalid ticket' });
@@ -272,6 +274,58 @@ export function withdrawChatPlugin(chatsDir: string): Plugin {
             const ticketType = body.type ?? 'withdraw';
 
             if (ticketType === 'deposit') {
+              if (body.depositMethod === 'robux') {
+                const robuxAmount = Number(body.robuxAmount);
+                if (!Number.isFinite(robuxAmount) || robuxAmount <= 0 || !Number.isInteger(robuxAmount)) {
+                  sendJson(res, 400, { error: 'invalid robux deposit' });
+                  return;
+                }
+                const bonusResult = resolveRobuxDepositBonus(body, robuxAmount);
+                if (bonusResult.error) {
+                  sendJson(res, 400, { error: bonusResult.error });
+                  return;
+                }
+                const ticketId = `rb_${now}_${Math.random().toString(36).slice(2, 8)}`;
+                const creditTotal = bonusResult.creditTotal;
+                const ticket: WithdrawTicket = {
+                  id: ticketId,
+                  userId: body.userId,
+                  userEmail: body.userEmail,
+                  userLabel: body.userLabel || body.userEmail,
+                  type: 'deposit',
+                  skins: [],
+                  total: creditTotal,
+                  robuxAmount,
+                  creditTotal,
+                  ...(bonusResult.bonusCode
+                    ? {
+                      bonusCode: bonusResult.bonusCode,
+                      bonusPercent: bonusResult.bonusPercent,
+                    }
+                    : {}),
+                  status: 'open',
+                  createdAt: now,
+                  updatedAt: now,
+                };
+                const bonusLine = bonusResult.bonusCode
+                  ? `\nPromo code ${bonusResult.bonusCode} (+${bonusResult.bonusPercent}%): ${creditTotal.toLocaleString('en-US')} coins SALDO.`
+                  : `\nYou will receive ${creditTotal.toLocaleString('en-US')} coins SALDO (1 R$ = 1.2 coins).`;
+                const messages: ChatMessage[] = [{
+                  id: `msg_${now}_welcome`,
+                  ticketId,
+                  senderId: 'system',
+                  senderEmail: 'system@blox-upgrader',
+                  senderRole: 'system',
+                  senderLabel: 'System',
+                  text: `Robux deposit request received (${robuxAmount.toLocaleString('en-US')} R$).${bonusLine}\n\nAn administrator will assist you live. Follow their payment instructions here.`,
+                  createdAt: now,
+                }];
+                const bundle: TicketBundle = { ticket, messages };
+                saveBundle(bundle);
+                sendJson(res, 200, bundle);
+                return;
+              }
+
               const skins = body.skins ?? [];
               const total = skins.reduce((sum, s) => sum + s.price, 0);
               if (!skins.length || !Number.isFinite(total) || total < MIN_DEPOSIT_TOTAL) {

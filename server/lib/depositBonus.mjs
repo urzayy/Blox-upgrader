@@ -25,6 +25,22 @@ export function calcDepositCreditTotal(baseTotal, bonusPercent) {
   return Math.floor(baseTotal + (baseTotal * bonusPercent) / 100);
 }
 
+export const ROBUX_TO_SALDO_RATE = 1.2;
+
+export function calcRobuxBaseCredit(robuxAmount) {
+  if (!Number.isFinite(robuxAmount) || robuxAmount <= 0) return 0;
+  return Math.round(robuxAmount * ROBUX_TO_SALDO_RATE * 100) / 100;
+}
+
+export function resolveRobuxDepositBonus(body, robuxAmount) {
+  const baseTotal = calcRobuxBaseCredit(robuxAmount);
+  if (baseTotal <= 0) {
+    return { error: 'invalid robux deposit' };
+  }
+  const bonus = resolveDepositBonus(body, baseTotal);
+  return { ...bonus, baseTotal };
+}
+
 export function resolveDepositBonus(body, baseTotal) {
   const rawCode = body?.bonusCode;
   if (!rawCode) {

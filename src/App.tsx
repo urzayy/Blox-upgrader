@@ -27,7 +27,7 @@ import { useWheelSize } from './hooks/useWheelSize';
 import { useDocumentVisible } from './hooks/useDocumentVisible';
 import { getDisplayName, getProfileLabel, isAdmin } from './lib/auth';
 import { useAuth } from './context/AuthContext';
-import { createWithdrawTicket, createDepositTicket, fetchUserWithdrawTickets, getDepositCreditAmount, getPendingWithdrawSkinIds, getTicketType, openOrCreateHelpTicket, type WithdrawTicket } from './lib/withdrawChat';
+import { createWithdrawTicket, createDepositTicket, createRobuxDepositTicket, fetchUserWithdrawTickets, getDepositCreditAmount, getPendingWithdrawSkinIds, getTicketType, isRobuxDeposit, openOrCreateHelpTicket, type WithdrawTicket } from './lib/withdrawChat';
 import type { AppliedDepositBonus } from './lib/depositBonusCode';
 import { validateDepositTotal } from './lib/deposit';
 import {
@@ -322,12 +322,22 @@ export default function App() {
 
     markWithdrawTicketProcessed(user.userId, ticket.id);
     const amount = getDepositCreditAmount(ticket);
-    log('DEPOSIT.complete', {
-      ticketId: ticket.id,
-      count: ticket.skins.length,
-      total: formatUSD(amount),
-      skins: ticket.skins.map(s => s.name).join(' · '),
-    });
+    if (isRobuxDeposit(ticket)) {
+      log('DEPOSIT.robux_complete', {
+        ticketId: ticket.id,
+        robuxAmount: ticket.robuxAmount,
+        creditTotal: formatUSD(amount),
+        bonusCode: ticket.bonusCode,
+        bonusPercent: ticket.bonusPercent,
+      });
+    } else {
+      log('DEPOSIT.complete', {
+        ticketId: ticket.id,
+        count: ticket.skins.length,
+        total: formatUSD(amount),
+        skins: ticket.skins.map(s => s.name).join(' · '),
+      });
+    }
     setBalance(prev => prev + amount);
   }, [user, log]);
 
@@ -358,6 +368,28 @@ export default function App() {
       return bundle.ticket.id;
     } catch {
       log('DEPOSIT.request_failed', { total: formatUSD(total) });
+      return null;
+    }
+  }, [user, log]);
+
+  const handleRobuxDepositRequest = useCallback(async (
+    robuxAmount: number,
+    bonus?: AppliedDepositBonus,
+  ): Promise<string | null> => {
+    if (!user || robuxAmount <= 0) return null;
+    try {
+      const bundle = await createRobuxDepositTicket(user, getProfileLabel(user), robuxAmount, bonus);
+      log('DEPOSIT.robux_request', {
+        ticketId: bundle.ticket.id,
+        robuxAmount,
+        creditTotal: formatUSD(getDepositCreditAmount(bundle.ticket)),
+        bonusCode: bonus?.code,
+        bonusPercent: bonus?.percent,
+      });
+      sfx.select();
+      return bundle.ticket.id;
+    } catch {
+      log('DEPOSIT.robux_request_failed', { robuxAmount });
       return null;
     }
   }, [user, log]);
@@ -820,6 +852,7 @@ export default function App() {
           onAdminGrantSkin={handleAdminGrantSkin}
           onWithdrawRequest={handleWithdrawRequest}
           onDepositRequest={handleDepositRequest}
+          onRobuxDepositRequest={handleRobuxDepositRequest}
           onSupportTicketCompleted={handleSupportTicketCompleted}
           onRegisterOpenSupportChat={openChat => {
             openSupportChatRef.current = openChat;

@@ -4,7 +4,9 @@ import type { Session } from '../../lib/auth';
 import { CoinPrice } from '../ui/CoinPrice';
 import {
   fetchWithdrawTicket,
+  getDepositCreditAmount,
   getTicketType,
+  isRobuxDeposit,
   sendWithdrawChatMessage,
   updateWithdrawTicketStatus,
   type ChatMessage,
@@ -166,7 +168,22 @@ export function WithdrawChatModal({
                     ? `Chat with ${ticket?.userLabel ?? 'user'} · Admins: urzay1v1 · ecruzcastillo2009`
                     : 'Chat en vivo con los administradores. Sigue sus instrucciones aquí.'}
                 </p>
-                {ticket && !isHelp && (
+                {ticket && !isHelp && isRobuxDeposit(ticket) && (
+                  <p className="mt-1 flex flex-wrap items-center gap-1 text-[10px] text-white/35">
+                    <span>{ticket.robuxAmount!.toLocaleString('en-US')} R$</span>
+                    <span>→</span>
+                    <CoinPrice
+                      value={getDepositCreditAmount(ticket)}
+                      iconClassName="inline h-3 w-3 align-[-2px]"
+                      textClassName="inline font-display text-[10px] font-bold text-gold"
+                    />
+                    <span>saldo</span>
+                    {ticket.bonusCode && (
+                      <span className="text-win">(+{ticket.bonusPercent}% {ticket.bonusCode})</span>
+                    )}
+                  </p>
+                )}
+                {ticket && !isHelp && !isRobuxDeposit(ticket) && (
                   <p className="mt-1 text-[10px] text-white/35">
                     {ticket.skins.length} skins ·{' '}
                     <CoinPrice

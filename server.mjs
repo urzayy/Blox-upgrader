@@ -12,7 +12,7 @@ import { createUserStore } from './server/lib/userStore.mjs';
 import { createPlayerStateStore } from './server/lib/playerStateStore.mjs';
 import { clearAccountByEmail as resetAccountByEmail } from './server/lib/accountReset.mjs';
 import { createAccountResetMarkerStore } from './server/lib/accountResetMarker.mjs';
-import { resolveDepositBonus } from './server/lib/depositBonus.mjs';
+import { resolveDepositBonus, resolveRobuxDepositBonus } from './server/lib/depositBonus.mjs';
 
 dotenv.config();
 
@@ -729,6 +729,60 @@ app.post('/api/withdraw/tickets', (req, res) => {
   const ticketType = body.type ?? 'withdraw';
 
   if (ticketType === 'deposit') {
+    if (body.depositMethod === 'robux') {
+      const robuxAmount = Number(body.robuxAmount);
+      if (!Number.isFinite(robuxAmount) || robuxAmount <= 0 || !Number.isInteger(robuxAmount)) {
+        sendJson(res, 400, { error: 'invalid robux deposit' });
+        return;
+      }
+      const bonusResult = resolveRobuxDepositBonus(body, robuxAmount);
+      if (bonusResult.error) {
+        sendJson(res, 400, { error: bonusResult.error });
+        return;
+      }
+      const ticketId = `rb_${now}_${Math.random().toString(36).slice(2, 8)}`;
+      const creditTotal = bonusResult.creditTotal;
+      const ticket = {
+        id: ticketId,
+        userId: body.userId,
+        userEmail: body.userEmail,
+        userLabel: body.userLabel || body.userEmail,
+        type: 'deposit',
+        skins: [],
+        total: creditTotal,
+        robuxAmount,
+        creditTotal,
+        ...(bonusResult.bonusCode
+          ? {
+            bonusCode: bonusResult.bonusCode,
+            bonusPercent: bonusResult.bonusPercent,
+          }
+          : {}),
+        status: 'open',
+        createdAt: now,
+        updatedAt: now,
+      };
+      const bonusLine = bonusResult.bonusCode
+        ? `\nPromo code ${bonusResult.bonusCode} (+${bonusResult.bonusPercent}%): ${creditTotal.toLocaleString('en-US')} coins SALDO.`
+        : `\nYou will receive ${creditTotal.toLocaleString('en-US')} coins SALDO (1 R$ = 1.2 coins).`;
+      const bundle = {
+        ticket,
+        messages: [{
+          id: `msg_${now}_welcome`,
+          ticketId,
+          senderId: 'system',
+          senderEmail: 'system@blox-upgrader',
+          senderRole: 'system',
+          senderLabel: 'System',
+          text: `Robux deposit request received (${robuxAmount.toLocaleString('en-US')} R$).${bonusLine}\n\nAn administrator will assist you live. Follow their payment instructions here.`,
+          createdAt: now,
+        }],
+      };
+      saveBundle(bundle);
+      sendJson(res, 200, bundle);
+      return;
+    }
+
     const skins = body.skins ?? [];
     const total = skins.reduce((sum, s) => sum + s.price, 0);
     if (!skins.length || !Number.isFinite(total) || total < MIN_DEPOSIT_TOTAL) {

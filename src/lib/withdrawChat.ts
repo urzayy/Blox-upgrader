@@ -3,6 +3,7 @@ import type { Session } from './auth';
 import { getDisplayName } from './auth';
 import { formatUSD } from './wheelMath';
 import { getAdminLastReadMap } from './adminChatRead';
+import { calcRobuxDepositCredit } from './robuxDeposit';
 
 export type SupportTicketType = 'withdraw' | 'deposit' | 'help';
 export type WithdrawTicketStatus = 'open' | 'completed' | 'cancelled';
@@ -27,6 +28,7 @@ export interface WithdrawTicket {
   creditTotal?: number;
   bonusCode?: string;
   bonusPercent?: number;
+  robuxAmount?: number;
   status: WithdrawTicketStatus;
   createdAt: number;
   updatedAt: number;
@@ -36,9 +38,16 @@ export function getTicketType(ticket: WithdrawTicket): SupportTicketType {
   return ticket.type ?? 'withdraw';
 }
 
+export function isRobuxDeposit(ticket: WithdrawTicket): boolean {
+  return getTicketType(ticket) === 'deposit' && (ticket.robuxAmount ?? 0) > 0;
+}
+
 /** Exact SALDO credit for a completed deposit ticket. */
 export function getDepositCreditAmount(ticket: WithdrawTicket): number {
   if (ticket.creditTotal != null && ticket.creditTotal > 0) return ticket.creditTotal;
+  if (isRobuxDeposit(ticket)) {
+    return calcRobuxDepositCredit(ticket.robuxAmount!, ticket.bonusPercent ?? 0);
+  }
   const fromSkins = ticket.skins.reduce((sum, s) => sum + s.price, 0);
   return fromSkins > 0 ? fromSkins : ticket.total;
 }
@@ -150,6 +159,29 @@ export async function createDepositTicket(
   });
 }
 
+export async function createRobuxDepositTicket(
+  session: Session,
+  userLabel: string,
+  robuxAmount: number,
+  bonus?: { code: string; percent: number },
+): Promise<WithdrawTicketBundle> {
+  return api<WithdrawTicketBundle>('/api/withdraw/tickets', {
+    method: 'POST',
+    body: JSON.stringify({
+      type: 'deposit',
+      depositMethod: 'robux',
+      userId: session.userId,
+      userEmail: session.email,
+      userLabel,
+      robuxAmount,
+      skins: [],
+      total: 0,
+      bonusCode: bonus?.code,
+      bonusPercent: bonus?.percent,
+    }),
+  });
+}
+
 export async function fetchWithdrawTicket(ticketId: string): Promise<WithdrawTicketBundle> {
   return api<WithdrawTicketBundle>(`/api/withdraw/tickets/${encodeURIComponent(ticketId)}`);
 }
@@ -251,6 +283,10 @@ export function formatWithdrawSummary(ticket: WithdrawTicket): string {
     return 'Live help chat';
   }
   if (getTicketType(ticket) === 'deposit') {
+    if (isRobuxDeposit(ticket)) {
+      const credit = getDepositCreditAmount(ticket);
+      return `Robux deposit · ${ticket.robuxAmount!.toLocaleString('en-US')} R$ → ${formatUSD(credit)} saldo`;
+    }
     const count = ticket.skins.length;
     const names = ticket.skins.map(s => s.name).slice(0, 2).join(' · ');
     const suffix = count > 2 ? '…' : '';
