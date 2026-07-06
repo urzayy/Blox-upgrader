@@ -18,6 +18,8 @@ import { LiveChatsInbox } from '../support/LiveChatsInbox';
 import { fetchUserWithdrawTickets, type WithdrawTicket } from '../../lib/withdrawChat';
 import { useAdminChatNotifications } from '../../lib/adminChatNotifications';
 import { useActivityLog } from '../../hooks/useActivityLog';
+import { DEV_MOBILE_LAYOUT } from '../../lib/devMobileLayout';
+import { MobileHeaderBar } from './MobileHeaderBar';
 import type { Skin } from '../../data/skins';
 
 interface Props {
@@ -229,7 +231,83 @@ export function Header({
         />
       )}
 
-      <header className="sticky top-0 z-50 grid grid-cols-[1fr_auto_1fr] items-center gap-4 border-b border-white/5 bg-deep/90 px-4 py-3 backdrop-blur-xl">
+      <header className={
+        DEV_MOBILE_LAYOUT
+          ? 'sticky top-0 z-50 border-b border-white/5 bg-deep/90 backdrop-blur-xl lg:px-4 lg:py-3'
+          : 'sticky top-0 z-50 grid grid-cols-[1fr_auto_1fr] items-center gap-4 border-b border-white/5 bg-deep/90 px-4 py-3 backdrop-blur-xl'
+      }
+      >
+      {DEV_MOBILE_LAYOUT && (
+        <MobileHeaderBar
+          balance={balance}
+          inventory={inventory}
+          user={user}
+          profileLabel={profileLabel}
+          turbo={turbo}
+          isAdmin={isAdmin}
+          openLiveChatCount={openLiveChatCount}
+          liveChatsOpen={liveChatsOpen}
+          withdrawOpen={withdrawOpen}
+          adminChatAttentionCount={adminChatAttentionCount}
+          adminInboxOpen={adminInboxOpen}
+          supportChatOpen={supportChatOpen}
+          clearOpen={clearOpen}
+          seeOpen={seeOpen}
+          giftMoneyOpen={giftMoneyOpen}
+          giftOpen={giftOpen}
+          userDbOpen={userDbOpen}
+          adminOpen={adminOpen}
+          onTurboToggle={onTurboToggle}
+          onOpenLogin={openLogin}
+          onLogout={onLogout}
+          onOpenLiveChats={() => {
+            log('CLICK.open_live_chats');
+            setLiveChatsOpen(true);
+          }}
+          onOpenDeposit={() => {
+            log('CLICK.open_deposit');
+            setDepositOpen(true);
+          }}
+          onOpenWithdraw={() => {
+            log('CLICK.open_withdraw');
+            setWithdrawOpen(true);
+          }}
+          onOpenNickname={() => {
+            log('CLICK.open_nickname');
+            setNicknameOpen(true);
+          }}
+          onOpenClear={() => {
+            log('CLICK.open_admin_clear');
+            setClearOpen(true);
+          }}
+          onOpenSee={() => {
+            log('CLICK.open_admin_see');
+            setSeeOpen(true);
+          }}
+          onOpenAdminInbox={() => {
+            log('CLICK.open_withdraw_inbox');
+            setAdminInboxOpen(true);
+          }}
+          onOpenGiftMoney={() => {
+            log('CLICK.open_admin_gift_money');
+            setGiftMoneyOpen(true);
+          }}
+          onOpenGift={() => {
+            log('CLICK.open_admin_gift');
+            setGiftOpen(true);
+          }}
+          onOpenUserDb={() => {
+            log('CLICK.open_user_db');
+            setUserDbOpen(true);
+          }}
+          onOpenAdmin={() => {
+            log('CLICK.open_admin');
+            setAdminOpen(true);
+          }}
+        />
+      )}
+
+      <div className={DEV_MOBILE_LAYOUT ? 'hidden lg:grid lg:grid-cols-[1fr_auto_1fr] lg:items-center lg:gap-4' : 'contents'}>
       <div className="flex items-center gap-3 justify-self-start">
         <h1 className="font-display text-lg font-bold tracking-[0.12em] uppercase">
           Blox<span className="text-gold">Upgrader</span>
@@ -413,27 +491,27 @@ export function Header({
                   </span>
                 )}
               </button>
-              <button
-                type="button"
-                onClick={() => {
-                  log('CLICK.open_deposit');
-                  setDepositOpen(true);
-                }}
-                className="group relative overflow-hidden rounded-lg border border-gold/45 px-3.5 py-1.5 font-display text-[11px] font-bold uppercase tracking-[0.14em] text-[#1a1400] shadow-[0_0_28px_rgba(255,215,0,0.35),inset_0_1px_0_rgba(255,255,255,0.35)] backdrop-blur-xl transition hover:border-gold hover:shadow-[0_0_40px_rgba(255,215,0,0.55),inset_0_1px_0_rgba(255,255,255,0.45)]"
-              >
-                <span
-                  aria-hidden="true"
-                  className="pointer-events-none absolute inset-0 bg-gradient-to-r from-[#ffe566] via-[#ffcc00] to-[#ffb800] opacity-95"
-                />
-                <span
-                  aria-hidden="true"
-                  className="pointer-events-none absolute -inset-1 bg-gold/40 blur-xl transition group-hover:bg-gold/55"
-                />
-                <span className="relative z-10 drop-shadow-[0_1px_0_rgba(255,255,255,0.35)]">
-                  Deposit
-                </span>
-              </button>
-              <button
+            <button
+              type="button"
+              onClick={() => {
+                log('CLICK.open_deposit');
+                setDepositOpen(true);
+              }}
+              className="group relative overflow-hidden rounded-lg border border-gold/45 px-3.5 py-1.5 font-display text-[11px] font-bold uppercase tracking-[0.14em] text-[#1a1400] shadow-[0_0_28px_rgba(255,215,0,0.35),inset_0_1px_0_rgba(255,255,255,0.35)] backdrop-blur-xl transition hover:border-gold hover:shadow-[0_0_40px_rgba(255,215,0,0.55),inset_0_1px_0_rgba(255,255,255,0.45)]"
+            >
+              <span
+                aria-hidden="true"
+                className="pointer-events-none absolute inset-0 bg-gradient-to-r from-[#ffe566] via-[#ffcc00] to-[#ffb800] opacity-95"
+              />
+              <span
+                aria-hidden="true"
+                className="pointer-events-none absolute -inset-1 bg-gold/40 blur-xl transition group-hover:bg-gold/55"
+              />
+              <span className="relative z-10 drop-shadow-[0_1px_0_rgba(255,255,255,0.35)]">
+                Deposit
+              </span>
+            </button>
+            <button
                 type="button"
                 onClick={() => {
                   log('CLICK.open_withdraw');
@@ -485,16 +563,29 @@ export function Header({
           </button>
         )}
       </div>
+      </div>
     </header>
     </>
   );
 }
 
-function Stat({ label, value }: { label: string; value: number }) {
+function Stat({ label, value, compact = false }: { label: string; value: number; compact?: boolean }) {
   return (
-    <div className="flex items-center gap-1 rounded-lg border border-white/5 bg-panel/90 px-2 py-1">
-      <span className="text-[8px] font-semibold tracking-wide text-white/40 uppercase">{label}</span>
-      <CoinPrice value={value} iconClassName="h-3 w-3" textClassName="font-display text-[11px] font-bold text-gold" />
+    <div className={`flex items-center gap-1 rounded-lg border border-white/5 bg-panel/90 ${
+      compact ? 'px-1.5 py-0.5' : 'px-2 py-1'
+    }`}
+    >
+      {!compact && (
+        <span className="text-[8px] font-semibold tracking-wide text-white/40 uppercase">{label}</span>
+      )}
+      {compact && (
+        <span className="text-[7px] font-semibold tracking-wide text-white/40 uppercase">{label}</span>
+      )}
+      <CoinPrice
+        value={value}
+        iconClassName={compact ? 'h-2.5 w-2.5' : 'h-3 w-3'}
+        textClassName={`font-display font-bold text-gold ${compact ? 'text-[10px]' : 'text-[11px]'}`}
+      />
     </div>
   );
 }

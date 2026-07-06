@@ -4,16 +4,25 @@ import { SkinLockOverlay } from './SkinLockOverlay';
 import { RARITY, type Skin } from '../../data/skins';
 import { CoinPrice } from '../ui/CoinPrice';
 import { inventoryTotal } from '../../lib/inventory';
+import { DEV_MOBILE_LAYOUT } from '../../lib/devMobileLayout';
 
 interface Props {
   variant: 'input' | 'target';
   skin?: Skin | null;
   skins?: Skin[];
   inputRolling?: boolean;
+  className?: string;
   onClear?: () => void;
 }
 
-export function SelectedSkinSlot({ variant, skin = null, skins = [], inputRolling = false, onClear }: Props) {
+export function SelectedSkinSlot({
+  variant,
+  skin = null,
+  skins = [],
+  inputRolling = false,
+  className = '',
+  onClear,
+}: Props) {
   const isInput = variant === 'input';
   const inputList = isInput ? skins : skin ? [skin] : [];
   const hasSelection = inputList.length > 0;
@@ -21,19 +30,25 @@ export function SelectedSkinSlot({ variant, skin = null, skins = [], inputRollin
 
   return (
     <div
-      className={`relative flex flex-1 min-w-0 flex-col rounded-xl border bg-gradient-to-b from-[#1a1d26] to-panel p-3 ${
+      className={`relative flex flex-1 min-w-0 flex-col rounded-xl border bg-gradient-to-b from-[#1a1d26] to-panel p-2 sm:p-3 ${
         isInput ? 'border-white/10' : 'border-gold/20 shadow-[inset_0_0_40px_rgba(255,215,0,0.04)]'
-      }`}
+      } ${className}`}
     >
       {!(isInput && !hasSelection) && (
-        <p className="mb-2 shrink-0 text-[10px] font-medium text-white/45 leading-snug">
+        <p className={`mb-2 shrink-0 text-[10px] font-medium text-white/45 leading-snug ${
+          DEV_MOBILE_LAYOUT ? 'hidden sm:block' : ''
+        }`}
+        >
           {isInput
             ? 'Selecciona hasta 5 skins de tu inventario abajo'
             : 'Selecciona la skin objetivo abajo'}
         </p>
       )}
 
-      <div className="relative flex flex-1 min-h-[140px] flex-col overflow-hidden rounded-lg bg-[#12151c]/80">
+      <div className={`relative flex flex-1 flex-col overflow-hidden rounded-lg bg-[#12151c]/80 ${
+        DEV_MOBILE_LAYOUT ? 'min-h-[88px] lg:min-h-[140px]' : 'min-h-[140px]'
+      }`}
+      >
         {!hasSelection ? (
           <EmptySlot isInput={isInput} />
         ) : isInput && inputList.length > 1 ? (

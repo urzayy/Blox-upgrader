@@ -7,7 +7,11 @@
     @apply scroll-smooth antialiased;
   }
   body {
-    @apply bg-deep text-white font-body overflow-hidden h-screen;
+    @apply bg-deep text-white font-body h-screen overflow-hidden;
+    @apply max-lg:min-h-[100dvh] max-lg:h-auto max-lg:overflow-x-hidden max-lg:overflow-y-auto;
+  }
+  #root {
+    @apply max-lg:min-h-[100dvh];
   }
 }
 

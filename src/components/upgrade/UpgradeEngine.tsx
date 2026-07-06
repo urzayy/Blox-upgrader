@@ -85,7 +85,7 @@ export function UpgradeEngine({
   }, [probability, spinning, turbo, onComplete, onUpgradeStart, onUpgradeRollLocked, requiresLogin, onLoginRequired]);
 
   return (
-    <section className="relative flex w-full max-w-[400px] shrink-0 flex-col items-center px-2">
+    <section className="relative flex w-full max-w-[400px] shrink-0 flex-col items-center px-1 sm:px-2 max-lg:max-w-full">
       <div className={`transition-all duration-300 ${phase === 'win' ? 'scale-105' : phase === 'lose' ? 'animate-wheel-shake' : ''}`}>
         <ProbabilityWheel
           probability={probability}
@@ -105,7 +105,7 @@ export function UpgradeEngine({
         onClick={runUpgrade}
         whileHover={canUpgrade && !spinning ? { scale: 1.02, boxShadow: '0 0 40px rgba(255,204,0,0.35)' } : {}}
         whileTap={canUpgrade && !spinning ? { scale: 0.98 } : {}}
-        className="mt-3 w-full max-w-[280px] rounded-xl bg-[#ffcc00] py-3.5 font-display text-base font-black tracking-wide text-black uppercase shadow-[0_4px_24px_rgba(255,204,0,0.35)] disabled:opacity-30 disabled:shadow-none"
+        className="mt-2 w-full max-w-[280px] rounded-xl bg-[#ffcc00] py-3 font-display text-sm font-black tracking-wide text-black uppercase shadow-[0_4px_24px_rgba(255,204,0,0.35)] disabled:opacity-30 disabled:shadow-none max-lg:max-w-none max-lg:py-2.5 max-lg:text-xs"
       >
         {spinning ? 'ROLLING...' : requiresLogin && canUpgrade ? 'Inicia sesión' : 'UPGRADE'}
       </motion.button>

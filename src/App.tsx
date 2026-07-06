@@ -50,6 +50,7 @@ import {
 import { ThanksToast } from './components/ui/ThanksToast';
 import type { ShopPurchaseItem } from './components/shop/ShopPanel';
 import type { DepositItem } from './components/deposit/DepositModal';
+import { DEV_MOBILE_LAYOUT } from './lib/devMobileLayout';
 
 export default function App() {
   const { user, logout: authLogout, openLogin } = useAuth();
@@ -780,7 +781,10 @@ export default function App() {
 
   return (
     <LayoutGroup>
-      <div className="relative flex h-screen flex-col overflow-hidden">
+      <div className={`relative flex flex-col ${
+        DEV_MOBILE_LAYOUT ? 'min-h-[100dvh] lg:h-screen lg:overflow-hidden' : 'h-screen overflow-hidden'
+      }`}
+      >
         <ParticleField />
         <div className="pointer-events-none fixed inset-0 bg-[radial-gradient(ellipse_80%_50%_at_50%_-10%,rgba(255,215,0,0.06),transparent)]" />
 
@@ -823,10 +827,92 @@ export default function App() {
           onAccountCleared={handleAccountCleared}
         />
 
-        <div className="mx-auto flex min-h-0 w-full max-w-[1920px] flex-1 gap-2 px-2 pb-2 lg:px-4">
+        <div className={`mx-auto flex min-h-0 w-full max-w-[1920px] flex-1 gap-2 px-2 pb-2 lg:px-4 ${
+          DEV_MOBILE_LAYOUT ? 'overflow-x-hidden lg:overflow-hidden' : ''
+        }`}
+        >
           <LiveFeed items={feed} className="hidden w-[220px] shrink-0 border-r border-white/5 xl:flex" />
 
-          <div className="flex min-h-0 flex-1 flex-col gap-2">
+          <div className={`flex min-h-0 flex-1 flex-col gap-2 ${
+            DEV_MOBILE_LAYOUT ? 'lg:overflow-hidden' : ''
+          }`}
+          >
+            {DEV_MOBILE_LAYOUT ? (
+              <>
+                <div className="flex shrink-0 justify-center lg:hidden">
+                  <UpgradeEngine
+                    probability={probability}
+                    wheelSize={wheelSize}
+                    multiplier={multiplier}
+                    cap={cap}
+                    canUpgrade={canUpgrade}
+                    requiresLogin={!user}
+                    onLoginRequired={openLogin}
+                    turbo={turbo}
+                    onMultiplier={handleMultiplier}
+                    onCap={handleCap}
+                    onUpgradeStart={handleUpgradeStart}
+                    onUpgradeRollLocked={handleUpgradeRollLocked}
+                    onComplete={onUpgradeComplete}
+                  />
+                </div>
+                <div className="grid shrink-0 grid-cols-2 gap-2 lg:hidden">
+                  <SelectedSkinSlot
+                    skins={inputSkins}
+                    variant="input"
+                    inputRolling={isUpgradeRolling}
+                    onClear={() => {
+                      if (isUpgradeRolling) return;
+                      log('CLICK.clear_input', { count: inputSkins.length });
+                      setInputSkins([]);
+                    }}
+                  />
+                  <SelectedSkinSlot
+                    skin={targetSkin}
+                    variant="target"
+                    onClear={() => {
+                      log('CLICK.clear_target', { skin: targetSkin?.name ?? '' });
+                      setTargetSkin(null);
+                    }}
+                  />
+                </div>
+                <div className="hidden shrink-0 flex-col gap-2 lg:flex lg:flex-row lg:gap-3">
+                  <SelectedSkinSlot
+                    skins={inputSkins}
+                    variant="input"
+                    inputRolling={isUpgradeRolling}
+                    onClear={() => {
+                      if (isUpgradeRolling) return;
+                      log('CLICK.clear_input', { count: inputSkins.length });
+                      setInputSkins([]);
+                    }}
+                  />
+                  <UpgradeEngine
+                    probability={probability}
+                    wheelSize={wheelSize}
+                    multiplier={multiplier}
+                    cap={cap}
+                    canUpgrade={canUpgrade}
+                    requiresLogin={!user}
+                    onLoginRequired={openLogin}
+                    turbo={turbo}
+                    onMultiplier={handleMultiplier}
+                    onCap={handleCap}
+                    onUpgradeStart={handleUpgradeStart}
+                    onUpgradeRollLocked={handleUpgradeRollLocked}
+                    onComplete={onUpgradeComplete}
+                  />
+                  <SelectedSkinSlot
+                    skin={targetSkin}
+                    variant="target"
+                    onClear={() => {
+                      log('CLICK.clear_target', { skin: targetSkin?.name ?? '' });
+                      setTargetSkin(null);
+                    }}
+                  />
+                </div>
+              </>
+            ) : (
             <div className="flex shrink-0 gap-2 lg:gap-3">
               <SelectedSkinSlot
                 skins={inputSkins}
@@ -864,8 +950,12 @@ export default function App() {
                 }}
               />
             </div>
+            )}
 
-            <div className="grid min-h-0 flex-1 grid-cols-1 gap-2 lg:grid-cols-2">
+            <div className={`grid min-h-0 flex-1 grid-cols-1 gap-2 lg:grid-cols-2 ${
+              DEV_MOBILE_LAYOUT ? 'lg:[&>section]:min-h-0' : ''
+            }`}
+            >
               <InventoryShopPanel
                 skins={inventoryPanelSkins}
                 selected={inputSkins}

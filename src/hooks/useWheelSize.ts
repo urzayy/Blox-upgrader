@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { DEV_MOBILE_LAYOUT } from '../lib/devMobileLayout';
 
 /** ~40% smaller than previous sizes */
 export function useWheelSize() {
@@ -6,7 +7,9 @@ export function useWheelSize() {
   useEffect(() => {
     const update = () => {
       const w = window.innerWidth;
-      if (w < 480) setSize(Math.min(200, w - 32));
+      if (w < 480) {
+        setSize(DEV_MOBILE_LAYOUT ? Math.min(190, w - 32) : Math.min(200, w - 32));
+      }
       else if (w < 1024) setSize(240);
       else if (w < 1440) setSize(300);
       else setSize(340);
