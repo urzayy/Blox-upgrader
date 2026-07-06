@@ -3,6 +3,7 @@ import type { Skin } from '../../data/skins';
 import { SkinCard } from './SkinCard';
 import { ShopPanel, type ShopPurchaseItem } from '../shop/ShopPanel';
 import { KnifeTabIcon, PanelTabButton, ShopTabIcon } from '../ui/PanelTabIcons';
+import { CoinPrice } from '../ui/CoinPrice';
 
 const PAGE_SIZE = 18;
 
@@ -88,10 +89,14 @@ export function InventoryShopPanel({
             )}
           </span>
         ) : (
-          <span className="text-[10px] text-white/35">
-            SALDO:{' '}
-            <span className="font-display font-bold text-gold">{balance.toLocaleString('es-ES')}</span>
-          </span>
+          <div className="flex items-center gap-2 rounded-lg border border-gold/30 bg-gradient-to-r from-gold/10 via-gold/5 to-transparent px-2.5 py-1.5 shadow-[0_0_18px_rgba(255,215,0,0.12)]">
+            <span className="text-[9px] font-bold uppercase tracking-[0.14em] text-white/45">Saldo</span>
+            <CoinPrice
+              value={balance}
+              iconClassName="h-3.5 w-3.5"
+              textClassName="font-display text-xs font-bold text-gold"
+            />
+          </div>
         )}
       </div>
 
