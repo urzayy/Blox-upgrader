@@ -42,7 +42,7 @@ export function LiveHelpControl({ onConfirm, loading }: Props) {
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: 6, scale: 0.97 }}
               transition={{ type: 'spring', stiffness: 420, damping: 30 }}
-              className="absolute bottom-full right-0 z-[116] mb-2 w-[min(92vw,300px)] rounded-xl border border-win/25 bg-[#0c1210]/98 p-3 shadow-[0_12px_40px_rgba(0,0,0,0.65),0_0_24px_rgba(52,211,153,0.12)] backdrop-blur-sm"
+              className="absolute bottom-full right-0 z-[116] mb-2 w-[min(92vw,300px)] rounded-xl border border-win/30 bg-[#0e1412] p-3 shadow-[0_12px_40px_rgba(0,0,0,0.75),0_0_24px_rgba(52,211,153,0.12)]"
             >
               <h3
                 id="live-help-confirm-title"
