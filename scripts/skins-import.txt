@@ -146,7 +146,7 @@ M4A1-S | Anodized Red 1.100 Rojo https://bloxstrike.net/items/bloxstrike-live/87
 Package | MP9 | High Octane 1.040 Rojo https://bloxstrike.net/items/bloxstrike-live/115824013489426.png
 Package | AK-47 | Midas 1.010 Rojo https://bloxstrike.net/items/bloxstrike-live/75177355895881.png
 Package | Tec-9 | Medal.tv 1.000 Rojo https://bloxstrike.net/items/bloxstrike-live/71231444746781.png
-Flip | Noir 1.000 Rojo https://bloxstrike.net/items/bloxstrike-live/84089827338039.png
+Flip | Noir 22.000 Rojo https://bloxstrike.net/items/bloxstrike-live/84089827338039.png
 Package | AWP | Tekko 960 Rojo https://bloxstrike.net/items/bloxstrike-live/120743455064046.png
 AWP | High Octane 953 Rojo https://bloxstrike.net/items/bloxstrike-live/136112070369501.png
 Package | M4A4 | Tekko 811 Rojo https://bloxstrike.net/items/bloxstrike-live/91269532200879.png
@@ -172,7 +172,7 @@ Package | Glock-18 | PinPoint 332 Rojo  https://bloxstrike.net/items/bloxstrike-
 AWP | Bird Hunt 304 Rojo https://bloxstrike.net/items/bloxstrike-live/91355488643704.png
 MP9 | High Octane 303 Rojo https://bloxstrike.net/items/bloxstrike-live/99133552349769.png
 USP-S | SuperSoaked 285 Rojo https://bloxstrike.net/items/bloxstrike-live/111928584115671.png
-M4A1-S | Phaseprint 584 Rojo  https://bloxstrike.net/items/bloxstrike-live/76878278285757.png
+M4A1-S | Phaseprint 320 Rojo  https://bloxstrike.net/items/bloxstrike-live/76878278285757.png
 Package | MAC-10 | Midas 247 Rojo https://bloxstrike.net/items/bloxstrike-live/87600573919459.png
 M4A1-S | Retro 206 Rojo  https://bloxstrike.net/items/bloxstrike-live/127638017774749.png
 Sawed-Off | SuperSoaked 147 Rojo  https://bloxstrike.net/items/bloxstrike-live/92355344149162.png
@@ -193,7 +193,7 @@ AWP | Railgun 48 Rosa https://bloxstrike.net/items/bloxstrike-live/1249998830322
 SSG 08 | Mindspill 48 Roja  https://bloxstrike.net/items/bloxstrike-live/76518146707378.png
 Case | Finishline Case 47 roja https://bloxstrike.net/items/bloxstrike-live/114958333422119.png
 Case | Lionheart 47 Roja  https://bloxstrike.net/items/bloxstrike-live/73482740280871.png
-AWP | Typhon 75 Pink  https://bloxstrike.net/items/bloxstrike-live/136191452368563.png
+AWP | Typhon 40 Pink  https://bloxstrike.net/items/bloxstrike-live/136191452368563.png
 Case | Glove Case 2 46 Roja  https://bloxstrike.net/items/bloxstrike-live/75374128985311.png
 Case | Glove Case 45 Roja https://bloxstrike.net/items/bloxstrike-live/123594181073716.png
 USP-S | Ajax 45 rosa https://bloxstrike.net/items/bloxstrike-live/128789343995926.png
@@ -203,7 +203,7 @@ Case | Chrysalis 42 Roja  https://bloxstrike.net/items/bloxstrike-live/134467311
 P90 | DRFT 42 Roja  https://bloxstrike.net/items/bloxstrike-live/129912585396630.png
 Desert Eagle | Mercy 37 Rosa https://bloxstrike.net/items/bloxstrike-live/88607588222034.png
 Glock-18 | Fade 37 rosa https://bloxstrike.net/items/bloxstrike-live/102311740531470.png
-M4A1-S | Castroil 35 rosa https://bloxstrike.net/items/bloxstrike-live/106466951136790.png
+M4A1-S | Castroil 180 rosa https://bloxstrike.net/items/bloxstrike-live/106466951136790.png
 MAC-10 | Midas 35 Roja https://bloxstrike.net/items/bloxstrike-live/100609608112786.png
 AK-47 | Aniki 30 Morada  https://bloxstrike.net/items/bloxstrike-live/83000635050744.png
 Desert Eagle | Racer8 27 Rosa  https://bloxstrike.net/items/bloxstrike-live/116218659152633.png
@@ -215,7 +215,7 @@ SSG 08 | Racer8 18 rosa  https://bloxstrike.net/items/bloxstrike-live/7265112855
 Desert Eagle | Circuit 16 rosa https://bloxstrike.net/items/bloxstrike-live/96711237869835.png
 Dual Berettas | Inked 11 Rosa  https://bloxstrike.net/items/bloxstrike-live/100406553018004.png
 Five-SeveN | X-Ray 10 Rosa  https://bloxstrike.net/items/bloxstrike-live/117920971198120.png
-Glock-18 | Fuji 10 Rosa https://bloxstrike.net/items/bloxstrike-live/129437922121163.png
+Glock-18 | Fuji 15 Rosa https://bloxstrike.net/items/bloxstrike-live/129437922121163.png
 SG 553 | Dynasty 8 Rosa https://bloxstrike.net/items/bloxstrike-live/104894297920788.png
 SG 553 | Frostline 8 Azul https://bloxstrike.net/items/bloxstrike-live/107041781535861.png
 Five-SeveN | Icecap 7 Azul https://bloxstrike.net/items/bloxstrike-live/136238530759469.png
