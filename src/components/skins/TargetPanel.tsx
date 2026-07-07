@@ -5,6 +5,7 @@ import { SkinImage } from './SkinImage';
 
 import { LiveHelpControl } from '../support/LiveHelpControl';
 import { AdminPromoCodeControl } from '../admin/AdminPromoCodeControl';
+import { DevTransactionHistoryControl } from '../admin/DevTransactionHistoryControl';
 
 const PAGE_SIZE = 18;
 
@@ -15,6 +16,7 @@ interface Props {
   onLiveHelp?: () => void;
   liveHelpLoading?: boolean;
   showAdminPromoCodes?: boolean;
+  showTransactionHistory?: boolean;
   adminEmail?: string;
 }
 
@@ -36,6 +38,7 @@ export function TargetPanel({
   onLiveHelp,
   liveHelpLoading,
   showAdminPromoCodes,
+  showTransactionHistory,
   adminEmail,
 }: Props) {
   const [min, setMin] = useState('');
@@ -139,6 +142,9 @@ export function TargetPanel({
           </button>
         </div>
         <div className="flex shrink-0 items-center gap-2">
+          {showTransactionHistory && adminEmail && (
+            <DevTransactionHistoryControl />
+          )}
           {showAdminPromoCodes && adminEmail && (
             <AdminPromoCodeControl adminEmail={adminEmail} />
           )}

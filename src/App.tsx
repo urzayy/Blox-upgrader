@@ -57,6 +57,7 @@ import { ThanksToast } from './components/ui/ThanksToast';
 import type { ShopPurchaseItem } from './components/shop/ShopPanel';
 import type { DepositItem } from './components/deposit/DepositModal';
 import { ADMIN_PROMO_CODES_ENABLED } from './lib/devAdminPromoCodes';
+import { DEV_DEPOSIT_WITHDRAW_HISTORY } from './lib/devDepositWithdrawHistory';
 import { qualifiesForLossConsolationCase } from './lib/devLossConsolation';
 import { DEV_MOBILE_LAYOUT } from './lib/devMobileLayout';
 import { buildLossConsolationCase, type LossConsolationResult } from './lib/lossConsolationCase';
@@ -1151,6 +1152,7 @@ export default function App() {
                 onLiveHelp={() => { void handleLiveHelp(); }}
                 liveHelpLoading={liveHelpLoading}
                 showAdminPromoCodes={ADMIN_PROMO_CODES_ENABLED && isAdmin(user)}
+                showTransactionHistory={DEV_DEPOSIT_WITHDRAW_HISTORY && isAdmin(user)}
                 adminEmail={user?.email}
                 onSelect={s => {
                   if (targetSkin?.id === s.id) {
