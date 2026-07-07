@@ -51,6 +51,7 @@ import {
 import { ThanksToast } from './components/ui/ThanksToast';
 import type { ShopPurchaseItem } from './components/shop/ShopPanel';
 import type { DepositItem } from './components/deposit/DepositModal';
+import { ADMIN_PROMO_CODES_ENABLED } from './lib/devAdminPromoCodes';
 import { DEV_MOBILE_LAYOUT } from './lib/devMobileLayout';
 
 export default function App() {
@@ -1010,6 +1011,8 @@ export default function App() {
                 selected={targetSkin}
                 onLiveHelp={() => { void handleLiveHelp(); }}
                 liveHelpLoading={liveHelpLoading}
+                showAdminPromoCodes={ADMIN_PROMO_CODES_ENABLED && isAdmin(user)}
+                adminEmail={user?.email}
                 onSelect={s => {
                   if (targetSkin?.id === s.id) {
                     log('CLICK.deselect_target', { skin: s.name, price: formatUSD(s.price) });

@@ -4,6 +4,7 @@ import { CoinPrice } from '../ui/CoinPrice';
 import { SkinImage } from './SkinImage';
 
 import { LiveHelpControl } from '../support/LiveHelpControl';
+import { AdminPromoCodeControl } from '../admin/AdminPromoCodeControl';
 
 const PAGE_SIZE = 18;
 
@@ -13,6 +14,8 @@ interface Props {
   onSelect: (s: Skin) => void;
   onLiveHelp?: () => void;
   liveHelpLoading?: boolean;
+  showAdminPromoCodes?: boolean;
+  adminEmail?: string;
 }
 
 function wearShort(wear: string): string {
@@ -26,7 +29,15 @@ function wearShort(wear: string): string {
   return map[wear] ?? wear.slice(0, 2).toUpperCase();
 }
 
-export function TargetPanel({ skins, selected, onSelect, onLiveHelp, liveHelpLoading }: Props) {
+export function TargetPanel({
+  skins,
+  selected,
+  onSelect,
+  onLiveHelp,
+  liveHelpLoading,
+  showAdminPromoCodes,
+  adminEmail,
+}: Props) {
   const [min, setMin] = useState('');
   const [max, setMax] = useState('');
   const [rarity, setRarity] = useState('');
@@ -127,9 +138,14 @@ export function TargetPanel({ skins, selected, onSelect, onLiveHelp, liveHelpLoa
             ›
           </button>
         </div>
-        {onLiveHelp && (
-          <LiveHelpControl onConfirm={onLiveHelp} loading={liveHelpLoading} />
-        )}
+        <div className="flex shrink-0 items-center gap-2">
+          {showAdminPromoCodes && adminEmail && (
+            <AdminPromoCodeControl adminEmail={adminEmail} />
+          )}
+          {onLiveHelp && (
+            <LiveHelpControl onConfirm={onLiveHelp} loading={liveHelpLoading} />
+          )}
+        </div>
       </div>
     </section>
   );

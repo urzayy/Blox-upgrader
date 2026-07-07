@@ -36,7 +36,7 @@ interface Props {
   onLogout: () => void;
   onAdminGrantSkin: (skin: Skin) => void;
   onWithdrawRequest: (skins: Skin[]) => Promise<string | null>;
-  onDepositRequest: (items: DepositItem[]) => Promise<string | null>;
+  onDepositRequest: (items: DepositItem[], bonus?: AppliedDepositBonus) => Promise<string | null>;
   onRobuxDepositRequest?: (robuxAmount: number, bonus?: AppliedDepositBonus) => Promise<string | null>;
   onSupportTicketCompleted: (ticket: WithdrawTicket) => void;
   onRegisterOpenSupportChat?: (openChat: (ticketId: string) => void) => void;
@@ -202,8 +202,8 @@ export function Header({
       <DepositModal
         open={depositOpen}
         onClose={() => setDepositOpen(false)}
-        onRequestDeposit={async items => {
-          const ticketId = await onDepositRequest(items);
+        onRequestDeposit={async (items, bonus) => {
+          const ticketId = await onDepositRequest(items, bonus);
           if (ticketId) openSupportChat(ticketId);
           return ticketId;
         }}

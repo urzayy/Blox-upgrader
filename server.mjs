@@ -12,7 +12,8 @@ import { createUserStore } from './server/lib/userStore.mjs';
 import { createPlayerStateStore } from './server/lib/playerStateStore.mjs';
 import { clearAccountByEmail as resetAccountByEmail } from './server/lib/accountReset.mjs';
 import { createAccountResetMarkerStore } from './server/lib/accountResetMarker.mjs';
-import { resolveDepositBonus, resolveRobuxDepositBonus } from './server/lib/depositBonus.mjs';
+import { resolveDepositBonus, resolveRobuxDepositBonus, initPromoCodeStore } from './server/lib/depositBonus.mjs';
+import { createPromoCodeStore } from './server/lib/promoCodeStore.mjs';
 
 dotenv.config();
 
@@ -28,6 +29,7 @@ const CHATS_DIR = process.env.CHATS_DIR || path.join(DATA_DIR, 'withdraw-chats')
 const GRANTS_DIR = process.env.GRANTS_DIR || path.join(DATA_DIR, 'inventory-grants');
 const BALANCE_GRANTS_DIR = process.env.BALANCE_GRANTS_DIR || path.join(DATA_DIR, 'balance-grants');
 const STATE_DIR = process.env.STATE_DIR || path.join(DATA_DIR, 'site-state');
+const PROMO_CODES_DIR = process.env.PROMO_CODES_DIR || path.join(DATA_DIR, 'promo-codes');
 const STATE_FILE = path.join(STATE_DIR, 'state.json');
 
 const PORT = Number(process.env.PORT) || 4173;
@@ -35,11 +37,13 @@ const SITE_URL = process.env.SITE_URL || `http://localhost:${PORT}`;
 const BASE_TOTAL_UPGRADES = 13_200;
 const MIN_DEPOSIT_TOTAL = 40;
 
-for (const dir of [LOGS_DIR, USER_DB_DIR, path.join(USER_DB_DIR, 'events'), PLAYER_STATE_DIR, ACCOUNT_RESETS_DIR, CHATS_DIR, GRANTS_DIR, BALANCE_GRANTS_DIR, STATE_DIR]) {
+for (const dir of [LOGS_DIR, USER_DB_DIR, path.join(USER_DB_DIR, 'events'), PLAYER_STATE_DIR, ACCOUNT_RESETS_DIR, CHATS_DIR, GRANTS_DIR, BALANCE_GRANTS_DIR, STATE_DIR, PROMO_CODES_DIR]) {
   if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
 }
 
 const userStore = createUserStore({ userDbDir: USER_DB_DIR });
+const promoCodeStore = createPromoCodeStore(PROMO_CODES_DIR);
+initPromoCodeStore(promoCodeStore);
 const playerStateStore = createPlayerStateStore({ playerStateDir: PLAYER_STATE_DIR });
 const resetMarkerStore = createAccountResetMarkerStore(ACCOUNT_RESETS_DIR);
 let storageStatus = { ok: false, path: userStore.type === 'supabase' ? 'supabase' : USER_DB_DIR };
@@ -515,6 +519,54 @@ app.get('/api/admin/user-db/users/:userId/export.txt', async (req, res) => {
   }
   res.type('text/plain; charset=utf-8');
   res.send(await userStore.exportUserTxt(req.params.userId));
+});
+
+app.get('/api/promo-codes/validate', (req, res) => {
+  const code = String(req.query.code ?? '');
+  sendJson(res, 200, promoCodeStore.validateCode(code));
+});
+
+app.get('/api/admin/promo-codes', (req, res) => {
+  const adminEmail = String(req.query.adminEmail ?? '');
+  if (!userStore.isAdminEmail(adminEmail)) {
+    sendJson(res, 403, { error: 'forbidden' });
+    return;
+  }
+  sendJson(res, 200, { codes: promoCodeStore.listCodes() });
+});
+
+app.post('/api/admin/promo-codes', (req, res) => {
+  const body = req.body ?? {};
+  if (!userStore.isAdminEmail(String(body.adminEmail ?? '').trim())) {
+    sendJson(res, 403, { error: 'forbidden' });
+    return;
+  }
+  const result = promoCodeStore.createCode({
+    code: String(body.code ?? ''),
+    percent: Number(body.percent),
+    durationValue: body.durationValue,
+    durationUnit: body.durationUnit ?? 'permanent',
+    createdBy: String(body.adminEmail ?? '').trim(),
+  });
+  if (result.error) {
+    sendJson(res, 400, { error: result.error });
+    return;
+  }
+  sendJson(res, 200, { entry: result.entry });
+});
+
+app.delete('/api/admin/promo-codes/:code', (req, res) => {
+  const adminEmail = String(req.query.adminEmail ?? '');
+  if (!userStore.isAdminEmail(adminEmail)) {
+    sendJson(res, 403, { error: 'forbidden' });
+    return;
+  }
+  const result = promoCodeStore.deleteCode(req.params.code ?? '');
+  if (result.error) {
+    sendJson(res, 400, { error: result.error });
+    return;
+  }
+  sendJson(res, 200, { ok: true, entry: result.entry });
 });
 
 app.get('/api/site-state', (_req, res) => {

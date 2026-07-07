@@ -41,9 +41,9 @@ export function DepositModal({ open, onClose, onRequestDeposit }: Props) {
     }
   }, [open]);
 
-  const handleApplyCode = () => {
+  const handleApplyCode = async () => {
     setCodeError('');
-    const result = validateDepositBonusCode(codeInput);
+    const result = await validateDepositBonusCode(codeInput);
     if (!result.valid) {
       setAppliedBonus(null);
       setCodeError(result.error ?? 'Invalid code.');
@@ -125,7 +125,7 @@ export function DepositModal({ open, onClose, onRequestDeposit }: Props) {
                     setCodeInput(value);
                     setCodeError('');
                   }}
-                  onApply={handleApplyCode}
+                  onApply={() => { void handleApplyCode(); }}
                   onClear={() => {
                     setAppliedBonus(null);
                     setCodeInput('');
@@ -144,7 +144,7 @@ export function DepositModal({ open, onClose, onRequestDeposit }: Props) {
                   return false;
                 }
                 if (appliedBonus) {
-                  const recheck = validateDepositBonusCode(appliedBonus.code);
+                  const recheck = await validateDepositBonusCode(appliedBonus.code);
                   if (!recheck.valid) {
                     setAppliedBonus(null);
                     setCodeError(recheck.error ?? 'Invalid code.');

@@ -13,6 +13,8 @@ balance-grants/*.json
 !balance-grants/README.md
 site-state/*.json
 !site-state/README.md
+promo-codes/*.json
+!promo-codes/README.md
 user-db/users.json
 user-db/accounts.json
 user-db/events/*.jsonl

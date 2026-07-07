@@ -7,6 +7,7 @@ import { inventoryGrantsPlugin } from './vite-inventory-grants-plugin';
 import { balanceGrantsPlugin } from './vite-balance-grants-plugin';
 import { siteStatePlugin } from './vite-site-state-plugin';
 import { userDbPlugin } from './vite-user-db-plugin';
+import { promoCodesPlugin } from './vite-promo-codes-plugin';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const userDbDir = path.resolve(__dirname, 'user-db');
@@ -14,11 +15,13 @@ const withdrawChatsDir = path.resolve(__dirname, 'withdraw-chats');
 const inventoryGrantsDir = path.resolve(__dirname, 'inventory-grants');
 const balanceGrantsDir = path.resolve(__dirname, 'balance-grants');
 const siteStateDir = path.resolve(__dirname, 'site-state');
+const promoCodesDir = path.resolve(__dirname, 'promo-codes');
 
 export default defineConfig({
   plugins: [
     react(),
     userDbPlugin(userDbDir),
+    promoCodesPlugin(promoCodesDir, userDbDir),
     withdrawChatPlugin(withdrawChatsDir),
     inventoryGrantsPlugin(inventoryGrantsDir),
     balanceGrantsPlugin(balanceGrantsDir),

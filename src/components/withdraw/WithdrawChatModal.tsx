@@ -184,13 +184,18 @@ export function WithdrawChatModal({
                   </p>
                 )}
                 {ticket && !isHelp && !isRobuxDeposit(ticket) && (
-                  <p className="mt-1 text-[10px] text-white/35">
+                  <p className="mt-1 flex flex-wrap items-center gap-1 text-[10px] text-white/35">
                     {ticket.skins.length} skins ·{' '}
                     <CoinPrice
-                      value={ticket.total}
+                      value={getDepositCreditAmount(ticket)}
                       iconClassName="inline h-3 w-3 align-[-2px]"
                       textClassName="inline font-display text-[10px] font-bold text-gold"
                     />
+                    {ticket.bonusCode && (
+                      <span className="font-display font-bold uppercase text-win drop-shadow-[0_0_8px_rgba(52,211,153,0.55)]">
+                        · Promocode: {ticket.bonusCode} ({ticket.bonusPercent}%)
+                      </span>
+                    )}
                   </p>
                 )}
                 {ticket && isHelp && (
@@ -217,6 +222,15 @@ export function WithdrawChatModal({
                   ticketSkins={
                     msg.senderRole === 'system' && msg.id.includes('_welcome')
                       ? ticket?.skins
+                      : undefined
+                  }
+                  depositBonus={
+                    msg.senderRole === 'system' && msg.id.includes('_welcome') && ticket?.bonusCode
+                      ? {
+                        code: ticket.bonusCode,
+                        percent: ticket.bonusPercent ?? 0,
+                        creditTotal: getDepositCreditAmount(ticket),
+                      }
                       : undefined
                   }
                 />
@@ -290,17 +304,19 @@ function ChatBubble({
   message,
   isOwn,
   ticketSkins,
+  depositBonus,
 }: {
   message: ChatMessage;
   isOwn: boolean;
   ticketSkins?: WithdrawSkinSummary[];
+  depositBonus?: { code: string; percent: number; creditTotal: number };
 }) {
   if (message.senderRole === 'system') {
     return (
       <div className="mx-auto max-w-[92%] rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 text-center text-[11px] leading-relaxed text-white/55 whitespace-pre-wrap">
         {message.text}
         {ticketSkins && ticketSkins.length > 0 && (
-          <TicketSkinsGallery skins={ticketSkins} />
+          <TicketSkinsGallery skins={ticketSkins} depositBonus={depositBonus} />
         )}
       </div>
     );
@@ -347,8 +363,15 @@ function groupTicketSkins(skins: WithdrawSkinSummary[]) {
   return Array.from(map.values());
 }
 
-function TicketSkinsGallery({ skins }: { skins: WithdrawSkinSummary[] }) {
+function TicketSkinsGallery({
+  skins,
+  depositBonus,
+}: {
+  skins: WithdrawSkinSummary[];
+  depositBonus?: { code: string; percent: number; creditTotal: number };
+}) {
   const grouped = groupTicketSkins(skins);
+  const showCreditTotal = Boolean(depositBonus && grouped.length === 1);
 
   return (
     <div className="mt-3 border-t border-white/10 pt-3 text-left">
@@ -361,7 +384,7 @@ function TicketSkinsGallery({ skins }: { skins: WithdrawSkinSummary[] }) {
           >
             <div className="absolute right-1 top-1 z-10 rounded bg-black/75 px-1 py-0.5">
               <CoinPrice
-                value={skin.price * quantity}
+                value={showCreditTotal ? depositBonus!.creditTotal : skin.price * quantity}
                 iconClassName="h-2 w-2"
                 textClassName="text-[7px] font-bold text-gold font-display"
               />
@@ -374,12 +397,30 @@ function TicketSkinsGallery({ skins }: { skins: WithdrawSkinSummary[] }) {
             <div className="relative mx-auto aspect-square w-full max-h-[64px] overflow-hidden p-1">
               <SkinImage src={skin.image} alt={skin.name} zoom={1.05} />
             </div>
-            <p className="line-clamp-2 border-t border-white/5 bg-black/40 px-1.5 py-1 text-[8px] font-semibold leading-tight text-white/85">
-              {skin.name}
-            </p>
+            <div className="border-t border-white/5 bg-black/40 px-1.5 py-1">
+              <p className="line-clamp-2 text-[8px] font-semibold leading-tight text-white/85">
+                {skin.name}
+              </p>
+              {depositBonus && (
+                <p className="mt-1 text-center font-display text-[7px] font-black uppercase leading-tight text-win drop-shadow-[0_0_10px_rgba(52,211,153,0.65)]">
+                  Promocode usado: {depositBonus.code} ({depositBonus.percent}%)
+                </p>
+              )}
+            </div>
           </div>
         ))}
       </div>
+      {depositBonus && grouped.length > 1 && (
+        <p className="mt-2 text-center font-display text-[10px] font-black uppercase text-win drop-shadow-[0_0_10px_rgba(52,211,153,0.65)]">
+          Promocode usado: {depositBonus.code} ({depositBonus.percent}%) ·{' '}
+          <CoinPrice
+            value={depositBonus.creditTotal}
+            iconClassName="inline h-3 w-3 align-[-2px]"
+            textClassName="inline font-display text-[10px] font-bold text-win"
+          />
+          {' '}total credit
+        </p>
+      )}
     </div>
   );
 }

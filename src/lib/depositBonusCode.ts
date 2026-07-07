@@ -1,7 +1,6 @@
-export const DEPOSIT_BONUS_PERCENT = 2;
+import { validatePromoCode } from './promoCodeApi';
 
-/** Add valid codes here later, e.g. WELCOME: 2 */
-const VALID_CODES: Record<string, number> = {};
+export const DEPOSIT_BONUS_PERCENT = 2;
 
 export interface AppliedDepositBonus {
   code: string;
@@ -12,22 +11,16 @@ export function normalizeBonusCode(code: string): string {
   return code.trim().toUpperCase();
 }
 
-export function validateDepositBonusCode(code: string): {
+export async function validateDepositBonusCode(code: string): Promise<{
   valid: boolean;
   percent: number;
   error?: string;
-} {
-  const normalized = normalizeBonusCode(code);
-  if (!normalized) {
-    return { valid: false, percent: 0, error: 'Enter a code.' };
+}> {
+  try {
+    return await validatePromoCode(code);
+  } catch {
+    return { valid: false, percent: 0, error: 'Could not validate the code. Try again.' };
   }
-
-  const percent = VALID_CODES[normalized];
-  if (!percent) {
-    return { valid: false, percent: 0, error: 'Invalid code.' };
-  }
-
-  return { valid: true, percent };
 }
 
 export function calcDepositCreditTotal(baseTotal: number, bonusPercent: number): number {
