@@ -276,10 +276,6 @@ export function withdrawChatPlugin(chatsDir: string): Plugin {
             if (ticketType === 'deposit') {
               if (body.depositMethod === 'robux') {
                 const robuxAmount = Number(body.robuxAmount);
-                if (!Number.isFinite(robuxAmount) || robuxAmount <= 0 || !Number.isInteger(robuxAmount)) {
-                  sendJson(res, 400, { error: 'invalid robux deposit' });
-                  return;
-                }
                 const bonusResult = resolveRobuxDepositBonus(body, robuxAmount);
                 if (bonusResult.error) {
                   sendJson(res, 400, { error: bonusResult.error });

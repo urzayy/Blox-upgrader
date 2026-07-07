@@ -30,6 +30,7 @@ import { useAuth } from './context/AuthContext';
 import { createWithdrawTicket, createDepositTicket, createRobuxDepositTicket, fetchUserWithdrawTickets, getDepositCreditAmount, getPendingWithdrawSkinIds, getTicketType, isRobuxDeposit, openOrCreateHelpTicket, type WithdrawTicket } from './lib/withdrawChat';
 import type { AppliedDepositBonus } from './lib/depositBonusCode';
 import { validateDepositTotal } from './lib/deposit';
+import { validateRobuxDepositAmount } from './lib/robuxDeposit';
 import {
   acknowledgeInventoryGrants,
   fetchPendingInventoryGrants,
@@ -376,7 +377,9 @@ export default function App() {
     robuxAmount: number,
     bonus?: AppliedDepositBonus,
   ): Promise<string | null> => {
-    if (!user || robuxAmount <= 0) return null;
+    if (!user) return null;
+    const validation = validateRobuxDepositAmount(robuxAmount);
+    if (!validation.ok) return null;
     try {
       const bundle = await createRobuxDepositTicket(user, getProfileLabel(user), robuxAmount, bonus);
       log('DEPOSIT.robux_request', {

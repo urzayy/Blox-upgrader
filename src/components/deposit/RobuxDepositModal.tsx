@@ -3,7 +3,9 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { ROBUX_DEPOSIT_ICON } from '../../lib/devRobuxDeposit';
 import {
   calcRobuxDepositCredit,
+  MIN_ROBUX_DEPOSIT,
   ROBUX_TO_SALDO_RATE,
+  validateRobuxDepositAmount,
 } from '../../lib/robuxDeposit';
 import {
   validateDepositBonusCode,
@@ -71,6 +73,11 @@ export function RobuxDepositModal({ open, onClose, onSubmit }: Props) {
       setError('Enter a valid whole number of Robux.');
       return;
     }
+    const validation = validateRobuxDepositAmount(robuxAmount);
+    if (!validation.ok) {
+      setError(validation.error ?? 'Invalid deposit amount.');
+      return;
+    }
     if (appliedBonus) {
       const recheck = validateDepositBonusCode(appliedBonus.code);
       if (!recheck.valid) {
@@ -135,15 +142,15 @@ export function RobuxDepositModal({ open, onClose, onSubmit }: Props) {
               How many robux do you want to deposit?
             </p>
             <p className="mt-1 text-center text-[11px] font-semibold text-gold">
-              1 Robux = {ROBUX_TO_SALDO_RATE} saldo
+              1 Robux = {ROBUX_TO_SALDO_RATE} saldo · Minimum {MIN_ROBUX_DEPOSIT.toLocaleString('en-US')} Robux
             </p>
 
             <form onSubmit={e => { void handleSubmit(e); }} className="mt-5 space-y-3">
               <div className="flex items-center gap-2">
                 <input
-                  type="number"
-                  min={1}
-                  step={1}
+                type="number"
+                min={MIN_ROBUX_DEPOSIT}
+                step={1}
                   inputMode="numeric"
                   value={amount}
                   onChange={e => {

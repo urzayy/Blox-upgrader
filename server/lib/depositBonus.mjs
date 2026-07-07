@@ -27,16 +27,32 @@ export function calcDepositCreditTotal(baseTotal, bonusPercent) {
 
 export const ROBUX_TO_SALDO_RATE = 1.2;
 
+export const MIN_ROBUX_DEPOSIT = 50;
+
+export function validateRobuxDepositAmount(robuxAmount) {
+  if (!Number.isFinite(robuxAmount) || robuxAmount <= 0 || !Number.isInteger(robuxAmount)) {
+    return { ok: false, error: 'invalid robux deposit' };
+  }
+  if (robuxAmount < MIN_ROBUX_DEPOSIT) {
+    return {
+      ok: false,
+      error: `Minimum Robux deposit is ${MIN_ROBUX_DEPOSIT}.`,
+    };
+  }
+  return { ok: true };
+}
+
 export function calcRobuxBaseCredit(robuxAmount) {
   if (!Number.isFinite(robuxAmount) || robuxAmount <= 0) return 0;
   return Math.round(robuxAmount * ROBUX_TO_SALDO_RATE * 100) / 100;
 }
 
 export function resolveRobuxDepositBonus(body, robuxAmount) {
-  const baseTotal = calcRobuxBaseCredit(robuxAmount);
-  if (baseTotal <= 0) {
-    return { error: 'invalid robux deposit' };
+  const validation = validateRobuxDepositAmount(robuxAmount);
+  if (!validation.ok) {
+    return { error: validation.error ?? 'invalid robux deposit' };
   }
+  const baseTotal = calcRobuxBaseCredit(robuxAmount);
   const bonus = resolveDepositBonus(body, baseTotal);
   return { ...bonus, baseTotal };
 }
