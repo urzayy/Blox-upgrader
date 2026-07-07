@@ -38,6 +38,17 @@ export function grantSkinToInventory(inventory: Skin[], template: Skin): Skin[] 
   return [...inventory, granted];
 }
 
+export function createConsolationGrantedSkin(template: Skin): Skin {
+  return {
+    ...template,
+    id: `inv_consolation_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+  };
+}
+
+export function grantConsolationSkinToInventory(inventory: Skin[], template: Skin): Skin[] {
+  return [...inventory, createConsolationGrantedSkin(template)];
+}
+
 export function withdrawSkinsFromInventory(inventory: Skin[], skinIds: Iterable<string>): Skin[] {
   const ids = new Set(skinIds);
   return inventory.filter(s => !ids.has(s.id));
