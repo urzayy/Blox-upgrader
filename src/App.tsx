@@ -52,7 +52,10 @@ import { ThanksToast } from './components/ui/ThanksToast';
 import type { ShopPurchaseItem } from './components/shop/ShopPanel';
 import type { DepositItem } from './components/deposit/DepositModal';
 import { ADMIN_PROMO_CODES_ENABLED } from './lib/devAdminPromoCodes';
+import { qualifiesForLossConsolationCase } from './lib/devLossConsolation';
 import { DEV_MOBILE_LAYOUT } from './lib/devMobileLayout';
+import { buildLossConsolationCase, type LossConsolationResult } from './lib/lossConsolationCase';
+import { LossConsolationCaseModal } from './components/upgrade/LossConsolationCaseModal';
 
 export default function App() {
   const { user, logout: authLogout, openLogin } = useAuth();
@@ -86,6 +89,22 @@ export default function App() {
   const balanceGiftSyncInFlightRef = useRef(false);
   const lastResetAckRef = useRef<number | null>(null);
   const pendingUpgradeRecoveredRef = useRef<string | null>(null);
+  const [lossCase, setLossCase] = useState<{
+    lostValue: number;
+    inputLabel: string;
+    result: LossConsolationResult;
+    turbo: boolean;
+    pending: {
+      won: boolean;
+      roll: RollResult;
+      inputLabel: string;
+      inputImage: string;
+      inputTotal: number;
+      targetSkin: Skin;
+      probability: number;
+    };
+  } | null>(null);
+  const lossCaseCollectingRef = useRef(false);
   inventoryRef.current = inventory;
   balanceRef.current = balance;
 
@@ -730,12 +749,6 @@ export default function App() {
     rollingInputsRef.current = [];
     setIsUpgradeRolling(false);
 
-    if (won) {
-      setInventory(prev => applyUpgradeWin(prev, targetSkin));
-    }
-
-    clearPendingUpgrade(user.userId);
-
     const inputLabel = inputs.length === 1
       ? inputs[0].name
       : `${inputs.length} skins · ${formatUSD(inventoryTotal(inputs))}`;
@@ -743,22 +756,80 @@ export default function App() {
       (best, skin) => (skin.price > best.price ? skin : best),
       inputs[0],
     ).image;
+    const inputTotal = inventoryTotal(inputs);
 
-    finalizeUpgrade({
+    clearPendingUpgrade(user.userId);
+
+    const finalizePayload = {
       won,
       roll,
       inputLabel,
       inputImage,
-      inputTotal: inventoryTotal(inputs),
+      inputTotal,
       targetSkin,
       probability,
-    });
+    };
 
-    setInputSkins([]);
-    setTargetSkin(null);
-    setMultiplier(null);
-    setCap(null);
-  }, [user, targetSkin, probability, finalizeUpgrade]);
+    const clearSelections = () => {
+      setInputSkins([]);
+      setTargetSkin(null);
+      setMultiplier(null);
+      setCap(null);
+    };
+
+    if (won) {
+      setInventory(prev => applyUpgradeWin(prev, targetSkin));
+      finalizeUpgrade(finalizePayload);
+      clearSelections();
+      return;
+    }
+
+    if (qualifiesForLossConsolationCase(inputTotal)) {
+      lossCaseCollectingRef.current = false;
+      const result = buildLossConsolationCase(inputTotal);
+      setLossCase({
+        lostValue: inputTotal,
+        inputLabel,
+        result,
+        turbo,
+        pending: finalizePayload,
+      });
+      log('UPGRADE.consolation_case', {
+        lost: formatUSD(inputTotal),
+        percent: result.percent,
+        reward: result.rewardSkin.name,
+        rewardValue: formatUSD(result.rewardSkin.price),
+      });
+      clearSelections();
+      return;
+    }
+
+    finalizeUpgrade(finalizePayload);
+    clearSelections();
+  }, [user, targetSkin, probability, turbo, finalizeUpgrade, log]);
+
+  const handleLossCaseComplete = useCallback(() => {
+    if (!user || !lossCase || lossCaseCollectingRef.current) return;
+    lossCaseCollectingRef.current = true;
+
+    const snapshot = lossCase;
+    setLossCase(null);
+
+    setInventory(prev => {
+      const next = grantSkinToInventory(prev, snapshot.result.rewardSkin);
+      inventoryRef.current = next;
+      saveInventory(next, user.userId);
+      return next;
+    });
+    void pushPlayerStateSync(inventoryRef.current, balanceRef.current);
+
+    finalizeUpgrade(snapshot.pending);
+    log('UPGRADE.consolation_collect', {
+      skin: snapshot.result.rewardSkin.name,
+      value: formatUSD(snapshot.result.rewardSkin.price),
+      percent: snapshot.result.percent,
+    });
+  }, [user, lossCase, finalizeUpgrade, log, pushPlayerStateSync]);
 
   const handleUpgradeStart = useCallback(() => {
     if (!user || !inputSkins.length || !targetSkin) return;
@@ -840,6 +911,17 @@ export default function App() {
           onDismiss={() => setLiveHelpError('')}
           durationMs={6000}
         />
+
+        {lossCase && (
+          <LossConsolationCaseModal
+            open
+            lostValue={lossCase.lostValue}
+            inputLabel={lossCase.inputLabel}
+            result={lossCase.result}
+            turbo={lossCase.turbo}
+            onComplete={handleLossCaseComplete}
+          />
+        )}
 
         <Header
           inventory={inventory}
