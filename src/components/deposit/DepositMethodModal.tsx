@@ -62,9 +62,14 @@ export function DepositMethodModal({ open, onClose, onSelectRobux, onSelectSkins
                     draggable={false}
                   />
                 </div>
-                <span className="font-display text-base font-black uppercase tracking-wide text-win">
-                  Robux
-                </span>
+                <div className="flex flex-col items-center gap-1 text-center">
+                  <span className="font-display text-base font-black uppercase tracking-wide text-win">
+                    Robux
+                  </span>
+                  <p className="max-w-[200px] text-[10px] leading-snug text-white/40">
+                    You need Roblox Premium to complete this deposit.
+                  </p>
+                </div>
               </button>
 
               <button
