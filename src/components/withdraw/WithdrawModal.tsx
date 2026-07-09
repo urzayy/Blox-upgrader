@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { RARITY, type Skin } from '../../data/skins';
 import { CoinPrice } from '../ui/CoinPrice';
 import { inventoryTotal } from '../../lib/inventory';
+import { MIN_WITHDRAW_TOTAL, validateWithdrawTotal } from '../../lib/withdraw';
 import { SkinImage } from '../skins/SkinImage';
 import { SkinLockOverlay } from '../skins/SkinLockOverlay';
 import { sfx } from '../../lib/audio';
@@ -57,8 +58,15 @@ export function WithdrawModal({ open, inventory, lockedSkinIds, onClose, onReque
     sfx.select();
   };
 
+  const canSubmit = selectedSkins.length > 0 && selectedTotal >= MIN_WITHDRAW_TOTAL;
+
   const handleWithdraw = async () => {
     if (!selectedSkins.length || submitting) return;
+    const validation = validateWithdrawTotal(selectedTotal);
+    if (!validation.ok) {
+      setError(validation.error ?? 'Invalid withdrawal.');
+      return;
+    }
     setSubmitting(true);
     setError('');
     const ticketId = await onRequestWithdraw(selectedSkins);
@@ -102,7 +110,8 @@ export function WithdrawModal({ open, inventory, lockedSkinIds, onClose, onReque
                   Withdraw
                 </h2>
                 <p className="text-[11px] text-white/45">
-                  Selecciona las skins de tu inventario que quieres retirar
+                  Selecciona las skins de tu inventario que quieres retirar. Mínimo{' '}
+                  {MIN_WITHDRAW_TOTAL.toLocaleString('en-US')} monedas en total.
                 </p>
               </div>
               <button
@@ -167,12 +176,17 @@ export function WithdrawModal({ open, inventory, lockedSkinIds, onClose, onReque
                     />
                   </>
                 ) : (
-                  'Pulsa las skins que quieras retirar'
+                  `Pulsa las skins que quieras retirar (mín. ${MIN_WITHDRAW_TOTAL} monedas)`
+                )}
+                {selectedSkins.length > 0 && selectedTotal < MIN_WITHDRAW_TOTAL && (
+                  <span className="text-risk">
+                    {' '}· Faltan {(MIN_WITHDRAW_TOTAL - selectedTotal).toLocaleString('en-US')} monedas
+                  </span>
                 )}
               </div>
               <button
                 type="button"
-                disabled={selectedSkins.length === 0 || submitting}
+                disabled={!canSubmit || submitting}
                 onClick={() => { void handleWithdraw(); }}
                 className="group relative overflow-hidden rounded-lg border border-white/25 px-4 py-2 font-display text-[11px] font-bold uppercase tracking-[0.12em] text-white shadow-[0_0_24px_rgba(255,255,255,0.12)] backdrop-blur-xl transition enabled:hover:border-white/40 enabled:hover:shadow-[0_0_32px_rgba(255,255,255,0.22)] disabled:cursor-not-allowed disabled:opacity-35"
               >

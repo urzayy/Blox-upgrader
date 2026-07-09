@@ -4,6 +4,7 @@ import type { Plugin } from 'vite';
 import { resolveDepositBonus, resolveRobuxDepositBonus } from './server/lib/depositBonus.mjs';
 
 const MIN_DEPOSIT_TOTAL = 100;
+const MIN_WITHDRAW_TOTAL = 20;
 
 type WithdrawTicketStatus = 'open' | 'completed' | 'cancelled';
 
@@ -421,6 +422,10 @@ export function withdrawChatPlugin(chatsDir: string): Plugin {
             }
             const ticketId = `wd_${now}_${Math.random().toString(36).slice(2, 8)}`;
             const total = body.skins.reduce((sum, s) => sum + s.price, 0);
+            if (total < MIN_WITHDRAW_TOTAL) {
+              sendJson(res, 400, { error: `Minimum withdrawal is ${MIN_WITHDRAW_TOTAL} coins total.` });
+              return;
+            }
             const ticket: WithdrawTicket = {
               id: ticketId,
               userId: body.userId,

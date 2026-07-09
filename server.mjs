@@ -36,6 +36,7 @@ const PORT = Number(process.env.PORT) || 4173;
 const SITE_URL = process.env.SITE_URL || `http://localhost:${PORT}`;
 const BASE_TOTAL_UPGRADES = 13_200;
 const MIN_DEPOSIT_TOTAL = 100;
+const MIN_WITHDRAW_TOTAL = 20;
 
 for (const dir of [LOGS_DIR, USER_DB_DIR, path.join(USER_DB_DIR, 'events'), PLAYER_STATE_DIR, ACCOUNT_RESETS_DIR, CHATS_DIR, GRANTS_DIR, BALANCE_GRANTS_DIR, STATE_DIR, PROMO_CODES_DIR]) {
   if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
@@ -931,6 +932,10 @@ app.post('/api/withdraw/tickets', (req, res) => {
 
   const ticketId = `wd_${now}_${Math.random().toString(36).slice(2, 8)}`;
   const total = body.skins.reduce((sum, s) => sum + s.price, 0);
+  if (total < MIN_WITHDRAW_TOTAL) {
+    sendJson(res, 400, { error: `Minimum withdrawal is ${MIN_WITHDRAW_TOTAL} coins total.` });
+    return;
+  }
   const ticket = {
     id: ticketId,
     userId: body.userId,
