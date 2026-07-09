@@ -11,6 +11,7 @@ import {
   type Session,
 } from '../lib/auth';
 import { appendUserLog, initUserLogFile } from '../lib/userActivityLog';
+import { fetchAccountBanStatus } from '../lib/accountBanApi';
 
 interface AuthContextValue {
   user: Session | null;
@@ -43,6 +44,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!user) return;
     void (async () => {
+      const banStatus = await fetchAccountBanStatus(user.email);
+      if (banStatus.banned) {
+        clearSession();
+        setUser(null);
+        setLoginOpen(true);
+        return;
+      }
       await pushAccountToServer(user.userId);
       initUserLogFile({ userId: user.userId, email: user.email });
       if (restoredSessionRef.current) {

@@ -6,6 +6,7 @@ import { createUserStore } from './server/lib/userStore.mjs';
 import { createPlayerStateStore } from './server/lib/playerStateStore.mjs';
 import { clearAccountByEmail as resetAccountByEmail } from './server/lib/accountReset.mjs';
 import { createAccountResetMarkerStore } from './server/lib/accountResetMarker.mjs';
+import { createAccountBanStore } from './server/lib/accountBanStore.mjs';
 
 dotenv.config();
 
@@ -34,7 +35,9 @@ export function userDbPlugin(dbDir: string): Plugin {
   const playerStateDir = path.resolve(path.dirname(dbDir), 'player-state');
   const playerStateStore = createPlayerStateStore({ playerStateDir });
   const accountResetsDir = path.resolve(path.dirname(dbDir), 'account-resets');
+  const accountBansDir = path.resolve(path.dirname(dbDir), 'account-bans');
   const resetMarkerStore = createAccountResetMarkerStore(accountResetsDir);
+  const banStore = createAccountBanStore(accountBansDir);
   const logsDir = path.resolve(path.dirname(dbDir), 'user-logs');
   const chatsDir = path.resolve(path.dirname(dbDir), 'withdraw-chats');
   const grantsDir = path.resolve(path.dirname(dbDir), 'inventory-grants');
@@ -69,6 +72,11 @@ export function userDbPlugin(dbDir: string): Plugin {
               sendJson(res, 400, { error: 'bad request' });
               return;
             }
+            const normalizedEmail = String(body.email).trim().toLowerCase();
+            if (banStore.isBanned(normalizedEmail)) {
+              sendJson(res, 403, { error: 'account_suspended', message: 'Cuenta suspendida.' });
+              return;
+            }
             const result = await userStore.registerAccount({ ...body, isNewAccount: true });
             if (result?.line && typeof body.email === 'string') appendTxtLog(body.email, result.line);
             sendJson(res, 200, { ok: true, user: result?.user ?? null });
@@ -79,6 +87,11 @@ export function userDbPlugin(dbDir: string): Plugin {
             const body = await readJsonBody(req) as { userId?: string; email?: string; nickname?: string };
             if (!body.userId || !body.email) {
               sendJson(res, 400, { error: 'bad request' });
+              return;
+            }
+            const normalizedEmail = String(body.email).trim().toLowerCase();
+            if (banStore.isBanned(normalizedEmail)) {
+              sendJson(res, 403, { error: 'account_suspended', message: 'Cuenta suspendida.' });
               return;
             }
             const result = await userStore.touchAccountLogin(body);
@@ -134,6 +147,10 @@ export function userDbPlugin(dbDir: string): Plugin {
               return;
             }
             const normalizedEmail = String(body.email).trim().toLowerCase();
+            if (banStore.isBanned(normalizedEmail)) {
+              sendJson(res, 403, { error: 'account_suspended', message: 'Cuenta suspendida.' });
+              return;
+            }
             const pendingResetAt = resetMarkerStore.getResetAt(normalizedEmail);
 
             if (pendingResetAt && Number(body.resetAck) !== pendingResetAt) {
@@ -163,6 +180,86 @@ export function userDbPlugin(dbDir: string): Plugin {
               return;
             }
             sendJson(res, 200, { resetAt: resetMarkerStore.getResetAt(email) });
+            return;
+          }
+
+          if (url === '/api/account-ban-status' && req.method === 'GET') {
+            const email = new URL(req.url ?? '', 'http://local').searchParams.get('email')?.trim().toLowerCase() ?? '';
+            if (!email) {
+              sendJson(res, 400, { error: 'email required' });
+              return;
+            }
+            banStore.purgeExpired();
+            const ban = banStore.getBan(email);
+            if (!ban) {
+              sendJson(res, 200, { banned: false });
+              return;
+            }
+            sendJson(res, 200, {
+              banned: true,
+              bannedAt: ban.bannedAt,
+              bannedUntil: ban.bannedUntil,
+              reason: ban.reason,
+              permanent: ban.permanent,
+              days: ban.days,
+            });
+            return;
+          }
+
+          if (url === '/api/admin/ban-user' && req.method === 'POST') {
+            const body = await readJsonBody(req) as {
+              adminEmail?: string;
+              email?: string;
+              days?: number | null;
+              reason?: string | null;
+            };
+            if (!userStore.isAdminEmail(String(body.adminEmail ?? '').trim())) {
+              sendJson(res, 403, { error: 'forbidden' });
+              return;
+            }
+            const targetEmail = String(body.email ?? '').trim().toLowerCase();
+            if (!targetEmail) {
+              sendJson(res, 400, { error: 'email required' });
+              return;
+            }
+            if (userStore.isAdminEmail(targetEmail)) {
+              sendJson(res, 400, { error: 'Cannot ban admin accounts' });
+              return;
+            }
+            const days = body.days == null ? null : Number(body.days);
+            const ban = banStore.banUser(targetEmail, {
+              bannedBy: String(body.adminEmail).trim().toLowerCase(),
+              days,
+              reason: body.reason,
+            });
+            sendJson(res, 200, { ok: true, ban });
+            return;
+          }
+
+          if (url === '/api/admin/unban-user' && req.method === 'POST') {
+            const body = await readJsonBody(req) as { adminEmail?: string; email?: string };
+            if (!userStore.isAdminEmail(String(body.adminEmail ?? '').trim())) {
+              sendJson(res, 403, { error: 'forbidden' });
+              return;
+            }
+            const targetEmail = String(body.email ?? '').trim().toLowerCase();
+            if (!targetEmail) {
+              sendJson(res, 400, { error: 'email required' });
+              return;
+            }
+            const result = banStore.unbanUser(targetEmail);
+            sendJson(res, 200, { ok: true, ...result });
+            return;
+          }
+
+          if (url === '/api/admin/bans' && req.method === 'GET') {
+            const adminEmail = new URL(req.url ?? '', 'http://local').searchParams.get('adminEmail') ?? '';
+            if (!userStore.isAdminEmail(adminEmail)) {
+              sendJson(res, 403, { error: 'forbidden' });
+              return;
+            }
+            banStore.purgeExpired();
+            sendJson(res, 200, { bans: banStore.listActiveBans() });
             return;
           }
 

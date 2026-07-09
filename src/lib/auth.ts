@@ -1,4 +1,5 @@
 import { loginAccountOnServer, registerAccountOnServer } from './userDbApi';
+import { fetchAccountBanStatus } from './accountBanApi';
 
 export interface Account {
   id: string;
@@ -166,6 +167,10 @@ export async function loginOrRegister(
     if (hash !== existing.passwordHash) {
       return { ok: false, error: 'Contraseña incorrecta.' };
     }
+    const banStatus = await fetchAccountBanStatus(normalized);
+    if (banStatus.banned) {
+      return { ok: false, error: 'Cuenta suspendida.' };
+    }
     const session = sessionFromAccount(existing);
     saveSession(session);
     await loginAccountOnServer({
@@ -181,6 +186,11 @@ export async function loginOrRegister(
       ok: false,
       error: 'Debes aceptar ser mayor de 18 años y los términos del servicio para crear tu cuenta.',
     };
+  }
+
+  const banStatus = await fetchAccountBanStatus(normalized);
+  if (banStatus.banned) {
+    return { ok: false, error: 'Cuenta suspendida.' };
   }
 
   const salt = randomSalt();

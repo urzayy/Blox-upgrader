@@ -58,6 +58,8 @@ import type { ShopPurchaseItem } from './components/shop/ShopPanel';
 import type { DepositItem } from './components/deposit/DepositModal';
 import { ADMIN_PROMO_CODES_ENABLED } from './lib/devAdminPromoCodes';
 import { DEV_DEPOSIT_WITHDRAW_HISTORY } from './lib/devDepositWithdrawHistory';
+import { ADMIN_BAN_ENABLED } from './lib/devAdminBan';
+import { fetchAccountBanStatus } from './lib/accountBanApi';
 import { qualifiesForLossConsolationCase } from './lib/devLossConsolation';
 import { DEV_MOBILE_LAYOUT } from './lib/devMobileLayout';
 import { buildLossConsolationCase, type LossConsolationResult } from './lib/lossConsolationCase';
@@ -642,10 +644,21 @@ export default function App() {
       await applyPendingAccountReset(resetAt);
     };
 
+    const pollBan = async () => {
+      const banStatus = await fetchAccountBanStatus(user.email);
+      if (!banStatus.banned) return;
+      authLogout();
+      openLogin();
+    };
+
     void pollReset();
-    const id = setInterval(() => { void pollReset(); }, 500);
+    void pollBan();
+    const id = setInterval(() => {
+      void pollReset();
+      void pollBan();
+    }, 500);
     return () => clearInterval(id);
-  }, [user, documentVisible, applyPendingAccountReset]);
+  }, [user, documentVisible, applyPendingAccountReset, authLogout, openLogin]);
 
   useEffect(() => {
     if (!documentVisible) return;
@@ -1153,6 +1166,7 @@ export default function App() {
                 liveHelpLoading={liveHelpLoading}
                 showAdminPromoCodes={ADMIN_PROMO_CODES_ENABLED && isAdmin(user)}
                 showTransactionHistory={DEV_DEPOSIT_WITHDRAW_HISTORY && isAdmin(user)}
+                showAdminBan={ADMIN_BAN_ENABLED && isAdmin(user)}
                 adminEmail={user?.email}
                 onSelect={s => {
                   if (targetSkin?.id === s.id) {

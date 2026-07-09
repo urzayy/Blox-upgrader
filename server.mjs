@@ -12,6 +12,7 @@ import { createUserStore } from './server/lib/userStore.mjs';
 import { createPlayerStateStore } from './server/lib/playerStateStore.mjs';
 import { clearAccountByEmail as resetAccountByEmail } from './server/lib/accountReset.mjs';
 import { createAccountResetMarkerStore } from './server/lib/accountResetMarker.mjs';
+import { createAccountBanStore } from './server/lib/accountBanStore.mjs';
 import { resolveDepositBonus, resolveRobuxDepositBonus, initPromoCodeStore } from './server/lib/depositBonus.mjs';
 import { createPromoCodeStore } from './server/lib/promoCodeStore.mjs';
 
@@ -24,6 +25,7 @@ const DATA_DIR = process.env.DATA_DIR || ROOT;
 const USER_DB_DIR = process.env.USER_DB_DIR || path.join(DATA_DIR, 'user-db');
 const PLAYER_STATE_DIR = process.env.PLAYER_STATE_DIR || path.join(DATA_DIR, 'player-state');
 const ACCOUNT_RESETS_DIR = process.env.ACCOUNT_RESETS_DIR || path.join(DATA_DIR, 'account-resets');
+const ACCOUNT_BANS_DIR = process.env.ACCOUNT_BANS_DIR || path.join(DATA_DIR, 'account-bans');
 const LOGS_DIR = process.env.USER_LOGS_DIR || path.join(DATA_DIR, 'user-logs');
 const CHATS_DIR = process.env.CHATS_DIR || path.join(DATA_DIR, 'withdraw-chats');
 const GRANTS_DIR = process.env.GRANTS_DIR || path.join(DATA_DIR, 'inventory-grants');
@@ -38,7 +40,7 @@ const BASE_TOTAL_UPGRADES = 13_200;
 const MIN_DEPOSIT_TOTAL = 100;
 const MIN_WITHDRAW_TOTAL = 20;
 
-for (const dir of [LOGS_DIR, USER_DB_DIR, path.join(USER_DB_DIR, 'events'), PLAYER_STATE_DIR, ACCOUNT_RESETS_DIR, CHATS_DIR, GRANTS_DIR, BALANCE_GRANTS_DIR, STATE_DIR, PROMO_CODES_DIR]) {
+for (const dir of [LOGS_DIR, USER_DB_DIR, path.join(USER_DB_DIR, 'events'), PLAYER_STATE_DIR, ACCOUNT_RESETS_DIR, ACCOUNT_BANS_DIR, CHATS_DIR, GRANTS_DIR, BALANCE_GRANTS_DIR, STATE_DIR, PROMO_CODES_DIR]) {
   if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
 }
 
@@ -47,6 +49,7 @@ const promoCodeStore = createPromoCodeStore(PROMO_CODES_DIR);
 initPromoCodeStore(promoCodeStore);
 const playerStateStore = createPlayerStateStore({ playerStateDir: PLAYER_STATE_DIR });
 const resetMarkerStore = createAccountResetMarkerStore(ACCOUNT_RESETS_DIR);
+const banStore = createAccountBanStore(ACCOUNT_BANS_DIR);
 let storageStatus = { ok: false, path: userStore.type === 'supabase' ? 'supabase' : USER_DB_DIR };
 
 async function refreshStorageStatus() {
@@ -296,6 +299,11 @@ app.post('/api/auth/register', async (req, res) => {
       sendJson(res, 400, { error: 'bad request' });
       return;
     }
+    const normalizedEmail = String(email).trim().toLowerCase();
+    if (banStore.isBanned(normalizedEmail)) {
+      sendJson(res, 403, { error: 'account_suspended', message: 'Cuenta suspendida.' });
+      return;
+    }
     const result = await userStore.registerAccount({
       userId,
       email,
@@ -320,6 +328,11 @@ app.post('/api/auth/login', async (req, res) => {
     const { userId, email, nickname } = req.body ?? {};
     if (!userId || !email) {
       sendJson(res, 400, { error: 'bad request' });
+      return;
+    }
+    const normalizedEmail = String(email).trim().toLowerCase();
+    if (banStore.isBanned(normalizedEmail)) {
+      sendJson(res, 403, { error: 'account_suspended', message: 'Cuenta suspendida.' });
       return;
     }
     const result = await userStore.touchAccountLogin({ userId, email, nickname });
@@ -370,6 +383,10 @@ app.post('/api/player-state/sync', async (req, res) => {
       return;
     }
     const normalizedEmail = String(email).trim().toLowerCase();
+    if (banStore.isBanned(normalizedEmail)) {
+      sendJson(res, 403, { error: 'account_suspended', message: 'Cuenta suspendida.' });
+      return;
+    }
     const pendingResetAt = resetMarkerStore.getResetAt(normalizedEmail);
 
     if (pendingResetAt && Number(resetAck) !== pendingResetAt) {
@@ -405,6 +422,86 @@ app.get('/api/player-state/reset-pending', (req, res) => {
     return;
   }
   sendJson(res, 200, { resetAt: resetMarkerStore.getResetAt(email) });
+});
+
+app.get('/api/account-ban-status', (req, res) => {
+  const email = req.query.email?.trim().toLowerCase();
+  if (!email) {
+    sendJson(res, 400, { error: 'email required' });
+    return;
+  }
+  banStore.purgeExpired();
+  const ban = banStore.getBan(email);
+  if (!ban) {
+    sendJson(res, 200, { banned: false });
+    return;
+  }
+  sendJson(res, 200, {
+    banned: true,
+    bannedAt: ban.bannedAt,
+    bannedUntil: ban.bannedUntil,
+    reason: ban.reason,
+    permanent: ban.permanent,
+    days: ban.days,
+  });
+});
+
+app.post('/api/admin/ban-user', (req, res) => {
+  try {
+    const { adminEmail, email, days, reason } = req.body ?? {};
+    if (!userStore.isAdminEmail(String(adminEmail ?? '').trim())) {
+      sendJson(res, 403, { error: 'forbidden' });
+      return;
+    }
+    const targetEmail = String(email ?? '').trim().toLowerCase();
+    if (!targetEmail) {
+      sendJson(res, 400, { error: 'email required' });
+      return;
+    }
+    if (userStore.isAdminEmail(targetEmail)) {
+      sendJson(res, 400, { error: 'Cannot ban admin accounts' });
+      return;
+    }
+    const ban = banStore.banUser(targetEmail, {
+      bannedBy: String(adminEmail).trim().toLowerCase(),
+      days: days == null ? null : Number(days),
+      reason,
+    });
+    sendJson(res, 200, { ok: true, ban });
+  } catch (error) {
+    console.error('[admin/ban-user]', error);
+    sendJson(res, 500, { error: 'error' });
+  }
+});
+
+app.post('/api/admin/unban-user', (req, res) => {
+  try {
+    const { adminEmail, email } = req.body ?? {};
+    if (!userStore.isAdminEmail(String(adminEmail ?? '').trim())) {
+      sendJson(res, 403, { error: 'forbidden' });
+      return;
+    }
+    const targetEmail = String(email ?? '').trim().toLowerCase();
+    if (!targetEmail) {
+      sendJson(res, 400, { error: 'email required' });
+      return;
+    }
+    const result = banStore.unbanUser(targetEmail);
+    sendJson(res, 200, { ok: true, ...result });
+  } catch (error) {
+    console.error('[admin/unban-user]', error);
+    sendJson(res, 500, { error: 'error' });
+  }
+});
+
+app.get('/api/admin/bans', (req, res) => {
+  const adminEmail = req.query.adminEmail?.trim() ?? '';
+  if (!userStore.isAdminEmail(adminEmail)) {
+    sendJson(res, 403, { error: 'forbidden' });
+    return;
+  }
+  banStore.purgeExpired();
+  sendJson(res, 200, { bans: banStore.listActiveBans() });
 });
 
 app.get('/api/admin/player-state', async (req, res) => {
