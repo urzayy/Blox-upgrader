@@ -1,9 +1,11 @@
 import { calcDepositCreditTotal } from './depositBonusCode';
+import { MIN_DEPOSIT_TOTAL } from './deposit';
 
 /** Each deposited Robux credits this many site coins (SALDO). */
 export const ROBUX_TO_SALDO_RATE = 1.2;
 
-export const MIN_ROBUX_DEPOSIT = 50;
+/** Minimum Robux so credited saldo is at least MIN_DEPOSIT_TOTAL coins. */
+export const MIN_ROBUX_DEPOSIT = Math.ceil(MIN_DEPOSIT_TOTAL / ROBUX_TO_SALDO_RATE);
 
 export function validateRobuxDepositAmount(robuxAmount: number): { ok: boolean; error?: string } {
   if (!Number.isFinite(robuxAmount) || robuxAmount <= 0 || !Number.isInteger(robuxAmount)) {

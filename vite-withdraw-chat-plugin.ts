@@ -3,7 +3,7 @@ import path from 'node:path';
 import type { Plugin } from 'vite';
 import { resolveDepositBonus, resolveRobuxDepositBonus } from './server/lib/depositBonus.mjs';
 
-const MIN_DEPOSIT_TOTAL = 40;
+const MIN_DEPOSIT_TOTAL = 100;
 
 type WithdrawTicketStatus = 'open' | 'completed' | 'cancelled';
 

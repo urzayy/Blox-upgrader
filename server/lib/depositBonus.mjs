@@ -30,7 +30,8 @@ export function calcDepositCreditTotal(baseTotal, bonusPercent) {
 
 export const ROBUX_TO_SALDO_RATE = 1.2;
 
-export const MIN_ROBUX_DEPOSIT = 50;
+export const MIN_DEPOSIT_TOTAL = 100;
+export const MIN_ROBUX_DEPOSIT = Math.ceil(MIN_DEPOSIT_TOTAL / ROBUX_TO_SALDO_RATE);
 
 export function validateRobuxDepositAmount(robuxAmount) {
   if (!Number.isFinite(robuxAmount) || robuxAmount <= 0 || !Number.isInteger(robuxAmount)) {

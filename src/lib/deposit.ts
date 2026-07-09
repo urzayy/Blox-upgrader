@@ -1,4 +1,4 @@
-export const MIN_DEPOSIT_TOTAL = 40;
+export const MIN_DEPOSIT_TOTAL = 100;
 
 export function validateDepositTotal(total: number): { ok: boolean; error?: string } {
   if (!Number.isFinite(total) || total <= 0) {
