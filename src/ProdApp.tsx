@@ -30,7 +30,6 @@ import { findTargetForPreset } from './lib/upgradePresets';
 import { sfx } from './lib/audio';
 import { useWheelSize } from './hooks/useWheelSize';
 import { useDocumentVisible } from './hooks/useDocumentVisible';
-import { usePresenceHeartbeat } from './hooks/usePresenceHeartbeat';
 import { getDisplayName, getProfileLabel, isAdmin } from './lib/auth';
 import { useAuth } from './context/AuthContext';
 import { createWithdrawTicket, createDepositTicket, createRobuxDepositTicket, fetchUserWithdrawTickets, getDepositCreditAmount, getPendingWithdrawSkinIds, getTicketType, isRobuxDeposit, openOrCreateHelpTicket, type WithdrawTicket } from './lib/withdrawChat';
@@ -137,7 +136,6 @@ export default function ProdApp() {
   const dismissThanksToast = useCallback(() => setThanksToastVisible(false), []);
   const wheelSize = useWheelSize();
   const documentVisible = useDocumentVisible();
-  usePresenceHeartbeat(userId);
   const canUpgrade = probability > 0;
 
   const handleLogout = useCallback(() => {

@@ -15,10 +15,6 @@ import { createAccountResetMarkerStore } from './server/lib/accountResetMarker.m
 import { createAccountBanStore } from './server/lib/accountBanStore.mjs';
 import { resolveDepositBonus, resolveRobuxDepositBonus, initPromoCodeStore } from './server/lib/depositBonus.mjs';
 import { createPromoCodeStore } from './server/lib/promoCodeStore.mjs';
-import {
-  getActivePresenceCount,
-  registerPresenceHeartbeat,
-} from './server/lib/presenceStore.mjs';
 
 dotenv.config();
 
@@ -672,20 +668,7 @@ app.delete('/api/admin/promo-codes/:code', (req, res) => {
 });
 
 app.get('/api/site-state', (_req, res) => {
-  const state = loadState();
-  if (process.env.NODE_ENV === 'production') {
-    sendJson(res, 200, {
-      ...state,
-      playersOnline: getActivePresenceCount(),
-    });
-    return;
-  }
-  sendJson(res, 200, state);
-});
-
-app.post('/api/presence/heartbeat', (req, res) => {
-  const result = registerPresenceHeartbeat(req.body ?? {});
-  sendJson(res, result.ok ? 200 : 400, result);
+  sendJson(res, 200, loadState());
 });
 
 app.post('/api/site-state/feed-event', (req, res) => {
@@ -1110,9 +1093,7 @@ setInterval(() => {
     const next = appendFeedItem(state, createBotFeedItem());
     saveState({
       ...next,
-      playersOnline: process.env.NODE_ENV === 'production'
-        ? state.playersOnline
-        : driftPlayersOnline(state.playersOnline),
+      playersOnline: driftPlayersOnline(state.playersOnline),
     });
   } catch {
     /* ignore bot tick errors */
