@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { inventoryTotal } from '../../lib/inventory';
 import { CoinPrice } from '../ui/CoinPrice';
 import { useAuth } from '../../context/AuthContext';
+import { NicknameModal } from '../auth/NicknameModal';
 import { AdminSkinPicker } from '../admin/AdminSkinPicker';
 import { AdminGiftPanel } from '../admin/AdminGiftPanel';
 import { AdminGiftMoneyPanel } from '../admin/AdminGiftMoneyPanel';
@@ -21,15 +22,7 @@ import { fetchUserWithdrawTickets, type WithdrawTicket } from '../../lib/withdra
 import { useAdminChatNotifications } from '../../lib/adminChatNotifications';
 import { useActivityLog } from '../../hooks/useActivityLog';
 import { DEV_MOBILE_LAYOUT } from '../../lib/devMobileLayout';
-import { DEV_CLEAN_HEADER_LAYOUT } from '../../lib/devCleanHeaderLayout';
-import { cleanHeaderShell, cleanHeaderChip } from '../../lib/cleanHeaderClasses';
-import { navigateApp } from '../../lib/appRoute';
-import { registerOpenDepositHandler, registerOpenWithdrawHandler, registerAdminPanelHandler } from '../../lib/uiActions';
-import { useAppRoute } from '../../hooks/useAppRoute';
 import { MobileHeaderBar } from './MobileHeaderBar';
-import { HeaderNavMenu } from './HeaderNavMenu';
-import { ProfileMenu } from './ProfileMenu';
-import { LogoutDoorButton } from './LogoutDoorButton';
 import type { Skin } from '../../data/skins';
 
 interface Props {
@@ -38,6 +31,9 @@ interface Props {
   lockedSkinIds: ReadonlySet<string>;
   totalUpgrades: number;
   playersOnline: number;
+  turbo: boolean;
+  onTurboToggle: () => void;
+  onLogout: () => void;
   onAdminGrantSkin: (skin: Skin) => void;
   onWithdrawRequest: (skins: Skin[]) => Promise<string | null>;
   onDepositRequest: (items: DepositItem[], bonus?: AppliedDepositBonus) => Promise<string | null>;
@@ -54,6 +50,9 @@ export function Header({
   lockedSkinIds,
   totalUpgrades,
   playersOnline,
+  turbo,
+  onTurboToggle,
+  onLogout,
   onAdminGrantSkin,
   onWithdrawRequest,
   onDepositRequest,
@@ -63,20 +62,13 @@ export function Header({
   onAdminGiftSent,
   onAccountCleared,
 }: Props) {
-  const { user, openLogin, isAdmin } = useAuth();
+  const { user, profileLabel, openLogin, isAdmin } = useAuth();
   const { log } = useActivityLog();
-  const isProfilePage = useAppRoute() === 'profile';
-  const isMainPage = useAppRoute() === 'main';
-  const isUpgradePage = useAppRoute() === 'upgrade';
-  const isFreeCasesPage = useAppRoute() === 'free-cases';
-  const isGiveawaysPage = useAppRoute() === 'giveaways';
-  const isAdminPage = useAppRoute() === 'admin';
-  const isScrollableHeader = isMainPage || isProfilePage || isUpgradePage || isFreeCasesPage || isGiveawaysPage || isAdminPage;
+  const [nicknameOpen, setNicknameOpen] = useState(false);
   const [adminOpen, setAdminOpen] = useState(false);
   const [giftOpen, setGiftOpen] = useState(false);
   const [giftMoneyOpen, setGiftMoneyOpen] = useState(false);
   const [withdrawOpen, setWithdrawOpen] = useState(false);
-  const [withdrawPreselectedIds, setWithdrawPreselectedIds] = useState<string[]>([]);
   const [depositOpen, setDepositOpen] = useState(false);
   const [depositMethodOpen, setDepositMethodOpen] = useState(false);
   const [robuxDepositOpen, setRobuxDepositOpen] = useState(false);
@@ -92,6 +84,7 @@ export function Header({
   const activeAdminTicketId = isAdmin && supportChatOpen ? supportChatTicketId : null;
   const {
     toasts: adminChatToasts,
+    attentionCount: adminChatAttentionCount,
     dismissToast: dismissAdminChatToast,
   } = useAdminChatNotifications({
     enabled: isAdmin,
@@ -107,63 +100,6 @@ export function Header({
     log('CLICK.open_deposit');
     setDepositMethodOpen(true);
   }, [log]);
-
-  const openWithdrawFlow = useCallback((skinIds?: string[]) => {
-    log('CLICK.open_withdraw', { preselected: skinIds?.length ?? 0 });
-    setWithdrawPreselectedIds(skinIds ?? []);
-    setWithdrawOpen(true);
-  }, [log]);
-
-  useEffect(() => {
-    registerOpenDepositHandler(openDepositFlow);
-    return () => registerOpenDepositHandler(null);
-  }, [openDepositFlow]);
-
-  useEffect(() => {
-    registerOpenWithdrawHandler(openWithdrawFlow);
-    return () => registerOpenWithdrawHandler(null);
-  }, [openWithdrawFlow]);
-
-  useEffect(() => {
-    if (!isAdmin) return;
-    registerAdminPanelHandler('clear', () => {
-      log('CLICK.open_admin_clear');
-      setClearOpen(true);
-    });
-    registerAdminPanelHandler('see', () => {
-      log('CLICK.open_admin_see');
-      setSeeOpen(true);
-    });
-    registerAdminPanelHandler('inbox', () => {
-      log('CLICK.open_withdraw_inbox');
-      setAdminInboxOpen(true);
-    });
-    registerAdminPanelHandler('giftMoney', () => {
-      log('CLICK.open_admin_gift_money');
-      setGiftMoneyOpen(true);
-    });
-    registerAdminPanelHandler('gift', () => {
-      log('CLICK.open_admin_gift');
-      setGiftOpen(true);
-    });
-    registerAdminPanelHandler('userDb', () => {
-      log('CLICK.open_user_db');
-      setUserDbOpen(true);
-    });
-    registerAdminPanelHandler('skinPicker', () => {
-      log('CLICK.open_admin');
-      setAdminOpen(true);
-    });
-    return () => {
-      registerAdminPanelHandler('clear', null);
-      registerAdminPanelHandler('see', null);
-      registerAdminPanelHandler('inbox', null);
-      registerAdminPanelHandler('giftMoney', null);
-      registerAdminPanelHandler('gift', null);
-      registerAdminPanelHandler('userDb', null);
-      registerAdminPanelHandler('skinPicker', null);
-    };
-  }, [isAdmin, log]);
 
   useEffect(() => {
     onRegisterOpenSupportChat?.(openSupportChat);
@@ -196,6 +132,7 @@ export function Header({
           }}
         />
       )}
+      <NicknameModal open={nicknameOpen} onClose={() => setNicknameOpen(false)} />
       <AdminSkinPicker
         open={adminOpen}
         onClose={() => setAdminOpen(false)}
@@ -238,11 +175,7 @@ export function Header({
         open={withdrawOpen}
         inventory={inventory}
         lockedSkinIds={lockedSkinIds}
-        initialSelectedIds={withdrawPreselectedIds}
-        onClose={() => {
-          setWithdrawOpen(false);
-          setWithdrawPreselectedIds([]);
-        }}
+        onClose={() => setWithdrawOpen(false)}
         onRequestWithdraw={async skins => {
           const ticketId = await onWithdrawRequest(skins);
           if (ticketId) openSupportChat(ticketId);
@@ -329,75 +262,84 @@ export function Header({
 
       <header className={
         DEV_MOBILE_LAYOUT
-          ? `${isScrollableHeader ? 'relative' : 'sticky top-0'} z-50 border-b backdrop-blur-xl lg:px-4 ${
-            DEV_CLEAN_HEADER_LAYOUT
-              ? cleanHeaderShell('lg:px-10')
-              : 'border-white/5 bg-deep/90 lg:py-3'
-          }`
-          : `${isScrollableHeader ? 'relative' : 'sticky top-0'} z-50 grid grid-cols-[1fr_auto_1fr] items-center backdrop-blur-xl ${
-            DEV_CLEAN_HEADER_LAYOUT
-              ? `${cleanHeaderShell()} gap-6 lg:gap-8`
-              : 'gap-4 border-b border-white/5 bg-deep/90 px-4 py-3'
-          }`
+          ? 'sticky top-0 z-50 border-b border-white/5 bg-deep/90 backdrop-blur-xl lg:px-4 lg:py-3'
+          : 'sticky top-0 z-50 grid grid-cols-[1fr_auto_1fr] items-center gap-4 border-b border-white/5 bg-deep/90 px-4 py-3 backdrop-blur-xl'
       }
       >
       {DEV_MOBILE_LAYOUT && (
         <MobileHeaderBar
           balance={balance}
           inventory={inventory}
-          playersOnline={playersOnline}
           user={user}
+          profileLabel={profileLabel}
+          turbo={turbo}
+          isAdmin={isAdmin}
           openLiveChatCount={openLiveChatCount}
           liveChatsOpen={liveChatsOpen}
           withdrawOpen={withdrawOpen}
+          adminChatAttentionCount={adminChatAttentionCount}
+          adminInboxOpen={adminInboxOpen}
+          supportChatOpen={supportChatOpen}
+          clearOpen={clearOpen}
+          seeOpen={seeOpen}
+          giftMoneyOpen={giftMoneyOpen}
+          giftOpen={giftOpen}
+          userDbOpen={userDbOpen}
+          adminOpen={adminOpen}
+          onTurboToggle={onTurboToggle}
           onOpenLogin={openLogin}
+          onLogout={onLogout}
           onOpenLiveChats={() => {
             log('CLICK.open_live_chats');
             setLiveChatsOpen(true);
           }}
           onOpenDeposit={openDepositFlow}
-          onOpenWithdraw={() => openWithdrawFlow()}
+          onOpenWithdraw={() => {
+            log('CLICK.open_withdraw');
+            setWithdrawOpen(true);
+          }}
+          onOpenNickname={() => {
+            log('CLICK.open_nickname');
+            setNicknameOpen(true);
+          }}
+          onOpenClear={() => {
+            log('CLICK.open_admin_clear');
+            setClearOpen(true);
+          }}
+          onOpenSee={() => {
+            log('CLICK.open_admin_see');
+            setSeeOpen(true);
+          }}
+          onOpenAdminInbox={() => {
+            log('CLICK.open_withdraw_inbox');
+            setAdminInboxOpen(true);
+          }}
+          onOpenGiftMoney={() => {
+            log('CLICK.open_admin_gift_money');
+            setGiftMoneyOpen(true);
+          }}
+          onOpenGift={() => {
+            log('CLICK.open_admin_gift');
+            setGiftOpen(true);
+          }}
+          onOpenUserDb={() => {
+            log('CLICK.open_user_db');
+            setUserDbOpen(true);
+          }}
+          onOpenAdmin={() => {
+            log('CLICK.open_admin');
+            setAdminOpen(true);
+          }}
         />
       )}
 
-      <div className={DEV_MOBILE_LAYOUT ? `hidden lg:grid lg:grid-cols-[1fr_auto_1fr] lg:items-center ${
-        DEV_CLEAN_HEADER_LAYOUT ? 'lg:gap-8' : 'lg:gap-4'
-      }` : 'contents'}>
-      <div className={`flex min-w-0 justify-self-start ${
-        DEV_CLEAN_HEADER_LAYOUT ? 'items-center gap-6 lg:gap-10' : 'items-center gap-4'
-      }`}
-      >
-        <div className={`flex shrink-0 ${
-          DEV_CLEAN_HEADER_LAYOUT ? 'flex-col items-start gap-1' : 'items-center gap-3'
-        }`}
-        >
-        <button
-          type="button"
-          onClick={() => navigateApp('main')}
-          className={`text-left transition hover:opacity-90 ${
-            DEV_CLEAN_HEADER_LAYOUT ? '' : ''
-          }`}
-        >
-        <h1 className={`font-display font-bold tracking-[0.12em] uppercase ${
-          DEV_CLEAN_HEADER_LAYOUT ? 'text-xl leading-tight' : 'text-lg'
-        }`}
-        >
+      <div className={DEV_MOBILE_LAYOUT ? 'hidden lg:grid lg:grid-cols-[1fr_auto_1fr] lg:items-center lg:gap-4' : 'contents'}>
+      <div className="flex items-center gap-3 justify-self-start">
+        <h1 className="font-display text-lg font-bold tracking-[0.12em] uppercase">
           Blox<span className="text-gold">Upgrader</span>
-          {!DEV_CLEAN_HEADER_LAYOUT && (
           <span className="text-[11px] font-semibold tracking-normal text-white/40">.com</span>
-          )}
         </h1>
-        </button>
 
-        {DEV_CLEAN_HEADER_LAYOUT ? (
-          <div className="flex items-center gap-1.5 pl-0.5">
-            <span className="h-2 w-2 animate-pulse rounded-full bg-win shadow-[0_0_8px_rgba(0,230,118,0.65)]" />
-            <span className="font-display text-[11px] font-semibold tabular-nums text-white/75">
-              {playersOnline.toLocaleString('es-ES')}
-            </span>
-            <span className="text-[10px] font-medium uppercase tracking-wide text-white/40">online</span>
-          </div>
-        ) : (
         <div className="hidden items-center gap-2 sm:flex">
           <div className="flex items-center gap-1.5 rounded-lg border border-white/5 bg-panel/80 px-2.5 py-1">
             <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-win" />
@@ -413,78 +355,176 @@ export function Header({
             <span className="text-[10px] text-white/40">upgrades</span>
           </div>
         </div>
-        )}
-        </div>
-
-        <HeaderNavMenu />
       </div>
 
-      <div className={`flex min-w-0 items-center justify-self-center overflow-x-auto ${
-        DEV_CLEAN_HEADER_LAYOUT ? 'gap-3' : 'gap-2'
-      }`}
-      >
-        {!DEV_CLEAN_HEADER_LAYOUT && (
+      <div className="flex min-w-0 items-center gap-2 justify-self-center overflow-x-auto">
+        {isAdmin && (
+          <>
+            <button
+              type="button"
+              onClick={() => {
+                log('CLICK.open_admin_clear');
+                setClearOpen(true);
+              }}
+              title="Resetear cuenta por correo — borra todo"
+              className={`shrink-0 rounded-lg border-2 px-2.5 py-2 font-display text-[10px] font-black uppercase tracking-wider transition ${
+                clearOpen
+                  ? 'border-[#ff3344] bg-[#ff3344] text-white shadow-[0_0_20px_rgba(255,51,68,0.45)]'
+                  : 'border-[#ff3344] bg-[#ff3344]/20 text-[#ff6677] hover:bg-[#ff3344]/35 hover:text-white'
+              }`}
+            >
+              CLEAR
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                log('CLICK.open_admin_see');
+                setSeeOpen(true);
+              }}
+              title="Ver inventario de un jugador por correo"
+              className={`shrink-0 rounded-lg border px-2 py-2 font-display text-[10px] font-bold uppercase tracking-wider transition ${
+                seeOpen
+                  ? 'border-white/40 bg-white/15 text-white shadow-[0_0_20px_rgba(255,255,255,0.15)]'
+                  : 'border-white/25 bg-white/10 text-white/90 hover:border-white/40 hover:bg-white/15'
+              }`}
+            >
+              See
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                log('CLICK.open_withdraw_inbox');
+                setAdminInboxOpen(true);
+              }}
+              title="Chats en vivo — deposit y withdraw"
+              className={`relative rounded-lg border px-3 py-2 font-display text-[10px] font-bold uppercase tracking-wider transition ${
+                adminInboxOpen || supportChatOpen
+                  ? 'border-white/40 bg-white/15 text-white shadow-[0_0_20px_rgba(255,255,255,0.15)]'
+                  : 'border-white/25 bg-white/10 text-white/90 hover:border-white/40 hover:bg-white/15'
+              }`}
+            >
+              CHATS
+              {adminChatAttentionCount > 0 && (
+                <span className="absolute -right-1.5 -top-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-gold px-1 text-[9px] font-black text-deep">
+                  {adminChatAttentionCount > 9 ? '9+' : adminChatAttentionCount}
+                </span>
+              )}
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                log('CLICK.open_admin_gift_money');
+                setGiftMoneyOpen(true);
+              }}
+              title="Regalar SALDO a cualquier usuario por email"
+              className={`rounded-lg border px-3 py-2 font-display text-[10px] font-bold uppercase tracking-wider transition ${
+                giftMoneyOpen
+                  ? 'border-gold bg-gold/20 text-gold shadow-[0_0_20px_rgba(255,215,0,0.25)]'
+                  : 'border-gold/40 bg-gold/10 text-gold hover:border-gold hover:bg-gold/15'
+              }`}
+            >
+              Gift Money
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                log('CLICK.open_admin_gift');
+                setGiftOpen(true);
+              }}
+              title="Regalar skins a cualquier usuario por email"
+              className={`rounded-lg border px-3 py-2 font-display text-[10px] font-bold uppercase tracking-wider transition ${
+                giftOpen
+                  ? 'border-gold bg-gold/20 text-gold shadow-[0_0_20px_rgba(255,215,0,0.25)]'
+                  : 'border-gold/40 bg-gold/10 text-gold hover:border-gold hover:bg-gold/15'
+              }`}
+            >
+              Gift User
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                log('CLICK.open_user_db');
+                setUserDbOpen(true);
+              }}
+              title="User database — all accounts and activity"
+              className={`rounded-lg border px-3 py-2 font-display text-[10px] font-bold uppercase tracking-wider transition ${
+                userDbOpen
+                  ? 'border-gold bg-gold/20 text-gold shadow-[0_0_20px_rgba(255,215,0,0.25)]'
+                  : 'border-gold/40 bg-gold/10 text-gold hover:border-gold hover:bg-gold/15'
+              }`}
+            >
+              Users DB
+            </button>
+            <button
+            type="button"
+            onClick={() => {
+              log('CLICK.open_admin');
+              setAdminOpen(true);
+            }}
+            title="Admin Mode — añadir skins a tu inventario"
+            className={`rounded-lg border px-3 py-2 font-display text-[10px] font-bold uppercase tracking-wider transition ${
+              adminOpen
+                ? 'border-win bg-win/20 text-win shadow-[0_0_20px_rgba(0,230,118,0.25)]'
+                : 'border-win/40 bg-win/10 text-win hover:border-win hover:bg-win/15'
+            }`}
+            >
+              Admin
+            </button>
+          </>
+        )}
+        <button
+          type="button"
+          onClick={onTurboToggle}
+          title={turbo ? 'Turbo activado' : 'Turbo desactivado'}
+          aria-pressed={turbo}
+          aria-label={turbo ? 'Desactivar turbo' : 'Activar turbo'}
+          className={`flex h-[42px] w-[42px] items-center justify-center rounded-lg border transition ${
+            turbo
+              ? 'border-gold bg-gold/15 shadow-gold'
+              : 'border-white/10 bg-panel hover:border-gold/40'
+          }`}
+        >
+          <LightningIcon active={turbo} />
+        </button>
         <div className="flex items-center gap-1.5">
           <Stat label="Inventory value" value={inventoryTotal(inventory)} />
           <Stat label="SALDO" value={balance} />
         </div>
-        )}
       </div>
 
-      <div className={`flex items-center justify-self-end ${
-        DEV_CLEAN_HEADER_LAYOUT ? 'gap-2' : 'gap-2.5'
-      }`}
-      >
+      <div className="flex items-center gap-2 justify-self-end">
         {user ? (
           <>
-            <div className={`flex items-center ${DEV_CLEAN_HEADER_LAYOUT ? 'gap-1 -translate-x-1' : 'gap-1.5 -translate-x-0.5'}`}>
+            <div className="flex items-center gap-2">
               <button
                 type="button"
                 onClick={() => {
                   log('CLICK.open_live_chats');
                   setLiveChatsOpen(true);
                 }}
-                className={`relative rounded-md border font-display font-bold uppercase transition ${
-                  DEV_CLEAN_HEADER_LAYOUT
-                    ? 'px-4 py-2.5 text-xs tracking-[0.1em]'
-                    : 'px-3 py-1.5 text-[10px] tracking-[0.12em] backdrop-blur-xl'
-                } ${
-                  openLiveChatCount > 0 ? (DEV_CLEAN_HEADER_LAYOUT ? 'pr-6' : 'pr-7') : ''
+                className={`relative rounded-lg border px-3 py-1.5 font-display text-[10px] font-bold uppercase tracking-[0.12em] backdrop-blur-xl transition ${
+                  openLiveChatCount > 0 ? 'pr-7' : ''
                 } ${
                   liveChatsOpen
-                    ? DEV_CLEAN_HEADER_LAYOUT
-                      ? cleanHeaderChip(true)
-                      : 'border-win/40 bg-win/15 text-win shadow-[0_0_20px_rgba(0,230,118,0.2)]'
-                    : DEV_CLEAN_HEADER_LAYOUT
-                      ? cleanHeaderChip(false)
-                      : 'border-win/25 bg-win/10 text-win hover:border-win/40 hover:bg-win/15'
+                    ? 'border-win/40 bg-win/15 text-win shadow-[0_0_20px_rgba(0,230,118,0.2)]'
+                    : 'border-win/25 bg-win/10 text-win hover:border-win/40 hover:bg-win/15'
                 }`}
               >
                 Live Chats
                 {openLiveChatCount > 0 && (
-                  <span className={`absolute right-1 top-1 flex items-center justify-center rounded-full bg-gold font-black leading-none text-deep shadow-[0_0_6px_rgba(176,108,255,0.5)] ${
-                    DEV_CLEAN_HEADER_LAYOUT ? 'h-3.5 min-w-3.5 px-0.5 text-[8px]' : 'h-4 min-w-4 px-1 text-[9px]'
-                  }`}
-                  >
+                  <span className="absolute right-1 top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-gold px-1 text-[9px] font-black leading-none text-deep shadow-[0_0_6px_rgba(255,215,0,0.5)]">
                     {openLiveChatCount}
                   </span>
                 )}
               </button>
-              {DEV_CLEAN_HEADER_LAYOUT && (
-                <Stat label="SALDO" value={balance} slim cleanChip />
-              )}
             <button
               type="button"
               onClick={openDepositFlow}
-              className={`group relative overflow-hidden rounded-md border border-gold/45 font-display font-bold uppercase text-[#f5f0ff] shadow-[0_0_20px_rgba(176,108,255,0.3),inset_0_1px_0_rgba(255,255,255,0.35)] backdrop-blur-xl transition hover:border-gold hover:shadow-[0_0_32px_rgba(176,108,255,0.5),inset_0_1px_0_rgba(255,255,255,0.45)] ${
-                DEV_CLEAN_HEADER_LAYOUT
-                  ? 'px-5 py-2.5 text-xs tracking-[0.1em]'
-                  : 'px-3.5 py-1.5 text-[11px] tracking-[0.14em]'
-              }`}
+              className="group relative overflow-hidden rounded-lg border border-gold/45 px-3.5 py-1.5 font-display text-[11px] font-bold uppercase tracking-[0.14em] text-[#1a1400] shadow-[0_0_28px_rgba(255,215,0,0.35),inset_0_1px_0_rgba(255,255,255,0.35)] backdrop-blur-xl transition hover:border-gold hover:shadow-[0_0_40px_rgba(255,215,0,0.55),inset_0_1px_0_rgba(255,255,255,0.45)]"
             >
               <span
                 aria-hidden="true"
-                className="pointer-events-none absolute inset-0 bg-gradient-to-r from-[#d8b4fe] via-[#c084fc] to-[#a855f7] opacity-95"
+                className="pointer-events-none absolute inset-0 bg-gradient-to-r from-[#ffe566] via-[#ffcc00] to-[#ffb800] opacity-95"
               />
               <span
                 aria-hidden="true"
@@ -496,12 +536,11 @@ export function Header({
             </button>
             <button
                 type="button"
-                onClick={() => openWithdrawFlow()}
-                className={`group relative overflow-hidden rounded-md border font-display font-bold uppercase text-white shadow-[0_0_16px_rgba(255,255,255,0.1),inset_0_1px_0_rgba(255,255,255,0.2)] backdrop-blur-xl transition hover:border-white/35 hover:shadow-[0_0_24px_rgba(255,255,255,0.18),inset_0_1px_0_rgba(255,255,255,0.28)] ${
-                  DEV_CLEAN_HEADER_LAYOUT
-                    ? 'px-5 py-2.5 text-xs tracking-[0.1em]'
-                    : 'px-3.5 py-1.5 text-[11px] tracking-[0.14em]'
-                } ${
+                onClick={() => {
+                  log('CLICK.open_withdraw');
+                  setWithdrawOpen(true);
+                }}
+                className={`group relative overflow-hidden rounded-lg border px-3.5 py-1.5 font-display text-[11px] font-bold uppercase tracking-[0.14em] text-white shadow-[0_0_24px_rgba(255,255,255,0.12),inset_0_1px_0_rgba(255,255,255,0.2)] backdrop-blur-xl transition hover:border-white/35 hover:shadow-[0_0_32px_rgba(255,255,255,0.2),inset_0_1px_0_rgba(255,255,255,0.28)] ${
                   withdrawOpen ? 'border-white/40' : 'border-white/20'
                 }`}
               >
@@ -518,8 +557,24 @@ export function Header({
                 </span>
               </button>
             </div>
-            <ProfileMenu />
-            <LogoutDoorButton />
+            <button
+              type="button"
+              onClick={() => {
+                log('CLICK.open_nickname');
+                setNicknameOpen(true);
+              }}
+              title="Clic para cambiar tu apodo"
+              className="hidden max-w-[180px] truncate rounded-lg border border-white/10 bg-panel/80 px-2.5 py-1.5 text-[11px] text-white/70 transition hover:border-gold/30 hover:text-gold sm:inline"
+            >
+              {profileLabel}
+            </button>
+            <button
+              type="button"
+              onClick={onLogout}
+              className="rounded-lg border border-white/10 bg-panel px-3 py-1.5 text-[11px] font-semibold text-white/60 transition hover:border-white/25 hover:text-white"
+            >
+              Salir
+            </button>
           </>
         ) : (
           <button
@@ -537,51 +592,41 @@ export function Header({
   );
 }
 
-function Stat({
-  label,
-  value,
-  compact = false,
-  comfortable = false,
-  slim = false,
-  cleanChip = false,
-}: {
-  label: string;
-  value: number;
-  compact?: boolean;
-  comfortable?: boolean;
-  slim?: boolean;
-  cleanChip?: boolean;
-}) {
+function Stat({ label, value, compact = false }: { label: string; value: number; compact?: boolean }) {
   return (
-    <div className={`flex items-center rounded-md border ${
-      cleanChip
-        ? `gap-1.5 px-3 py-2.5 ${cleanHeaderChip(false)}`
-        : `bg-[#1a1e28]/90 ${
-          slim
-            ? 'gap-1 border-white/[0.08] px-2 py-1.5'
-            : comfortable
-              ? 'gap-1.5 border-white/[0.08] px-3.5 py-2'
-              : compact
-                ? 'gap-1 border-white/5 px-1.5 py-0.5'
-                : 'gap-1.5 border-white/5 px-2 py-1'
-        }`
+    <div className={`flex items-center gap-1 rounded-lg border border-white/5 bg-panel/90 ${
+      compact ? 'px-1.5 py-0.5' : 'px-2 py-1'
     }`}
     >
-      <span className={`font-semibold tracking-wide uppercase ${
-        cleanChip ? 'text-[10px] text-white/45' : 'text-white/40'
-      } ${
-        slim && !cleanChip ? 'text-[8px]' : comfortable ? 'text-[10px]' : compact ? 'text-[7px]' : 'text-[8px]'
-      }`}
-      >
-        {label}
-      </span>
+      {!compact && (
+        <span className="text-[8px] font-semibold tracking-wide text-white/40 uppercase">{label}</span>
+      )}
+      {compact && (
+        <span className="text-[7px] font-semibold tracking-wide text-white/40 uppercase">{label}</span>
+      )}
       <CoinPrice
         value={value}
-        iconClassName={cleanChip ? 'h-4 w-4' : slim ? 'h-3 w-3' : comfortable ? 'h-3.5 w-3.5' : compact ? 'h-2.5 w-2.5' : 'h-3 w-3'}
-        textClassName={`font-display font-bold text-gold ${
-          cleanChip ? 'text-sm' : slim ? 'text-[10px]' : comfortable ? 'text-xs' : compact ? 'text-[10px]' : 'text-[11px]'
-        }`}
+        iconClassName={compact ? 'h-2.5 w-2.5' : 'h-3 w-3'}
+        textClassName={`font-display font-bold text-gold ${compact ? 'text-[10px]' : 'text-[11px]'}`}
       />
     </div>
+  );
+}
+
+function LightningIcon({ active }: { active: boolean }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      className={`h-5 w-5 transition ${active ? 'drop-shadow-[0_0_6px_rgba(255,215,0,0.8)]' : 'opacity-50'}`}
+      aria-hidden="true"
+    >
+      <path
+        d="M13 2L4 14h7l-1 8 9-12h-7l1-8z"
+        fill={active ? '#FFD700' : '#B8960F'}
+        stroke="#0a0a0a"
+        strokeWidth="1.25"
+        strokeLinejoin="round"
+      />
+    </svg>
   );
 }

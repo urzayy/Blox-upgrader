@@ -43,7 +43,7 @@ export function AdminPromoCodeControl({ adminEmail }: Props) {
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 exit={{ opacity: 0, y: 6, scale: 0.97 }}
                 transition={{ type: 'spring', stiffness: 420, damping: 30 }}
-                className="absolute bottom-full right-0 z-[116] mb-2 w-[min(92vw,240px)] overflow-hidden rounded-xl border border-gold/25 bg-[#100d1a] shadow-[0_12px_40px_rgba(0,0,0,0.75),0_0_20px_rgba(176,108,255,0.08)]"
+                className="absolute bottom-full right-0 z-[116] mb-2 w-[min(92vw,240px)] overflow-hidden rounded-xl border border-gold/25 bg-[#12141c] shadow-[0_12px_40px_rgba(0,0,0,0.75),0_0_20px_rgba(255,215,0,0.08)]"
               >
                 <button
                   type="button"

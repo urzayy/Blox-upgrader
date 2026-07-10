@@ -59,7 +59,7 @@ export function AdminChatNotificationStack({
             }}
             className={`pointer-events-auto flex w-full items-start gap-3 rounded-xl border px-4 py-3 text-left shadow-[0_12px_40px_rgba(0,0,0,0.65)] backdrop-blur-xl ${
               toast.ticketType === 'deposit'
-                ? 'border-gold/45 bg-[#0c0e14]/95 shadow-[0_0_28px_rgba(176,108,255,0.12)]'
+                ? 'border-gold/45 bg-[#0c0e14]/95 shadow-[0_0_28px_rgba(255,215,0,0.12)]'
                 : 'border-win/45 bg-[#0c0e14]/95 shadow-[0_0_28px_rgba(0,230,118,0.12)]'
             }`}
           >

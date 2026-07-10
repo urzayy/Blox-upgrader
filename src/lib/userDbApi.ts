@@ -1,5 +1,3 @@
-import type { PlayerStateSnapshot } from './playerStateApi';
-
 export interface SyncUserPayload {
   userId: string;
   email: string;
@@ -15,7 +13,7 @@ export interface LogEventPayload {
   details?: Record<string, string | number | boolean | null | undefined>;
 }
 
-async function postJson(url: string, body: unknown, attempts = 3): Promise<Response | null> {
+async function postJson(url: string, body: unknown, attempts = 3): Promise<boolean> {
   for (let i = 0; i < attempts; i += 1) {
     try {
       const res = await fetch(url, {
@@ -23,7 +21,7 @@ async function postJson(url: string, body: unknown, attempts = 3): Promise<Respo
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
       });
-      if (res.ok || res.status === 409) return res;
+      if (res.ok) return true;
       if (i === attempts - 1) {
         console.warn(`[UserDB] ${url} failed: HTTP ${res.status}`);
       }
@@ -36,58 +34,7 @@ async function postJson(url: string, body: unknown, attempts = 3): Promise<Respo
       await new Promise(r => setTimeout(r, 800 * (i + 1)));
     }
   }
-  return null;
-}
-
-export interface ServerSessionUser {
-  userId: string;
-  email: string;
-  nickname?: string | null;
-  salt?: string;
-}
-
-export interface ServerSessionResult {
-  ok: boolean;
-  notFound?: boolean;
-  wrongPassword?: boolean;
-  user?: ServerSessionUser;
-  playerState?: PlayerStateSnapshot | null;
-}
-
-export async function requestServerSession(
-  email: string,
-  password: string,
-): Promise<ServerSessionResult> {
-  try {
-    const res = await fetch('/api/auth/session', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: email.trim().toLowerCase(), password }),
-    });
-    const data = await res.json().catch(() => ({})) as {
-      ok?: boolean;
-      notFound?: boolean;
-      error?: string;
-      user?: ServerSessionUser;
-      playerState?: PlayerStateSnapshot | null;
-    };
-    if (res.status === 404 || data.notFound) {
-      return { ok: false, notFound: true };
-    }
-    if (res.status === 401 || data.error === 'wrong_password') {
-      return { ok: false, wrongPassword: true };
-    }
-    if (!res.ok || !data.ok || !data.user?.userId) {
-      return { ok: false };
-    }
-    return {
-      ok: true,
-      user: data.user,
-      playerState: data.playerState ?? null,
-    };
-  } catch {
-    return { ok: false };
-  }
+  return false;
 }
 
 export async function registerAccountOnServer(account: {
@@ -99,8 +46,8 @@ export async function registerAccountOnServer(account: {
   acceptedAge: boolean;
   acceptedTerms: boolean;
   nickname?: string;
-}): Promise<'ok' | 'conflict' | 'failed'> {
-  const res = await postJson('/api/auth/register', {
+}): Promise<boolean> {
+  return postJson('/api/auth/register', {
     userId: account.id,
     email: account.email,
     passwordHash: account.passwordHash,
@@ -110,19 +57,14 @@ export async function registerAccountOnServer(account: {
     acceptedTerms: account.acceptedTerms,
     nickname: account.nickname,
   });
-  if (!res) return 'failed';
-  if (res.status === 409) return 'conflict';
-  return res.ok ? 'ok' : 'failed';
 }
 
 export async function loginAccountOnServer(payload: SyncUserPayload): Promise<boolean> {
-  const res = await postJson('/api/auth/login', payload);
-  return Boolean(res?.ok);
+  return postJson('/api/auth/login', payload);
 }
 
 export async function syncUserToDb(payload: SyncUserPayload): Promise<boolean> {
-  const res = await postJson('/api/users/sync', payload);
-  return Boolean(res?.ok);
+  return postJson('/api/users/sync', payload);
 }
 
 export async function logEventToDb(payload: LogEventPayload): Promise<void> {

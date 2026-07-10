@@ -1,8 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import type { Plugin } from 'vite';
-import { BASE_TOTAL_UPGRADES, createFeedItem } from './src/lib/feed';
-import { DEV_FEED_BOT_TICK_MS, DEV_FEED_WIN_RATE } from './src/lib/devLiveFeed';
+import { BASE_TOTAL_UPGRADES, createFeedItem, initialFeed } from './src/lib/feed';
 import { driftPlayersOnline } from './src/lib/siteStorage';
 import type { FeedItem } from './src/data/skins';
 
@@ -50,7 +49,7 @@ function isFeedItem(value: unknown): value is FeedItem {
 
 function createInitialState(): SiteState {
   return {
-    feed: Array.from({ length: 24 }, () => createFeedItem({ winRate: DEV_FEED_WIN_RATE })),
+    feed: initialFeed(24),
     totalUpgrades: BASE_TOTAL_UPGRADES,
     playersOnline: 500 + Math.floor(Math.random() * 300) + 1,
     updatedAt: Date.now(),
@@ -111,7 +110,7 @@ export function siteStatePlugin(stateDir: string): Plugin {
 
       const botTick = () => {
         const state = loadState();
-        const botItem = createFeedItem({ winRate: DEV_FEED_WIN_RATE });
+        const botItem = createFeedItem();
         saveState({
           ...appendFeedItem(state, botItem),
           playersOnline: driftPlayersOnline(state.playersOnline),
@@ -119,7 +118,7 @@ export function siteStatePlugin(stateDir: string): Plugin {
       };
 
       botTick();
-      const botInterval = setInterval(botTick, DEV_FEED_BOT_TICK_MS);
+      const botInterval = setInterval(botTick, 3500);
 
       server.middlewares.use(async (req, res, next) => {
         const url = req.url ?? '';

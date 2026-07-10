@@ -13,10 +13,6 @@ function inventoryKey(userId: string | null): string {
     : 'blox-upgrader/inventory/guest';
 }
 
-export function getInventoryStorageKey(userId: string | null = null): string {
-  return inventoryKey(userId);
-}
-
 function versionKey(userId: string | null): string {
   return userId
     ? `blox-upgrader/inventory-version/${userId}`
@@ -34,7 +30,6 @@ function isSkin(value: unknown): value is Skin {
     && typeof s.wear === 'string'
     && typeof s.price === 'number'
     && typeof s.image === 'string'
-    && (s.obtainedAt === undefined || typeof s.obtainedAt === 'number')
   );
 }
 
@@ -85,29 +80,6 @@ export function saveInventory(inventory: Skin[], userId: string | null = null): 
   } catch {
     /* storage full or blocked */
   }
-}
-
-const appendChains = new Map<string, Promise<void>>();
-
-/** Serializes inventory appends per user to avoid lost skins on rapid multi-case reveals. */
-export function appendSkinToInventory(userId: string, skin: Skin): Promise<void> {
-  return appendSkinsToInventory(userId, [skin]);
-}
-
-export function appendSkinsToInventory(userId: string, skins: Skin[]): Promise<void> {
-  if (!skins.length) return Promise.resolve();
-
-  const previous = appendChains.get(userId) ?? Promise.resolve();
-  const next = previous
-    .then(() => {
-      const inventory = loadInventory(userId);
-      saveInventory([...inventory, ...skins], userId);
-    })
-    .catch(() => {
-      /* keep chain alive after failures */
-    });
-  appendChains.set(userId, next);
-  return next;
 }
 
 export function clearSavedInventory(userId: string | null = null): void {

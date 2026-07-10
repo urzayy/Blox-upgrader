@@ -5,11 +5,12 @@ import { getPresenceVisitorId } from '../lib/presenceVisitorId';
 
 const HEARTBEAT_MS = 20_000;
 
+/** Production-only heartbeat so the header "online" count reflects real visitors. */
 export function usePresenceHeartbeat(userId: string | null | undefined): void {
   const documentVisible = useDocumentVisible();
 
   useEffect(() => {
-    if (!documentVisible) return;
+    if (import.meta.env.DEV || !documentVisible) return;
 
     const visitorId = getPresenceVisitorId();
     const ping = () => {

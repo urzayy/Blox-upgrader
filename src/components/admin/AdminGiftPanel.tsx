@@ -102,7 +102,7 @@ export function AdminGiftPanel({ open, adminEmail, onClose, onGiftSent }: Props)
             role="dialog"
             aria-modal="true"
             aria-labelledby="admin-gift-title"
-            className="relative flex h-[min(88vh,920px)] w-full max-w-6xl flex-col overflow-hidden rounded-2xl border border-gold/25 bg-[#0c0a14] shadow-[0_24px_80px_rgba(0,0,0,0.75),0_0_40px_rgba(176,108,255,0.08)]"
+            className="relative flex h-[min(88vh,920px)] w-full max-w-6xl flex-col overflow-hidden rounded-2xl border border-gold/25 bg-[#0e1018] shadow-[0_24px_80px_rgba(0,0,0,0.75),0_0_40px_rgba(255,215,0,0.08)]"
             initial={{ scale: 0.94, y: 16, opacity: 0 }}
             animate={{ scale: 1, y: 0, opacity: 1 }}
             exit={{ scale: 0.96, y: 8, opacity: 0 }}
@@ -265,8 +265,8 @@ function GiftSkinTile({
       title={`Seleccionar ${skin.name}`}
       className={`group relative w-full self-start overflow-hidden rounded-lg border bg-[#141820] text-left transition disabled:opacity-40 ${
         selected
-          ? 'border-gold/60 ring-1 ring-gold/50 shadow-[0_0_18px_rgba(176,108,255,0.2)]'
-          : 'border-white/10 hover:border-gold/50 hover:shadow-[0_0_16px_rgba(176,108,255,0.15)]'
+          ? 'border-gold/60 ring-1 ring-gold/50 shadow-[0_0_18px_rgba(255,215,0,0.2)]'
+          : 'border-white/10 hover:border-gold/50 hover:shadow-[0_0_16px_rgba(255,215,0,0.15)]'
       }`}
     >
       <div className="absolute inset-x-0 top-0 z-10 h-0.5" style={{ background: r.color }} />

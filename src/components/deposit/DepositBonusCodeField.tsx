@@ -49,7 +49,7 @@ export function DepositBonusCodeField({
           <button
             type="button"
             onClick={onApply}
-            className="shrink-0 rounded-lg border border-gold/45 bg-gradient-to-r from-[#9333ea] to-[#b56bff] px-3 py-1.5 font-display text-[10px] font-bold uppercase tracking-wide text-white shadow-[0_0_16px_rgba(176,108,255,0.25)] transition hover:border-gold hover:brightness-105"
+            className="shrink-0 rounded-lg border border-gold/45 bg-[#ffcc00] px-3 py-1.5 font-display text-[10px] font-bold uppercase tracking-wide text-[#1a1400] shadow-[0_0_16px_rgba(255,204,0,0.25)] transition hover:border-gold hover:brightness-105"
           >
             Apply
           </button>

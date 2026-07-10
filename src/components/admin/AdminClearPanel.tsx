@@ -83,7 +83,7 @@ export function AdminClearPanel({ open, adminEmail, onClose, onAccountCleared }:
             role="dialog"
             aria-modal="true"
             aria-labelledby="admin-clear-title"
-            className="relative w-full max-w-lg overflow-hidden rounded-2xl border border-risk/40 bg-[#0c0a14] shadow-[0_24px_80px_rgba(0,0,0,0.75)]"
+            className="relative w-full max-w-lg overflow-hidden rounded-2xl border border-risk/40 bg-[#0e1018] shadow-[0_24px_80px_rgba(0,0,0,0.75)]"
             initial={{ scale: 0.94, y: 16, opacity: 0 }}
             animate={{ scale: 1, y: 0, opacity: 1 }}
             exit={{ scale: 0.96, y: 8, opacity: 0 }}

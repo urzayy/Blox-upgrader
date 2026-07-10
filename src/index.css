@@ -4,15 +4,14 @@
 
 @layer base {
   html {
-    @apply h-full scroll-smooth antialiased;
+    @apply scroll-smooth antialiased;
   }
   body {
-    @apply bg-deep text-white font-body h-full min-h-[100dvh] overflow-hidden;
-    @apply max-lg:overflow-x-hidden;
-    background-image: radial-gradient(ellipse 120% 80% at 50% -20%, rgba(124, 58, 237, 0.12), transparent 55%);
+    @apply bg-deep text-white font-body h-screen overflow-hidden;
+    @apply max-lg:min-h-[100dvh] max-lg:h-auto max-lg:overflow-x-hidden max-lg:overflow-y-auto;
   }
   #root {
-    @apply h-full min-h-[100dvh];
+    @apply max-lg:min-h-[100dvh];
   }
 }
 
@@ -23,36 +22,4 @@
 }
 
 @layer utilities {
-  @keyframes profileSparkleRise {
-    0% {
-      transform: translateY(0) translateX(0);
-      opacity: 0;
-    }
-    8% {
-      opacity: var(--sparkle-opacity, 0.25);
-    }
-    92% {
-      opacity: var(--sparkle-opacity, 0.25);
-    }
-    100% {
-      transform: translateY(-140%) translateX(var(--sparkle-drift, 0px));
-      opacity: 0;
-    }
-  }
-
-  .profile-sparkle {
-    animation-name: profileSparkleRise;
-    animation-timing-function: linear;
-    animation-iteration-count: infinite;
-  }
-
-  .profile-sparkle-star {
-    width: 0;
-    height: 0;
-    border-left: 2px solid transparent;
-    border-right: 2px solid transparent;
-    border-bottom: 4px solid rgba(192, 132, 252, 0.55);
-    transform-origin: center;
-    filter: drop-shadow(0 0 2px rgba(176, 108, 255, 0.35));
-  }
 }

@@ -75,7 +75,7 @@ export function DepositModal({ open, onClose, onRequestDeposit }: Props) {
             role="dialog"
             aria-modal="true"
             aria-labelledby="deposit-modal-title"
-            className="relative flex h-[min(88vh,760px)] w-full max-w-4xl flex-col overflow-hidden rounded-2xl border border-gold/25 bg-[#0c0a14] shadow-[0_24px_80px_rgba(0,0,0,0.75)]"
+            className="relative flex h-[min(88vh,760px)] w-full max-w-4xl flex-col overflow-hidden rounded-2xl border border-gold/25 bg-[#0e1018] shadow-[0_24px_80px_rgba(0,0,0,0.75)]"
             initial={{ scale: 0.94, y: 16, opacity: 0 }}
             animate={{ scale: 1, y: 0, opacity: 1 }}
             exit={{ scale: 0.96, y: 8, opacity: 0 }}

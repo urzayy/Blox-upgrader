@@ -1,6 +1,5 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { createHash } from 'node:crypto';
 
 const ADMIN_EMAILS = new Set(['urzay1v1@gmail.com', 'ecruzcastillo2009@gmail.com']);
 
@@ -194,38 +193,10 @@ export function createUserDb(rootDir = process.env.USER_DB_DIR || defaultDbRoot(
     return `${header}${body}\n`;
   }
 
-  function hashPassword(password, salt) {
-    return createHash('sha256').update(`${salt}:${String(password)}`).digest('hex');
-  }
-
-  function getAccountByEmail(email) {
+  function getUserByEmail(email) {
     const normalizedEmail = normalizeEmail(email);
-    const store = loadAccountsStore();
-    const userId = store.byEmail[normalizedEmail];
-    if (!userId) return null;
-    return store.accounts[userId] ?? null;
-  }
-
-  function authenticateAccount({ email, password }) {
-    const account = getAccountByEmail(email);
-    if (!account?.passwordHash || !account.salt) {
-      return { ok: false, notFound: true };
-    }
-    const hash = hashPassword(password, account.salt);
-    if (hash !== account.passwordHash) {
-      return { ok: false, wrongPassword: true };
-    }
-    return {
-      ok: true,
-      userId: account.id,
-      email: account.email,
-      nickname: account.nickname ?? null,
-      salt: account.salt,
-    };
-  }
-
-  function emailExistsOnServer(email) {
-    return Boolean(getAccountByEmail(email));
+    const index = loadUsersIndex();
+    return Object.values(index.users).find(u => u.email === normalizedEmail) ?? null;
   }
 
   function registerAccount({
@@ -243,34 +214,12 @@ export function createUserDb(rootDir = process.env.USER_DB_DIR || defaultDbRoot(
 
     const normalizedEmail = normalizeEmail(email);
     const store = loadAccountsStore();
-    const existingAccount = getAccountByEmail(normalizedEmail);
-    if (existingAccount) {
-      if (!existingAccount.passwordHash && existingAccount.id === userId) {
-        store.accounts[userId] = {
-          ...existingAccount,
-          id: userId,
-          email: normalizedEmail,
-          passwordHash,
-          salt,
-          createdAt: createdAt ?? existingAccount.createdAt ?? Date.now(),
-          acceptedAge: Boolean(acceptedAge),
-          acceptedTerms: Boolean(acceptedTerms),
-          nickname: nickname?.trim() || existingAccount.nickname || null,
-        };
-        store.byEmail[normalizedEmail] = userId;
-        saveAccountsStore(store);
-        const user = upsertUser({ userId, email: normalizedEmail, nickname, isNewAccount });
-        const line = `[${new Date().toLocaleString('en-US', { hour12: false })}] AUTH.register | email=${normalizedEmail}`;
-        const event = appendEvent({
-          userId,
-          email: normalizedEmail,
-          line,
-          action: 'AUTH.register',
-          details: { email: normalizedEmail },
-        });
-        return { user, line: event.line };
-      }
-      return { conflict: true };
+    const previousId = store.byEmail[normalizedEmail];
+    if (previousId && previousId !== userId) {
+      delete store.accounts[previousId];
+      const index = loadUsersIndex();
+      delete index.users[previousId];
+      saveUsersIndex(index);
     }
     store.accounts[userId] = {
       id: userId,
@@ -302,13 +251,9 @@ export function createUserDb(rootDir = process.env.USER_DB_DIR || defaultDbRoot(
     if (!userId || !email) return null;
     const normalizedEmail = normalizeEmail(email);
     const store = loadAccountsStore();
-    let resolvedUserId = userId;
-    if (store.byEmail[normalizedEmail]) {
-      resolvedUserId = store.byEmail[normalizedEmail];
-    }
-    if (store.accounts[resolvedUserId]) {
-      store.accounts[resolvedUserId].lastLoginAt = Date.now();
-      if (nickname?.trim()) store.accounts[resolvedUserId].nickname = nickname.trim();
+    if (store.accounts[userId]) {
+      store.accounts[userId].lastLoginAt = Date.now();
+      if (nickname?.trim()) store.accounts[userId].nickname = nickname.trim();
       saveAccountsStore(store);
     } else if (store.byEmail[normalizedEmail]) {
       const id = store.byEmail[normalizedEmail];
@@ -319,7 +264,6 @@ export function createUserDb(rootDir = process.env.USER_DB_DIR || defaultDbRoot(
         lastLoginAt: Date.now(),
       };
       saveAccountsStore(store);
-      resolvedUserId = id;
     } else {
       store.accounts[userId] = {
         id: userId,
@@ -331,26 +275,19 @@ export function createUserDb(rootDir = process.env.USER_DB_DIR || defaultDbRoot(
       };
       store.byEmail[normalizedEmail] = userId;
       saveAccountsStore(store);
-      resolvedUserId = userId;
     }
 
-    const user = upsertUser({ userId: resolvedUserId, email: normalizedEmail, nickname, isNewAccount: false });
+    const user = upsertUser({ userId, email: normalizedEmail, nickname, isNewAccount: false });
     const line = `[${new Date().toLocaleString('en-US', { hour12: false })}] AUTH.login | email=${normalizedEmail}`;
     const event = appendEvent({
-      userId: resolvedUserId,
+      userId,
       email: normalizedEmail,
       line,
       action: 'AUTH.login',
       details: { email: normalizedEmail },
     });
 
-    return { user, line: event.line, canonicalUserId: resolvedUserId };
-  }
-
-  function getUserByEmail(email) {
-    const normalizedEmail = normalizeEmail(email);
-    const index = loadUsersIndex();
-    return Object.values(index.users).find(u => u.email === normalizedEmail) ?? null;
+    return { user, line: event.line };
   }
 
   function isAdminEmail(email) {
@@ -405,9 +342,6 @@ export function createUserDb(rootDir = process.env.USER_DB_DIR || defaultDbRoot(
     upsertUser,
     registerAccount,
     touchAccountLogin,
-    authenticateAccount,
-    emailExistsOnServer,
-    getAccountByEmail,
     appendEvent,
     listUsers,
     listRegisteredEmails,

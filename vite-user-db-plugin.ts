@@ -7,8 +7,6 @@ import { createPlayerStateStore } from './server/lib/playerStateStore.mjs';
 import { clearAccountByEmail as resetAccountByEmail } from './server/lib/accountReset.mjs';
 import { createAccountResetMarkerStore } from './server/lib/accountResetMarker.mjs';
 import { createAccountBanStore } from './server/lib/accountBanStore.mjs';
-import { createProfilePhotoStore } from './server/lib/profilePhotoStore.mjs';
-import { shouldSkipEmptyPlayerStateOverwrite } from './server/lib/playerStateSyncGuard.mjs';
 
 dotenv.config();
 
@@ -40,8 +38,6 @@ export function userDbPlugin(dbDir: string): Plugin {
   const accountBansDir = path.resolve(path.dirname(dbDir), 'account-bans');
   const resetMarkerStore = createAccountResetMarkerStore(accountResetsDir);
   const banStore = createAccountBanStore(accountBansDir);
-  const profilePhotoDir = path.resolve(path.dirname(dbDir), 'profile-photos');
-  const profilePhotoStore = createProfilePhotoStore(profilePhotoDir);
   const logsDir = path.resolve(path.dirname(dbDir), 'user-logs');
   const chatsDir = path.resolve(path.dirname(dbDir), 'withdraw-chats');
   const grantsDir = path.resolve(path.dirname(dbDir), 'inventory-grants');
@@ -82,46 +78,8 @@ export function userDbPlugin(dbDir: string): Plugin {
               return;
             }
             const result = await userStore.registerAccount({ ...body, isNewAccount: true });
-            if (result?.conflict) {
-              sendJson(res, 409, { ok: false, error: 'email_exists', message: 'Esta cuenta ya existe. Inicia sesión.' });
-              return;
-            }
             if (result?.line && typeof body.email === 'string') appendTxtLog(body.email, result.line);
             sendJson(res, 200, { ok: true, user: result?.user ?? null });
-            return;
-          }
-
-          if (url === '/api/auth/session' && req.method === 'POST') {
-            const body = await readJsonBody(req) as { email?: string; password?: string };
-            if (!body.email || !body.password) {
-              sendJson(res, 400, { error: 'bad request' });
-              return;
-            }
-            const normalizedEmail = String(body.email).trim().toLowerCase();
-            if (banStore.isBanned(normalizedEmail)) {
-              sendJson(res, 403, { error: 'account_suspended', message: 'Cuenta suspendida.' });
-              return;
-            }
-            const auth = await userStore.authenticateAccount({ email: normalizedEmail, password: body.password });
-            if (auth.notFound) {
-              sendJson(res, 404, { ok: false, notFound: true });
-              return;
-            }
-            if (!auth.ok) {
-              sendJson(res, 401, { ok: false, error: 'wrong_password' });
-              return;
-            }
-            const playerState = await playerStateStore.getPlayerStateByEmail(normalizedEmail);
-            sendJson(res, 200, {
-              ok: true,
-              user: {
-                userId: auth.userId,
-                email: auth.email,
-                nickname: auth.nickname,
-                salt: auth.salt,
-              },
-              playerState,
-            });
             return;
           }
 
@@ -138,11 +96,7 @@ export function userDbPlugin(dbDir: string): Plugin {
             }
             const result = await userStore.touchAccountLogin(body);
             if (result?.line) appendTxtLog(body.email, result.line);
-            sendJson(res, 200, {
-              ok: true,
-              user: result?.user ?? null,
-              canonicalUserId: result?.canonicalUserId ?? body.userId,
-            });
+            sendJson(res, 200, { ok: true, user: result?.user ?? null });
             return;
           }
 
@@ -214,25 +168,8 @@ export function userDbPlugin(dbDir: string): Plugin {
               resetMarkerStore.clearReset(normalizedEmail);
             }
 
-            const existing = await playerStateStore.getPlayerStateByEmail(normalizedEmail);
-            if (shouldSkipEmptyPlayerStateOverwrite(existing, body.balance, body.inventory)) {
-              sendJson(res, 200, { ok: true, state: existing, skippedEmptyOverwrite: true });
-              return;
-            }
-
             const state = await playerStateStore.savePlayerState(body);
             sendJson(res, 200, { ok: true, state });
-            return;
-          }
-
-          if (url === '/api/player-state' && req.method === 'GET') {
-            const email = new URL(req.url ?? '', 'http://local').searchParams.get('email')?.trim().toLowerCase() ?? '';
-            if (!email) {
-              sendJson(res, 400, { error: 'email required' });
-              return;
-            }
-            const state = await playerStateStore.getPlayerStateByEmail(email);
-            sendJson(res, 200, { state });
             return;
           }
 
@@ -266,36 +203,6 @@ export function userDbPlugin(dbDir: string): Plugin {
               permanent: ban.permanent,
               days: ban.days,
             });
-            return;
-          }
-
-          if (url === '/api/profile-photo' && req.method === 'GET') {
-            const userId = new URL(req.url ?? '', 'http://local').searchParams.get('userId') ?? '';
-            if (!userId) {
-              sendJson(res, 400, { error: 'userId required' });
-              return;
-            }
-            sendJson(res, 200, { photo: profilePhotoStore.getPhoto(userId) });
-            return;
-          }
-
-          if (url === '/api/profile-photo' && req.method === 'POST') {
-            const body = await readJsonBody(req) as {
-              userId?: string;
-              email?: string;
-              dataUrl?: string;
-            };
-            const result = profilePhotoStore.savePhoto(body);
-            if (!result.ok) {
-              const message = result.error === 'too_large'
-                ? 'La imagen es demasiado grande.'
-                : result.error === 'invalid_format'
-                  ? 'Solo JPG o PNG.'
-                  : 'No se pudo guardar la foto.';
-              sendJson(res, 400, { ok: false, error: result.error, message });
-              return;
-            }
-            sendJson(res, 200, { ok: true, photo: result.photo });
             return;
           }
 

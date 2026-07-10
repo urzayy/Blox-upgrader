@@ -10,14 +10,11 @@ import {
 } from './src/lib/feedBot.mjs';
 import { createUserStore } from './server/lib/userStore.mjs';
 import { createPlayerStateStore } from './server/lib/playerStateStore.mjs';
-import { shouldSkipEmptyPlayerStateOverwrite } from './server/lib/playerStateSyncGuard.mjs';
 import { clearAccountByEmail as resetAccountByEmail } from './server/lib/accountReset.mjs';
 import { createAccountResetMarkerStore } from './server/lib/accountResetMarker.mjs';
 import { createAccountBanStore } from './server/lib/accountBanStore.mjs';
 import { resolveDepositBonus, resolveRobuxDepositBonus, initPromoCodeStore } from './server/lib/depositBonus.mjs';
 import { createPromoCodeStore } from './server/lib/promoCodeStore.mjs';
-import { createProfilePhotoStore } from './server/lib/profilePhotoStore.mjs';
-import { createGiveawayStore } from './server/lib/giveawayStore.mjs';
 import {
   getActivePresenceCount,
   registerPresenceHeartbeat,
@@ -39,8 +36,6 @@ const GRANTS_DIR = process.env.GRANTS_DIR || path.join(DATA_DIR, 'inventory-gran
 const BALANCE_GRANTS_DIR = process.env.BALANCE_GRANTS_DIR || path.join(DATA_DIR, 'balance-grants');
 const STATE_DIR = process.env.STATE_DIR || path.join(DATA_DIR, 'site-state');
 const PROMO_CODES_DIR = process.env.PROMO_CODES_DIR || path.join(DATA_DIR, 'promo-codes');
-const PROFILE_PHOTOS_DIR = process.env.PROFILE_PHOTOS_DIR || path.join(DATA_DIR, 'profile-photos');
-const GIVEAWAYS_DIR = process.env.GIVEAWAYS_DIR || path.join(DATA_DIR, 'giveaways');
 const STATE_FILE = path.join(STATE_DIR, 'state.json');
 
 const PORT = Number(process.env.PORT) || 4173;
@@ -49,7 +44,7 @@ const BASE_TOTAL_UPGRADES = 13_200;
 const MIN_DEPOSIT_TOTAL = 100;
 const MIN_WITHDRAW_TOTAL = 20;
 
-for (const dir of [LOGS_DIR, USER_DB_DIR, path.join(USER_DB_DIR, 'events'), PLAYER_STATE_DIR, ACCOUNT_RESETS_DIR, ACCOUNT_BANS_DIR, CHATS_DIR, GRANTS_DIR, BALANCE_GRANTS_DIR, STATE_DIR, PROMO_CODES_DIR, GIVEAWAYS_DIR]) {
+for (const dir of [LOGS_DIR, USER_DB_DIR, path.join(USER_DB_DIR, 'events'), PLAYER_STATE_DIR, ACCOUNT_RESETS_DIR, ACCOUNT_BANS_DIR, CHATS_DIR, GRANTS_DIR, BALANCE_GRANTS_DIR, STATE_DIR, PROMO_CODES_DIR]) {
   if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
 }
 
@@ -59,8 +54,6 @@ initPromoCodeStore(promoCodeStore);
 const playerStateStore = createPlayerStateStore({ playerStateDir: PLAYER_STATE_DIR });
 const resetMarkerStore = createAccountResetMarkerStore(ACCOUNT_RESETS_DIR);
 const banStore = createAccountBanStore(ACCOUNT_BANS_DIR);
-const profilePhotoStore = createProfilePhotoStore(PROFILE_PHOTOS_DIR);
-const giveawayStore = createGiveawayStore(GIVEAWAYS_DIR, GRANTS_DIR);
 let storageStatus = { ok: false, path: userStore.type === 'supabase' ? 'supabase' : USER_DB_DIR };
 
 async function refreshStorageStatus() {
@@ -326,52 +319,10 @@ app.post('/api/auth/register', async (req, res) => {
       nickname,
       isNewAccount: true,
     });
-    if (result?.conflict) {
-      sendJson(res, 409, { ok: false, error: 'email_exists', message: 'Esta cuenta ya existe. Inicia sesión.' });
-      return;
-    }
     if (result?.line) appendUserTxtLog(email, result.line);
     sendJson(res, 200, { ok: true, user: result?.user ?? null });
   } catch (error) {
     console.error('[auth/register]', error);
-    sendJson(res, 500, { error: 'error' });
-  }
-});
-
-app.post('/api/auth/session', async (req, res) => {
-  try {
-    const { email, password } = req.body ?? {};
-    if (!email || !password) {
-      sendJson(res, 400, { error: 'bad request' });
-      return;
-    }
-    const normalizedEmail = String(email).trim().toLowerCase();
-    if (banStore.isBanned(normalizedEmail)) {
-      sendJson(res, 403, { error: 'account_suspended', message: 'Cuenta suspendida.' });
-      return;
-    }
-    const auth = await userStore.authenticateAccount({ email: normalizedEmail, password });
-    if (auth.notFound) {
-      sendJson(res, 404, { ok: false, notFound: true });
-      return;
-    }
-    if (!auth.ok) {
-      sendJson(res, 401, { ok: false, error: 'wrong_password' });
-      return;
-    }
-    const playerState = await playerStateStore.getPlayerStateByEmail(normalizedEmail);
-    sendJson(res, 200, {
-      ok: true,
-      user: {
-        userId: auth.userId,
-        email: auth.email,
-        nickname: auth.nickname,
-        salt: auth.salt,
-      },
-      playerState,
-    });
-  } catch (error) {
-    console.error('[auth/session]', error);
     sendJson(res, 500, { error: 'error' });
   }
 });
@@ -390,11 +341,7 @@ app.post('/api/auth/login', async (req, res) => {
     }
     const result = await userStore.touchAccountLogin({ userId, email, nickname });
     if (result?.line) appendUserTxtLog(email, result.line);
-    sendJson(res, 200, {
-      ok: true,
-      user: result?.user ?? null,
-      canonicalUserId: result?.canonicalUserId ?? userId,
-    });
+    sendJson(res, 200, { ok: true, user: result?.user ?? null });
   } catch (error) {
     console.error('[auth/login]', error);
     sendJson(res, 500, { error: 'error' });
@@ -461,12 +408,6 @@ app.post('/api/player-state/sync', async (req, res) => {
       resetMarkerStore.clearReset(normalizedEmail);
     }
 
-    const existing = await playerStateStore.getPlayerStateByEmail(normalizedEmail);
-    if (shouldSkipEmptyPlayerStateOverwrite(existing, balance, inventory)) {
-      sendJson(res, 200, { ok: true, state: existing, skippedEmptyOverwrite: true });
-      return;
-    }
-
     const state = await playerStateStore.savePlayerState({ userId, email, balance, inventory });
     sendJson(res, 200, { ok: true, state });
   } catch (error) {
@@ -475,21 +416,6 @@ app.post('/api/player-state/sync', async (req, res) => {
       error: 'error',
       message: error instanceof Error ? error.message : (error?.message ?? 'sync failed'),
     });
-  }
-});
-
-app.get('/api/player-state', async (req, res) => {
-  try {
-    const email = req.query.email?.trim().toLowerCase();
-    if (!email) {
-      sendJson(res, 400, { error: 'email required' });
-      return;
-    }
-    const state = await playerStateStore.getPlayerStateByEmail(email);
-    sendJson(res, 200, { state });
-  } catch (error) {
-    console.error('[player-state/get]', error);
-    sendJson(res, 500, { error: 'error' });
   }
 });
 
@@ -522,30 +448,6 @@ app.get('/api/account-ban-status', (req, res) => {
     permanent: ban.permanent,
     days: ban.days,
   });
-});
-
-app.get('/api/profile-photo', (req, res) => {
-  const userId = req.query.userId;
-  if (!userId) {
-    sendJson(res, 400, { error: 'userId required' });
-    return;
-  }
-  sendJson(res, 200, { photo: profilePhotoStore.getPhoto(String(userId)) });
-});
-
-app.post('/api/profile-photo', (req, res) => {
-  const { userId, email, dataUrl } = req.body ?? {};
-  const result = profilePhotoStore.savePhoto({ userId, email, dataUrl });
-  if (!result.ok) {
-    const message = result.error === 'too_large'
-      ? 'La imagen es demasiado grande.'
-      : result.error === 'invalid_format'
-        ? 'Solo JPG o PNG.'
-        : 'No se pudo guardar la foto.';
-    sendJson(res, 400, { ok: false, error: result.error, message });
-    return;
-  }
-  sendJson(res, 200, { ok: true, photo: result.photo });
 });
 
 app.post('/api/admin/ban-user', (req, res) => {
@@ -769,133 +671,21 @@ app.delete('/api/admin/promo-codes/:code', (req, res) => {
   sendJson(res, 200, { ok: true, entry: result.entry });
 });
 
-app.get('/api/giveaways', (_req, res) => {
-  sendJson(res, 200, giveawayStore.getAll());
-});
-
-app.get('/api/giveaways/:period', (req, res) => {
-  const period = req.params.period;
-  const userId = typeof req.query.userId === 'string' ? req.query.userId : null;
-  const detail = giveawayStore.getDetail(period, userId);
-  if (detail.error) {
-    sendJson(res, 400, { error: detail.error });
-    return;
-  }
-  sendJson(res, 200, detail);
-});
-
-app.post('/api/giveaways/join', (req, res) => {
-  const body = req.body ?? {};
-  const result = giveawayStore.joinGiveaway(body.period, body);
-  if (result.error) {
-    sendJson(res, 400, { error: result.error });
-    return;
-  }
-  sendJson(res, 200, result);
-});
-
-app.post('/api/giveaways/deposit-record', (req, res) => {
-  const body = req.body ?? {};
-  const userId = String(body.userId ?? '').trim();
-  const amount = Number(body.amount);
-  if (!userId || !Number.isFinite(amount) || amount <= 0) {
-    sendJson(res, 400, { error: 'invalid_payload' });
-    return;
-  }
-  const updates = giveawayStore.recordUserDeposit(userId, amount, {
-    email: body.email,
-    nickname: body.nickname,
-    avatarId: body.avatarId,
-  });
-  sendJson(res, 200, { ok: true, updates });
-});
-
-app.post('/api/admin/giveaways/open', (req, res) => {
-  const body = req.body ?? {};
-  if (!userStore.isAdminEmail(String(body.adminEmail ?? '').trim())) {
-    sendJson(res, 403, { error: 'forbidden' });
-    return;
-  }
-  const result = giveawayStore.openGiveaway({
-    period: body.period,
-    skin: body.skin,
-    depositRequirement: body.depositRequirement,
-    openedBy: body.adminEmail,
-  });
-  if (result.error) {
-    sendJson(res, 400, { error: result.error });
-    return;
-  }
-  sendJson(res, 200, result);
-});
-
-app.get('/api/giveaways/winners', (req, res) => {
-  const limit = Number(req.query.limit ?? 24);
-  sendJson(res, 200, giveawayStore.listWinners(Number.isFinite(limit) ? limit : 24));
-});
-
-app.get('/api/giveaways/pending-win', (req, res) => {
-  const userId = typeof req.query.userId === 'string' ? req.query.userId : '';
-  if (!userId) {
-    sendJson(res, 400, { error: 'userId required' });
-    return;
-  }
-  sendJson(res, 200, giveawayStore.listPendingWins(userId));
-});
-
-app.post('/api/giveaways/pending-win/ack', (req, res) => {
-  const body = req.body ?? {};
-  const userId = String(body.userId ?? '').trim();
-  const pendingId = String(body.pendingId ?? '').trim();
-  if (!userId || !pendingId) {
-    sendJson(res, 400, { error: 'invalid_ack' });
-    return;
-  }
-  const result = giveawayStore.ackPendingWin(userId, pendingId);
-  if (result.error) {
-    sendJson(res, 400, { error: result.error });
-    return;
-  }
-  sendJson(res, 200, result);
-});
-
-app.post('/api/admin/giveaways/close', (req, res) => {
-  const body = req.body ?? {};
-  if (!userStore.isAdminEmail(String(body.adminEmail ?? '').trim())) {
-    sendJson(res, 403, { error: 'forbidden' });
-    return;
-  }
-  const result = giveawayStore.closeGiveaway({
-    period: body.period,
-    pickWinner: Boolean(body.pickWinner),
-    grantedBy: body.adminEmail,
-  });
-  if (result.error) {
-    sendJson(res, 400, { error: result.error });
-    return;
-  }
-  sendJson(res, 200, result);
-});
-
 app.get('/api/site-state', (_req, res) => {
-  sendJson(res, 200, loadState());
+  const state = loadState();
+  if (process.env.NODE_ENV === 'production') {
+    sendJson(res, 200, {
+      ...state,
+      playersOnline: getActivePresenceCount(),
+    });
+    return;
+  }
+  sendJson(res, 200, state);
 });
 
 app.post('/api/presence/heartbeat', (req, res) => {
   const result = registerPresenceHeartbeat(req.body ?? {});
   sendJson(res, result.ok ? 200 : 400, result);
-});
-
-app.get('/api/admin/presence', (req, res) => {
-  const adminEmail = req.query.adminEmail?.trim() ?? '';
-  if (!userStore.isAdminEmail(adminEmail)) {
-    sendJson(res, 403, { error: 'forbidden' });
-    return;
-  }
-  sendJson(res, 200, {
-    count: getActivePresenceCount(),
-    updatedAt: Date.now(),
-  });
 });
 
 app.post('/api/site-state/feed-event', (req, res) => {
@@ -1317,9 +1107,12 @@ app.use('/api/*', (_req, res) => {
 setInterval(() => {
   try {
     const state = loadState();
+    const next = appendFeedItem(state, createBotFeedItem());
     saveState({
-      ...appendFeedItem(state, createBotFeedItem()),
-      playersOnline: driftPlayersOnline(state.playersOnline),
+      ...next,
+      playersOnline: process.env.NODE_ENV === 'production'
+        ? state.playersOnline
+        : driftPlayersOnline(state.playersOnline),
     });
   } catch {
     /* ignore bot tick errors */

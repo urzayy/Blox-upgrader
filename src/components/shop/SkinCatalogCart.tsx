@@ -324,18 +324,18 @@ export function SkinCatalogCart({
               type="button"
               disabled={!canSubmit || submitting}
               onClick={() => { void handleSubmit(); }}
-              className="group relative flex min-w-[132px] items-center justify-between gap-2 overflow-hidden rounded-lg border border-gold/45 px-3 py-2 shadow-[0_0_24px_rgba(176,108,255,0.3)] transition enabled:hover:border-gold enabled:hover:shadow-[0_0_32px_rgba(176,108,255,0.45)] disabled:cursor-not-allowed disabled:opacity-35"
+              className="group relative flex min-w-[132px] items-center justify-between gap-2 overflow-hidden rounded-lg border border-gold/45 px-3 py-2 shadow-[0_0_24px_rgba(255,215,0,0.3)] transition enabled:hover:border-gold enabled:hover:shadow-[0_0_32px_rgba(255,215,0,0.45)] disabled:cursor-not-allowed disabled:opacity-35"
             >
               <span
                 aria-hidden="true"
-                className="pointer-events-none absolute inset-0 bg-gradient-to-r from-[#d8b4fe] via-[#c084fc] to-[#a855f7] opacity-95"
+                className="pointer-events-none absolute inset-0 bg-gradient-to-r from-[#ffe566] via-[#ffcc00] to-[#ffb800] opacity-95"
               />
               <CoinPrice
                 value={submitTotal}
                 iconClassName="relative z-10 h-3.5 w-3.5"
-                textClassName="relative z-10 font-display text-sm font-bold text-white"
+                textClassName="relative z-10 font-display text-sm font-bold text-[#1a1400]"
               />
-              <span className="relative z-10 flex h-7 w-7 items-center justify-center rounded-md bg-white/15 text-white">
+              <span className="relative z-10 flex h-7 w-7 items-center justify-center rounded-md bg-[#1a1400]/15 text-[#1a1400]">
                 <CartIcon className="h-4 w-4" />
               </span>
             </button>
@@ -383,7 +383,7 @@ function CatalogSkinTile({
     <div
       className={`relative isolate w-full self-start overflow-hidden rounded-lg border bg-[#141820] ${
         selected
-          ? 'border-gold ring-1 ring-gold/50 shadow-[0_0_18px_rgba(176,108,255,0.22)]'
+          ? 'border-gold ring-1 ring-gold/50 shadow-[0_0_18px_rgba(255,215,0,0.22)]'
           : inCart
             ? 'border-gold/35'
             : 'border-white/10 hover:border-white/25'

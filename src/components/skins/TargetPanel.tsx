@@ -4,17 +4,22 @@ import { CoinPrice } from '../ui/CoinPrice';
 import { SkinImage } from './SkinImage';
 
 import { LiveHelpControl } from '../support/LiveHelpControl';
+import { AdminPromoCodeControl } from '../admin/AdminPromoCodeControl';
+import { AdminBanControl } from '../admin/AdminBanControl';
+import { DevTransactionHistoryControl } from '../admin/DevTransactionHistoryControl';
 
 const PAGE_SIZE = 18;
 
 interface Props {
   skins: Skin[];
   selected: Skin | null;
-  title?: string;
-  variant?: 'classic' | 'upgrader';
   onSelect: (s: Skin) => void;
   onLiveHelp?: () => void;
   liveHelpLoading?: boolean;
+  showAdminPromoCodes?: boolean;
+  showTransactionHistory?: boolean;
+  showAdminBan?: boolean;
+  adminEmail?: string;
 }
 
 function wearShort(wear: string): string {
@@ -31,13 +36,14 @@ function wearShort(wear: string): string {
 export function TargetPanel({
   skins,
   selected,
-  title = 'Seleccionar skin',
-  variant = 'classic',
   onSelect,
   onLiveHelp,
   liveHelpLoading,
+  showAdminPromoCodes,
+  showTransactionHistory,
+  showAdminBan,
+  adminEmail,
 }: Props) {
-  const isUpgrader = variant === 'upgrader';
   const [min, setMin] = useState('');
   const [max, setMax] = useState('');
   const [rarity, setRarity] = useState('');
@@ -67,23 +73,10 @@ export function TargetPanel({
   }, [page, totalPages]);
 
   return (
-    <section className={`flex min-h-[360px] flex-col overflow-hidden rounded-2xl border lg:min-h-[420px] ${
-      isUpgrader
-        ? 'border-violet-500/10 bg-[#141024]/90'
-        : 'min-h-0 rounded-xl border-gold/15 bg-panel/95'
-    }`}
-    >
-      <div className={`flex shrink-0 items-center justify-between px-4 py-3 ${
-        isUpgrader
-          ? 'border-b border-violet-500/10 bg-gradient-to-r from-violet-500/[0.08] to-transparent'
-          : 'border-b border-white/5 px-3 py-2'
-      }`}
-      >
-        <h2 className={`font-display font-bold uppercase tracking-wide ${
-          isUpgrader ? 'text-sm text-white' : 'text-[11px] tracking-[0.12em] text-gold'
-        }`}
-        >
-          {title}
+    <section className="flex min-h-0 flex-col overflow-hidden rounded-xl border border-gold/15 bg-panel/95">
+      <div className="flex shrink-0 items-center justify-between border-b border-white/5 px-3 py-2">
+        <h2 className="font-display text-[11px] font-bold uppercase tracking-[0.12em] text-gold">
+          Seleccionar skin
         </h2>
         <span className="text-[10px] text-white/35">{filtered.length} disponibles</span>
       </div>
@@ -123,7 +116,6 @@ export function TargetPanel({
               key={skin.id}
               skin={skin}
               selected={selected?.id === skin.id}
-              greenPrice={isUpgrader}
               onSelect={() => onSelect(skin)}
             />
           ))}
@@ -153,6 +145,15 @@ export function TargetPanel({
           </button>
         </div>
         <div className="flex shrink-0 items-center gap-2">
+          {showAdminBan && adminEmail && (
+            <AdminBanControl adminEmail={adminEmail} />
+          )}
+          {showTransactionHistory && (
+            <DevTransactionHistoryControl />
+          )}
+          {showAdminPromoCodes && adminEmail && (
+            <AdminPromoCodeControl adminEmail={adminEmail} />
+          )}
           {onLiveHelp && (
             <LiveHelpControl onConfirm={onLiveHelp} loading={liveHelpLoading} />
           )}
@@ -165,12 +166,10 @@ export function TargetPanel({
 function TargetSkinTile({
   skin,
   selected,
-  greenPrice = false,
   onSelect,
 }: {
   skin: Skin;
   selected: boolean;
-  greenPrice?: boolean;
   onSelect: () => void;
 }) {
   const r = RARITY[skin.rarity];
@@ -183,7 +182,7 @@ function TargetSkinTile({
       title={skin.name}
       className={`relative w-full self-start overflow-hidden rounded-lg border bg-[#141820] text-left transition ${
         selected
-          ? 'border-gold ring-1 ring-gold/50 shadow-[0_0_18px_rgba(176,108,255,0.22)]'
+          ? 'border-gold ring-1 ring-gold/50 shadow-[0_0_18px_rgba(255,215,0,0.22)]'
           : 'border-white/10 hover:border-gold/35'
       }`}
     >
@@ -199,7 +198,7 @@ function TargetSkinTile({
           <CoinPrice
             value={skin.price}
             iconClassName="h-2.5 w-2.5"
-            textClassName={`text-[8px] font-bold font-display ${greenPrice ? 'text-win' : 'text-gold'}`}
+            textClassName="text-[8px] font-bold text-gold font-display"
           />
         </div>
         <span className="shrink-0 rounded bg-black/70 px-1 py-0.5 text-[8px] font-bold text-white/55">

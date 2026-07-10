@@ -1,6 +1,6 @@
 import type { Skin } from '../data/skins';
 
-export const MULTIPLIERS = [1.5, 2, 5, 10, 20] as const;
+export const MULTIPLIERS = [2, 3, 5] as const;
 export const CAPS = [25, 35, 50, 75] as const;
 
 /** Preset buttons pick a target skin by ideal price — odds come from real prices only. */

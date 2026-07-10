@@ -141,7 +141,7 @@ export function AdminPromoCodePanel({ open, mode, adminEmail, onClose }: Props) 
             role="dialog"
             aria-modal="true"
             aria-labelledby="admin-promo-title"
-            className="relative flex max-h-[min(88vh,720px)] w-full max-w-lg flex-col overflow-hidden rounded-2xl border border-gold/25 bg-[#0c0a14] shadow-[0_24px_80px_rgba(0,0,0,0.75)]"
+            className="relative flex max-h-[min(88vh,720px)] w-full max-w-lg flex-col overflow-hidden rounded-2xl border border-gold/25 bg-[#0e1018] shadow-[0_24px_80px_rgba(0,0,0,0.75)]"
             initial={{ scale: 0.94, y: 16, opacity: 0 }}
             animate={{ scale: 1, y: 0, opacity: 1 }}
             exit={{ scale: 0.96, y: 8, opacity: 0 }}
@@ -226,7 +226,7 @@ export function AdminPromoCodePanel({ open, mode, adminEmail, onClose }: Props) 
                     type="button"
                     disabled={loading}
                     onClick={() => { void handleCreate(); }}
-                    className="w-full rounded-lg border border-gold/45 bg-gradient-to-r from-[#9333ea] to-[#b56bff] py-2.5 font-display text-xs font-bold uppercase tracking-wide text-white transition hover:brightness-105 disabled:opacity-50"
+                    className="w-full rounded-lg border border-gold/45 bg-[#ffcc00] py-2.5 font-display text-xs font-bold uppercase tracking-wide text-[#1a1400] transition hover:brightness-105 disabled:opacity-50"
                   >
                     {loading ? 'Creating…' : 'Create code'}
                   </button>

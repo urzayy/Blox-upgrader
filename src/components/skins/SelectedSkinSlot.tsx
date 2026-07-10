@@ -31,7 +31,7 @@ export function SelectedSkinSlot({
   return (
     <div
       className={`relative flex flex-1 min-w-0 flex-col rounded-xl border bg-gradient-to-b from-[#1a1d26] to-panel p-2 sm:p-3 ${
-        isInput ? 'border-white/10' : 'border-gold/20 shadow-[inset_0_0_40px_rgba(176,108,255,0.04)]'
+        isInput ? 'border-white/10' : 'border-gold/20 shadow-[inset_0_0_40px_rgba(255,215,0,0.04)]'
       } ${className}`}
     >
       {!(isInput && !hasSelection) && (
@@ -187,7 +187,7 @@ function EmptySlot({ isInput }: { isInput: boolean }) {
         </p>
 
         <div className="relative mt-2 flex min-h-[100px] flex-1 items-center justify-center">
-          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_55%,rgba(192,132,252,0.14)_0%,transparent_62%)]" />
+          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_55%,rgba(255,204,0,0.14)_0%,transparent_62%)]" />
           <img
             src="https://raw.githubusercontent.com/ByMykel/counter-strike-items/master/public/images/skins/weapon_ak47_cu_ak47_vulcan.png"
             alt=""
@@ -209,7 +209,7 @@ function EmptySlot({ isInput }: { isInput: boolean }) {
       </p>
 
       <div className="relative mt-2 flex min-h-[100px] flex-1 items-center justify-center">
-        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_55%,rgba(192,132,252,0.1)_0%,transparent_62%)]" />
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_55%,rgba(255,204,0,0.1)_0%,transparent_62%)]" />
         <img
           src="https://raw.githubusercontent.com/ByMykel/counter-strike-items/master/public/images/skins/weapon_awp_cu_awp_dragon_lore.png"
           alt=""
@@ -227,7 +227,7 @@ function ClearSlotButton({ onClick, className = '' }: { onClick: () => void; cla
       type="button"
       onClick={onClick}
       aria-label="Quitar selección"
-      className={`absolute z-10 flex h-8 w-8 items-center justify-center rounded-lg border border-gold/50 bg-gold/15 text-base font-bold text-gold shadow-[0_0_12px_rgba(176,108,255,0.25)] transition hover:border-gold hover:bg-gold/25 hover:text-[#D8B4FE] ${className}`}
+      className={`absolute z-10 flex h-8 w-8 items-center justify-center rounded-lg border border-gold/50 bg-gold/15 text-base font-bold text-gold shadow-[0_0_12px_rgba(255,215,0,0.25)] transition hover:border-gold hover:bg-gold/25 hover:text-[#FFE566] ${className}`}
     >
       ✕
     </button>
@@ -242,8 +242,8 @@ function ChevronStack({ direction }: { direction: 'down' | 'up' }) {
       <svg width="42" height="14" viewBox="0 0 42 14" className="opacity-45" aria-hidden="true">
         <path d="M6 4 L21 11 L36 4" fill="none" stroke="#B8860B" strokeWidth="4.5" strokeLinecap="round" strokeLinejoin="round" />
       </svg>
-      <svg width="42" height="14" viewBox="0 0 42 14" className="drop-shadow-[0_0_10px_rgba(176,108,255,0.55)]" aria-hidden="true">
-        <path d="M6 4 L21 11 L36 4" fill="none" stroke="#B56BFF" strokeWidth="5" strokeLinecap="round" strokeLinejoin="round" />
+      <svg width="42" height="14" viewBox="0 0 42 14" className="drop-shadow-[0_0_10px_rgba(255,215,0,0.55)]" aria-hidden="true">
+        <path d="M6 4 L21 11 L36 4" fill="none" stroke="#FFD700" strokeWidth="5" strokeLinecap="round" strokeLinejoin="round" />
       </svg>
       <svg width="42" height="14" viewBox="0 0 42 14" className="opacity-45" aria-hidden="true">
         <path d="M6 4 L21 11 L36 4" fill="none" stroke="#B8860B" strokeWidth="4.5" strokeLinecap="round" strokeLinejoin="round" />

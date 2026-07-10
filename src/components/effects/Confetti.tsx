@@ -10,7 +10,7 @@ export function Confetti() {
     canvas.width = window.innerWidth;
     canvas.height = window.innerHeight;
 
-    const colors = ['#B56BFF', '#FFAA00', '#FFFFFF', '#FF6600', '#FFE566'];
+    const colors = ['#FFD700', '#FFAA00', '#FFFFFF', '#FF6600', '#FFE566'];
     let particles = Array.from({ length: 180 }, () => ({
       x: Math.random() * canvas.width,
       y: -20 - Math.random() * 100,

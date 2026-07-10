@@ -25,8 +25,8 @@ function ReelSelector({ active }: { active: boolean }) {
           animate={active ? { y: [0, 3, 0], opacity: [0.85, 1, 0.85] } : { opacity: 0.7 }}
           transition={{ duration: 1.2, repeat: Infinity, ease: 'easeInOut' }}
         >
-          <svg width="18" height="11" viewBox="0 0 18 11" aria-hidden="true" className="drop-shadow-[0_0_10px_rgba(176,108,255,0.45)]">
-            <path d="M9 10 L1.5 1.5 L16.5 1.5 Z" fill="#B56BFF" stroke="#B8860B" strokeWidth="0.75" />
+          <svg width="18" height="11" viewBox="0 0 18 11" aria-hidden="true" className="drop-shadow-[0_0_10px_rgba(255,215,0,0.45)]">
+            <path d="M9 10 L1.5 1.5 L16.5 1.5 Z" fill="#FFD700" stroke="#B8860B" strokeWidth="0.75" />
           </svg>
         </motion.div>
 
@@ -50,9 +50,9 @@ function ReelCard({ item, highlight }: { item: CaseReelItem; highlight?: boolean
     <div
       className={`relative shrink-0 overflow-hidden rounded-xl border bg-[#141820] transition ${
         highlight
-          ? 'border-gold ring-2 ring-gold/50 shadow-[0_0_28px_rgba(176,108,255,0.35)]'
+          ? 'border-gold ring-2 ring-gold/50 shadow-[0_0_28px_rgba(255,215,0,0.35)]'
           : item.isJackpot
-            ? 'border-gold/35 shadow-[0_0_14px_rgba(176,108,255,0.15)]'
+            ? 'border-gold/35 shadow-[0_0_14px_rgba(255,215,0,0.15)]'
             : 'border-white/10'
       }`}
       style={{ width: ITEM_WIDTH }}
@@ -88,7 +88,7 @@ function TurboConsolationReveal({ result }: { result: LossConsolationResult }) {
     <motion.div
       role="status"
       aria-live="polite"
-      className="pointer-events-none relative w-full max-w-xs overflow-hidden rounded-2xl border border-gold/35 bg-[#0c0e14]/95 px-4 py-4 shadow-[0_16px_48px_rgba(0,0,0,0.75),0_0_24px_rgba(176,108,255,0.12)] backdrop-blur-md"
+      className="pointer-events-none relative w-full max-w-xs overflow-hidden rounded-2xl border border-gold/35 bg-[#0c0e14]/95 px-4 py-4 shadow-[0_16px_48px_rgba(0,0,0,0.75),0_0_24px_rgba(255,215,0,0.12)] backdrop-blur-md"
       initial={{ opacity: 0, y: 16, scale: 0.96 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
       exit={{ opacity: 0, y: 8, scale: 0.98 }}
@@ -156,7 +156,7 @@ export function LossConsolationCaseModal({
 
     const introTimer = window.setTimeout(() => {
       setPhase('rolling');
-      sfx.upgradeStart(turbo);
+      sfx.upgradeStart();
     }, 900);
 
     const rollTimer = window.setTimeout(() => {
@@ -202,7 +202,7 @@ export function LossConsolationCaseModal({
           <motion.div
             role="dialog"
             aria-modal="true"
-            className="relative w-full max-w-2xl overflow-hidden rounded-2xl border border-gold/25 bg-[#0c0e14] shadow-[0_24px_80px_rgba(0,0,0,0.85),0_0_40px_rgba(176,108,255,0.08)]"
+            className="relative w-full max-w-2xl overflow-hidden rounded-2xl border border-gold/25 bg-[#0c0e14] shadow-[0_24px_80px_rgba(0,0,0,0.85),0_0_40px_rgba(255,215,0,0.08)]"
             initial={{ scale: 0.92, y: 20, opacity: 0 }}
             animate={{ scale: 1, y: 0, opacity: 1 }}
             exit={{ scale: 0.96, y: 8, opacity: 0 }}
