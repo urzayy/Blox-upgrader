@@ -15,6 +15,7 @@ export interface Skin {
   wear: string;
   price: number;
   image: string;
+  obtainedAt?: number;
 }
 
 export interface FeedItem {
@@ -347,6 +348,29 @@ export const INVENTORY: Skin[] = [];
 export const ALL_SKINS_CATALOG: Skin[] = SKIN_CATALOG;
 
 const skinImageByName = new Map(SKIN_CATALOG.map(s => [s.name, s.image]));
+const skinByName = new Map(SKIN_CATALOG.map(s => [s.name, s]));
+const skinById = new Map(SKIN_CATALOG.map(s => [s.id, s]));
+
+export function findSkinById(id: string): Skin | undefined {
+  return skinById.get(id);
+}
+
+/** Resolve catalog skin from a display name (feed rows, legacy aliases). */
+export function findSkinByName(name: string): Skin | undefined {
+  const exact = skinByName.get(name);
+  if (exact) return exact;
+
+  const lower = name.toLowerCase();
+  const caseInsensitive = SKIN_CATALOG.find(s => s.name.toLowerCase() === lower);
+  if (caseInsensitive) return caseInsensitive;
+
+  const skinPart = lower.split('|').pop()?.trim();
+  if (skinPart) {
+    return SKIN_CATALOG.find(s => s.name.toLowerCase().includes(skinPart));
+  }
+
+  return undefined;
+}
 
 /** Resolve catalog image URL from a skin display name (legacy feed rows). */
 export function findSkinImageByName(name: string): string | undefined {

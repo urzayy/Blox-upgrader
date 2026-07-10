@@ -6,6 +6,10 @@ function balanceKey(userId: string | null): string {
     : 'blox-upgrader/balance/guest';
 }
 
+export function getBalanceStorageKey(userId: string | null = null): string {
+  return balanceKey(userId);
+}
+
 function versionKey(userId: string | null): string {
   return userId
     ? `blox-upgrader/balance-version/${userId}`

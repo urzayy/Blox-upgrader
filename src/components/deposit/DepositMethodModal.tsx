@@ -29,7 +29,7 @@ export function DepositMethodModal({ open, onClose, onSelectRobux, onSelectSkins
             role="dialog"
             aria-modal="true"
             aria-labelledby="deposit-method-title"
-            className="relative w-full max-w-lg rounded-2xl border border-gold/25 bg-[#0e1018] p-5 shadow-[0_24px_80px_rgba(0,0,0,0.75)]"
+            className="relative w-full max-w-lg rounded-2xl border border-gold/25 bg-[#0c0a14] p-5 shadow-[0_24px_80px_rgba(0,0,0,0.75)]"
             initial={{ scale: 0.94, y: 16, opacity: 0 }}
             animate={{ scale: 1, y: 0, opacity: 1 }}
             exit={{ scale: 0.96, y: 8, opacity: 0 }}
@@ -80,7 +80,7 @@ export function DepositMethodModal({ open, onClose, onSelectRobux, onSelectSkins
                 }}
                 className="group flex flex-col items-center gap-4 rounded-2xl border border-gold/30 bg-gold/5 px-4 py-6 transition hover:border-gold/50 hover:bg-gold/10"
               >
-                <div className="flex h-24 w-24 items-center justify-center overflow-hidden rounded-2xl border border-gold/20 bg-black/30 p-2 shadow-[0_0_24px_rgba(255,215,0,0.12)]">
+                <div className="flex h-24 w-24 items-center justify-center overflow-hidden rounded-2xl border border-gold/20 bg-black/30 p-2 shadow-[0_0_24px_rgba(176,108,255,0.12)]">
                   <img
                     src={DEPOSIT_SKINS_ICON}
                     alt=""

@@ -3,21 +3,24 @@ import { flushSync } from 'react-dom';
 import { LayoutGroup } from 'framer-motion';
 import { Header } from './components/layout/Header';
 import { LiveFeed } from './components/layout/LiveFeed';
-import { UpgradeEngine } from './components/upgrade/UpgradeEngine';
-import { InventoryShopPanel } from './components/skins/InventoryShopPanel';
-import { TargetPanel } from './components/skins/TargetPanel';
-import { SelectedSkinSlot } from './components/skins/SelectedSkinSlot';
+import { UpgradePage } from './pages/UpgradePage';
 import { ParticleField } from './components/effects/ParticleField';
 import { LoginModal } from './components/auth/LoginModal';
 import { TARGET_POOL, sortSkinsByPriceDesc, type Skin, type FeedItem } from './data/skins';
 import { useActivityLog } from './hooks/useActivityLog';
-import { syncPlayerState, fetchPendingAccountReset } from './lib/playerStateApi';
+import { syncPlayerState, fetchPendingAccountReset, fetchPlayerState } from './lib/playerStateApi';
+import {
+  applyPlayerStateSnapshot,
+  setLocalPlayerStateUpdatedAt,
+  shouldHydrateFromServer,
+  touchLocalPlayerStateUpdatedAt,
+} from './lib/playerStateHydration';
 import { logUpgradeResult } from './lib/userActivityLog';
 import { calcProbability, formatUSD, type RollResult } from './lib/wheelMath';
 import { applyUpgradeWin, commitUpgradeStake, createConsolationGrantedSkin, grantSkinToInventory, inventoryTotal, MAX_INPUT_SKINS, purchaseSkinCopies, sellSkinFromInventory, withdrawSkinsFromInventory } from './lib/inventory';
-import { loadInventory, saveInventory, clearInventoryForUserId } from './lib/inventoryStorage';
-import { loadBalance, saveBalance, clearBalanceForUserId } from './lib/balanceStorage';
-import { clearPendingUpgrade, loadPendingUpgrade, lockPendingUpgradeRoll, savePendingUpgrade } from './lib/upgradePendingStorage';
+import { loadInventory, saveInventory, clearInventoryForUserId, getInventoryStorageKey } from './lib/inventoryStorage';
+import { loadBalance, saveBalance, clearBalanceForUserId, getBalanceStorageKey } from './lib/balanceStorage';
+import { clearPendingUpgrade, getPendingUpgradeStakedSkinIds, getPendingUpgradeStorageKey, loadPendingUpgrade, lockPendingUpgradeRoll, savePendingUpgrade } from './lib/upgradePendingStorage';
 import {
   clearPendingLossConsolation,
   loadPendingLossConsolation,
@@ -27,7 +30,7 @@ import { normalizeGrantEmail } from './lib/inventoryGrants';
 import { BASE_TOTAL_UPGRADES } from './lib/feed';
 import { applySiteState, fetchSiteState, publishFeedEvent } from './lib/siteStateApi';
 import { findTargetForPreset } from './lib/upgradePresets';
-import { sfx } from './lib/audio';
+import { sfx, preloadRollSound } from './lib/audio';
 import { useWheelSize } from './hooks/useWheelSize';
 import { useDocumentVisible } from './hooks/useDocumentVisible';
 import { getDisplayName, getProfileLabel, isAdmin } from './lib/auth';
@@ -56,17 +59,36 @@ import {
 import { ThanksToast } from './components/ui/ThanksToast';
 import type { ShopPurchaseItem } from './components/shop/ShopPanel';
 import type { DepositItem } from './components/deposit/DepositModal';
-import { ADMIN_PROMO_CODES_ENABLED } from './lib/devAdminPromoCodes';
-import { DEV_DEPOSIT_WITHDRAW_HISTORY } from './lib/devDepositWithdrawHistory';
-import { ADMIN_BAN_ENABLED } from './lib/devAdminBan';
 import { fetchAccountBanStatus } from './lib/accountBanApi';
 import { qualifiesForLossConsolationCase } from './lib/devLossConsolation';
 import { DEV_MOBILE_LAYOUT } from './lib/devMobileLayout';
+import { DEV_CLEAN_HEADER_LAYOUT } from './lib/devCleanHeaderLayout';
+import { DEV_FEED_CLIENT_POLL_MS } from './lib/devLiveFeed';
 import { buildLossConsolationCase, type LossConsolationResult } from './lib/lossConsolationCase';
 import { LossConsolationCaseModal } from './components/upgrade/LossConsolationCaseModal';
+import { useAppRoute, useCaseSlug, useFreeCaseSlug, useGiveawayPeriod } from './hooks/useAppRoute';
+import { recordGiveawayDeposit, ackGiveawayWin, fetchPendingGiveawayWins, type GiveawayPendingWin } from './lib/giveawayApi';
+import { resolveAvatarId } from './lib/profileAvatars';
+import { navigateApp } from './lib/appRoute';
+import { XP_PER_WAGERED_COIN } from './lib/playerLevel';
+import { clearXpForUserId, addWagerXp } from './lib/xpStorage';
+import { clearFreeCaseCooldowns } from './lib/freeCaseCooldown';
+import { registerSellSkinHandler, registerSyncPlayerHandler, registerUpgradeWithSkinHandler } from './lib/uiActions';
+import { archiveInventorySkins } from './lib/inventoryArchiveStorage';
+import { ProfilePage } from './pages/ProfilePage';
+import { MainPage } from './pages/MainPage';
+import { CaseDetailPage } from './pages/CaseDetailPage';
+import { FreeCasesPage } from './pages/FreeCasesPage';
+import { FreeCaseDetailPage } from './pages/FreeCaseDetailPage';
+import { GiveawaysPage } from './pages/GiveawaysPage';
+import { GiveawayDetailPage } from './pages/GiveawayDetailPage';
+import { GiveawayWinModal } from './components/giveaways/GiveawayWinModal';
+import { AdminPage } from './pages/AdminPage';
+import { AdminLivePresenceFooter } from './components/admin/AdminLivePresenceFooter';
+import { usePresenceHeartbeat } from './hooks/usePresenceHeartbeat';
 
 export default function App() {
-  const { user, logout: authLogout, openLogin } = useAuth();
+  const { user, logout: authLogout, openLogin, isAdmin: userIsAdmin } = useAuth();
   const { log, logUser } = useActivityLog();
   const userId = user?.userId ?? null;
 
@@ -81,11 +103,16 @@ export default function App() {
   const [playersOnline, setPlayersOnline] = useState(650);
   const [turbo, setTurbo] = useState(false);
   const [lockedSkinIds, setLockedSkinIds] = useState<Set<string>>(() => new Set());
+  const [playerStateHydrated, setPlayerStateHydrated] = useState(() => !user);
+  const [localPlayerStateRevision, setLocalPlayerStateRevision] = useState(0);
   const [isUpgradeRolling, setIsUpgradeRolling] = useState(false);
   const isUpgradeRollingRef = useRef(false);
   const rollingInputIdsRef = useRef<string[]>([]);
   const rollingInputsRef = useRef<Skin[]>([]);
   const [thanksToastVisible, setThanksToastVisible] = useState(false);
+  const [giveawayWinOpen, setGiveawayWinOpen] = useState(false);
+  const [giveawayWinData, setGiveawayWinData] = useState<GiveawayPendingWin | null>(null);
+  const shownGiveawayWinIdRef = useRef<string | null>(null);
   const inventoryRef = useRef(inventory);
   const balanceRef = useRef(balance);
   const userIdRef = useRef(userId);
@@ -95,9 +122,12 @@ export default function App() {
   const initialWithdrawSyncRef = useRef(true);
   const giftSyncInFlightRef = useRef(false);
   const balanceGiftSyncInFlightRef = useRef(false);
+  const playerStateSyncInFlightRef = useRef(false);
+  const playerStateSyncTimerRef = useRef<number | null>(null);
   const lastResetAckRef = useRef<number | null>(null);
   const pendingUpgradeRecoveredRef = useRef<string | null>(null);
   const pendingConsolationRecoveredRef = useRef<string | null>(null);
+  const upgradeSessionKeyRef = useRef<string | null>(null);
   const [lossCase, setLossCase] = useState<{
     lostValue: number;
     inputLabel: string;
@@ -136,16 +166,49 @@ export default function App() {
   const dismissThanksToast = useCallback(() => setThanksToastVisible(false), []);
   const wheelSize = useWheelSize();
   const documentVisible = useDocumentVisible();
+  usePresenceHeartbeat(user?.userId);
+  const route = useAppRoute();
+  const freeCaseSlug = useFreeCaseSlug();
+  const caseSlug = useCaseSlug();
+  const giveawayPeriod = useGiveawayPeriod();
+  const isMainPage = route === 'main';
+  const isUpgradePage = route === 'upgrade';
+  const isProfilePage = route === 'profile';
+  const isFreeCasesPage = route === 'free-cases';
+  const isGiveawaysPage = route === 'giveaways';
+  const isAdminPage = route === 'admin';
+  const isScrollablePage = isMainPage || isProfilePage || isUpgradePage || isFreeCasesPage || isGiveawaysPage || isAdminPage;
   const canUpgrade = probability > 0;
 
-  const handleLogout = useCallback(() => {
-    saveInventory(inventory, userId);
-    authLogout();
-  }, [inventory, userId, authLogout]);
+  useEffect(() => {
+    preloadRollSound();
+  }, []);
+
+  useEffect(() => {
+    if (!import.meta.env.DEV || !user || !isProfilePage) return;
+    const flag = `blox-upgrader/dev-profile-gift-10k/${user.userId}`;
+    if (sessionStorage.getItem(flag)) return;
+    sessionStorage.setItem(flag, '1');
+    setBalance(prev => {
+      const next = prev + 10_000;
+      saveBalance(next, user.userId);
+      balanceRef.current = next;
+      return next;
+    });
+  }, [user, isProfilePage]);
+
+  useEffect(() => {
+    if (isProfilePage && !user) {
+      navigateApp('main');
+      openLogin();
+    }
+  }, [isProfilePage, user, openLogin]);
 
   const wipeLocalPlayerProgress = useCallback((targetUserId: string) => {
     clearInventoryForUserId(targetUserId);
     clearBalanceForUserId(targetUserId);
+    clearXpForUserId(targetUserId);
+    clearFreeCaseCooldowns(targetUserId);
     clearPendingUpgrade(targetUserId);
     clearPendingLossConsolation(targetUserId);
     inventoryRef.current = [];
@@ -188,6 +251,16 @@ export default function App() {
         inventory: [],
         resetAck: result.resetAt,
       });
+    } else if (result.state) {
+      if (result.skippedEmptyOverwrite) {
+        const next = applyPlayerStateSnapshot(user.userId, result.state);
+        inventoryRef.current = next.inventory;
+        balanceRef.current = next.balance;
+        setInventory(next.inventory);
+        setBalance(next.balance);
+      } else if (result.state.updatedAt) {
+        setLocalPlayerStateUpdatedAt(user.userId, result.state.updatedAt);
+      }
     }
   }, [user, wipeLocalPlayerProgress]);
 
@@ -235,16 +308,36 @@ export default function App() {
     [isUpgradeRolling, inputSkins],
   );
 
+  const pendingUpgradeStakeIds = useMemo(() => {
+    void localPlayerStateRevision;
+    return getPendingUpgradeStakedSkinIds(userId);
+  }, [userId, localPlayerStateRevision]);
+
+  const refreshLocalPlayerState = useCallback(() => {
+    if (!userId) return;
+    const nextInventory = loadInventory(userId);
+    const nextBalance = loadBalance(userId);
+    inventoryRef.current = nextInventory;
+    balanceRef.current = nextBalance;
+    setInventory(nextInventory);
+    setBalance(nextBalance);
+    if (!isUpgradeRollingRef.current) {
+      setInputSkins(prev => prev.filter(s => nextInventory.some(i => i.id === s.id)));
+    }
+    setLocalPlayerStateRevision(rev => rev + 1);
+  }, [userId]);
+
   const isSkinLocked = useCallback((skinId: string) => {
     if (lockedSkinIds.has(skinId)) return true;
+    if (pendingUpgradeStakeIds.has(skinId)) return true;
     if (isUpgradeRollingRef.current && rollingInputIdsRef.current.includes(skinId)) return true;
     return upgradeRollingIds.has(skinId);
-  }, [lockedSkinIds, upgradeRollingIds]);
+  }, [lockedSkinIds, pendingUpgradeStakeIds, upgradeRollingIds]);
 
   const effectiveLockedSkinIds = useMemo(() => {
-    if (upgradeRollingIds.size === 0) return lockedSkinIds;
-    return new Set([...lockedSkinIds, ...upgradeRollingIds]);
-  }, [lockedSkinIds, upgradeRollingIds]);
+    if (upgradeRollingIds.size === 0 && pendingUpgradeStakeIds.size === 0) return lockedSkinIds;
+    return new Set([...lockedSkinIds, ...upgradeRollingIds, ...pendingUpgradeStakeIds]);
+  }, [lockedSkinIds, upgradeRollingIds, pendingUpgradeStakeIds]);
 
   const handleInputSelect = useCallback((s: Skin) => {
     if (isSkinLocked(s.id)) return;
@@ -261,14 +354,96 @@ export default function App() {
     });
   }, [log, isSkinLocked]);
 
-  const handleSellSkin = useCallback((skin: Skin) => {
-    if (isSkinLocked(skin.id)) return;
-    setInventory(prev => sellSkinFromInventory(prev, skin.id));
-    setBalance(prev => prev + skin.price);
-    setInputSkins(prev => prev.filter(s => s.id !== skin.id));
-    log('INVENTORY.sell', { skin: skin.name, price: formatUSD(skin.price), weapon: skin.weapon });
+  const handleClearInput = useCallback(() => {
+    if (isUpgradeRolling) return;
+    log('CLICK.clear_input', { count: inputSkins.length });
+    setInputSkins([]);
+  }, [isUpgradeRolling, inputSkins.length, log]);
+
+  const handleClearTarget = useCallback(() => {
+    log('CLICK.clear_target', { skin: targetSkin?.name ?? '' });
+    setTargetSkin(null);
+  }, [targetSkin, log]);
+
+  const handleRandomInput = useCallback(() => {
+    if (isUpgradeRolling) return;
+    const available = inventoryPanelSkins.filter(s => !isSkinLocked(s.id));
+    if (!available.length) return;
+    const pick = available[Math.floor(Math.random() * available.length)];
+    log('CLICK.random_input', { skin: pick.name });
     sfx.select();
-  }, [isSkinLocked, log]);
+    setInputSkins([pick]);
+    applyPresetTarget([pick], multiplier, cap);
+  }, [isUpgradeRolling, inventoryPanelSkins, isSkinLocked, log, multiplier, cap, applyPresetTarget]);
+
+  const handleSelectAllInput = useCallback(() => {
+    if (isUpgradeRolling) return;
+    const available = inventoryPanelSkins
+      .filter(s => !isSkinLocked(s.id))
+      .slice(0, MAX_INPUT_SKINS);
+    if (!available.length) return;
+    log('CLICK.select_all_input', { count: available.length });
+    sfx.select();
+    setInputSkins(available);
+    applyPresetTarget(available, multiplier, cap);
+  }, [isUpgradeRolling, inventoryPanelSkins, isSkinLocked, log, multiplier, cap, applyPresetTarget]);
+
+  const handleTargetSelect = useCallback((s: Skin) => {
+    if (targetSkin?.id === s.id) {
+      log('CLICK.deselect_target', { skin: s.name, price: formatUSD(s.price) });
+      sfx.select();
+      setTargetSkin(null);
+      return;
+    }
+    log('CLICK.select_target', { skin: s.name, price: formatUSD(s.price) });
+    sfx.select();
+    setTargetSkin(s);
+  }, [targetSkin, log]);
+
+  const handleSellSkin = useCallback((skin: Skin): boolean => {
+    if (!userId) return false;
+    if (isSkinLocked(skin.id)) return false;
+
+    const freshInventory = loadInventory(userId);
+    const owned = freshInventory.find(s => s.id === skin.id);
+    if (!owned) return false;
+
+    const nextInventory = sellSkinFromInventory(freshInventory, owned.id);
+    const nextBalance = loadBalance(userId) + owned.price;
+
+    saveInventory(nextInventory, userId);
+    saveBalance(nextBalance, userId);
+    inventoryRef.current = nextInventory;
+    balanceRef.current = nextBalance;
+    setInventory(nextInventory);
+    setBalance(nextBalance);
+    setInputSkins(prev => prev.filter(s => s.id !== owned.id));
+    archiveInventorySkins(userId, [owned], 'sold');
+    log('INVENTORY.sell', { skin: owned.name, price: formatUSD(owned.price), weapon: owned.weapon });
+    sfx.select();
+    void pushPlayerStateSync(nextInventory, nextBalance);
+    return true;
+  }, [isSkinLocked, log, userId, pushPlayerStateSync]);
+
+  useEffect(() => {
+    registerUpgradeWithSkinHandler(skin => {
+      if (isSkinLocked(skin.id)) return;
+      navigateApp('upgrade');
+      setInputSkins([skin]);
+      setTargetSkin(null);
+      setMultiplier(null);
+      setCap(null);
+      log('PROFILE.upgrade_skin', { skin: skin.name, price: formatUSD(skin.price) });
+      sfx.select();
+    });
+    registerSellSkinHandler(handleSellSkin);
+    registerSyncPlayerHandler(refreshLocalPlayerState);
+    return () => {
+      registerUpgradeWithSkinHandler(null);
+      registerSellSkinHandler(null);
+      registerSyncPlayerHandler(null);
+    };
+  }, [handleSellSkin, isSkinLocked, log, refreshLocalPlayerState]);
 
   const handleShopPurchase = useCallback((items: ShopPurchaseItem[]): boolean => {
     if (!user) return false;
@@ -292,6 +467,16 @@ export default function App() {
     return true;
   }, [user, log]);
 
+  const handleCatalogCasePurchase = useCallback((price: number): boolean => {
+    if (!user) return false;
+    if (price <= 0) return false;
+    if (balanceRef.current < price) return false;
+
+    setBalance(prev => (prev < price ? prev : prev - price));
+    log('CASE.open_purchase', { price: formatUSD(price) });
+    return true;
+  }, [user, log]);
+
   const handleAdminGrantSkin = useCallback((skin: Skin) => {
     if (!isAdmin(user)) return;
     log('DEPOSIT.admin', { skin: skin.name, price: formatUSD(skin.price), weapon: skin.weapon });
@@ -301,27 +486,37 @@ export default function App() {
 
   const handleWithdrawRequest = useCallback(async (skins: Skin[]): Promise<string | null> => {
     if (!user || !skins.length) return null;
+
+    const freshInventory = loadInventory(user.userId);
+    const stakedIds = getPendingUpgradeStakedSkinIds(user.userId);
+    const validSkins = skins.filter(skin => (
+      freshInventory.some(item => item.id === skin.id)
+      && !stakedIds.has(skin.id)
+      && !lockedSkinIds.has(skin.id)
+    ));
+    if (validSkins.length !== skins.length) return null;
+
     try {
-      const bundle = await createWithdrawTicket(user, skins, getProfileLabel(user));
+      const bundle = await createWithdrawTicket(user, validSkins, getProfileLabel(user));
       log('WITHDRAW.request', {
         ticketId: bundle.ticket.id,
-        count: skins.length,
-        total: formatUSD(inventoryTotal(skins)),
-        skins: skins.map(s => s.name).join(' · '),
+        count: validSkins.length,
+        total: formatUSD(inventoryTotal(validSkins)),
+        skins: validSkins.map(s => s.name).join(' · '),
       });
       setLockedSkinIds(prev => {
         const next = new Set(prev);
-        for (const skin of skins) next.add(skin.id);
+        for (const skin of validSkins) next.add(skin.id);
         return next;
       });
-      setInputSkins(prev => prev.filter(s => !skins.some(w => w.id === s.id)));
+      setInputSkins(prev => prev.filter(s => !validSkins.some(w => w.id === s.id)));
       sfx.select();
       return bundle.ticket.id;
     } catch {
-      log('WITHDRAW.request_failed', { count: skins.length });
+      log('WITHDRAW.request_failed', { count: validSkins.length });
       return null;
     }
-  }, [user, log]);
+  }, [user, log, lockedSkinIds]);
 
   const applyWithdrawCompletion = useCallback((ticket: WithdrawTicket, showThanks: boolean) => {
     if (!user) return;
@@ -336,7 +531,11 @@ export default function App() {
       total: formatUSD(ticket.total),
       skins: ticket.skins.map(s => s.name).join(' · '),
     });
-    setInventory(prev => withdrawSkinsFromInventory(prev, ids));
+    setInventory(prev => {
+      const removed = prev.filter(s => ids.includes(s.id));
+      archiveInventorySkins(user.userId, removed, 'withdrawn');
+      return withdrawSkinsFromInventory(prev, ids);
+    });
     setInputSkins(prev => prev.filter(s => !ids.includes(s.id)));
     setLockedSkinIds(prev => {
       const next = new Set(prev);
@@ -373,6 +572,15 @@ export default function App() {
       });
     }
     setBalance(prev => prev + amount);
+    void recordGiveawayDeposit({
+      userId: user.userId,
+      amount,
+      email: user.email,
+      nickname: user.nickname,
+      avatarId: resolveAvatarId(user.avatarId, user.email),
+    }).then(ok => {
+      if (ok) window.dispatchEvent(new CustomEvent('giveaway-deposit-recorded'));
+    });
   }, [user, log]);
 
   const handleWithdrawTicketCompleted = useCallback((ticket: WithdrawTicket) => {
@@ -462,7 +670,7 @@ export default function App() {
   }, [user, openLogin, log]);
 
   useEffect(() => {
-    if (!user) {
+    if (!user || !documentVisible) {
       setLockedSkinIds(new Set());
       initialWithdrawSyncRef.current = true;
       return;
@@ -491,9 +699,9 @@ export default function App() {
     };
 
     void syncWithdrawState();
-    const id = setInterval(() => { void syncWithdrawState(); }, 3000);
+    const id = setInterval(() => { void syncWithdrawState(); }, 10000);
     return () => clearInterval(id);
-  }, [user, applyWithdrawCompletion, applyDepositCompletion]);
+  }, [user, documentVisible, applyWithdrawCompletion, applyDepositCompletion]);
 
   useEffect(() => {
     setInputSkins(prev => {
@@ -503,7 +711,7 @@ export default function App() {
   }, [lockedSkinIds]);
 
   useEffect(() => {
-    if (!user) return;
+    if (!user || !documentVisible) return;
 
     const syncPendingGifts = async () => {
       if (giftSyncInFlightRef.current) return;
@@ -547,12 +755,12 @@ export default function App() {
     };
 
     void syncPendingGifts();
-    const id = setInterval(() => { void syncPendingGifts(); }, 8000);
+    const id = setInterval(() => { void syncPendingGifts(); }, 15000);
     return () => clearInterval(id);
-  }, [user, log]);
+  }, [user, documentVisible, log]);
 
   useEffect(() => {
-    if (!user) return;
+    if (!user || !documentVisible) return;
 
     const syncPendingBalanceGifts = async () => {
       if (balanceGiftSyncInFlightRef.current) return;
@@ -591,9 +799,61 @@ export default function App() {
     };
 
     void syncPendingBalanceGifts();
-    const id = setInterval(() => { void syncPendingBalanceGifts(); }, 8000);
+    const id = setInterval(() => { void syncPendingBalanceGifts(); }, 15000);
     return () => clearInterval(id);
-  }, [user, log]);
+  }, [user, documentVisible, log]);
+
+  const dismissGiveawayWin = useCallback(async () => {
+    if (user && giveawayWinData) {
+      await ackGiveawayWin(user.userId, giveawayWinData.id);
+    }
+    setGiveawayWinOpen(false);
+  }, [user, giveawayWinData]);
+
+  useEffect(() => {
+    if (!user || !documentVisible) {
+      if (!user) {
+        setGiveawayWinOpen(false);
+        setGiveawayWinData(null);
+        shownGiveawayWinIdRef.current = null;
+      }
+      return;
+    }
+
+    const syncGiveawayWins = async () => {
+      try {
+        const pendingWins = await fetchPendingGiveawayWins(user.userId);
+        const nextWin = pendingWins[0];
+        if (!nextWin || shownGiveawayWinIdRef.current === nextWin.id) return;
+
+        const pendingGrants = await fetchPendingInventoryGrants(user.email);
+        const applied = loadAppliedGrantIds(user.userId);
+        const toApply = pendingGrants.filter(g => !applied.has(g.id));
+        if (toApply.length) {
+          markAppliedGrantIds(user.userId, toApply.map(g => g.id));
+          setInventory(prev => {
+            let next = prev;
+            for (const grant of toApply) {
+              next = grantSkinToInventory(next, grant.skin);
+            }
+            return next;
+          });
+          await acknowledgeInventoryGrants(user.email, toApply.map(g => g.id));
+        }
+
+        shownGiveawayWinIdRef.current = nextWin.id;
+        setGiveawayWinData(nextWin);
+        setGiveawayWinOpen(true);
+        sfx.win();
+      } catch {
+        /* API offline */
+      }
+    };
+
+    void syncGiveawayWins();
+    const id = setInterval(() => { void syncGiveawayWins(); }, 12000);
+    return () => clearInterval(id);
+  }, [user, documentVisible]);
 
   useEffect(() => {
     if (inputSkins.length && (multiplier || cap)) {
@@ -616,24 +876,95 @@ export default function App() {
 
   useEffect(() => {
     saveInventory(inventory, userId);
-  }, [inventory, userId]);
+    if (userId && playerStateHydrated) touchLocalPlayerStateUpdatedAt(userId);
+  }, [inventory, userId, playerStateHydrated]);
 
   useEffect(() => {
     saveBalance(balance, userId);
-  }, [balance, userId]);
+    if (userId && playerStateHydrated) touchLocalPlayerStateUpdatedAt(userId);
+  }, [balance, userId, playerStateHydrated]);
 
   useEffect(() => {
-    if (!user) return;
-    void pushPlayerStateSync(inventory, balance);
-  }, [user?.userId, pushPlayerStateSync]);
+    if (!userId) return;
+
+    const inventoryKey = getInventoryStorageKey(userId);
+    const balanceKey = getBalanceStorageKey(userId);
+    const pendingKey = getPendingUpgradeStorageKey(userId);
+
+    const onStorage = (event: StorageEvent) => {
+      if (event.storageArea !== localStorage || !event.key) return;
+      if (event.key === inventoryKey || event.key === balanceKey || event.key === pendingKey) {
+        refreshLocalPlayerState();
+      }
+    };
+
+    const onVisible = () => {
+      if (!document.hidden) refreshLocalPlayerState();
+    };
+
+    window.addEventListener('storage', onStorage);
+    document.addEventListener('visibilitychange', onVisible);
+    return () => {
+      window.removeEventListener('storage', onStorage);
+      document.removeEventListener('visibilitychange', onVisible);
+    };
+  }, [userId, refreshLocalPlayerState]);
 
   useEffect(() => {
-    if (!user) return;
-    const timer = setTimeout(() => {
-      void pushPlayerStateSync(inventory, balance);
-    }, 800);
-    return () => clearTimeout(timer);
-  }, [user, inventory, balance, pushPlayerStateSync]);
+    if (!user) {
+      setPlayerStateHydrated(true);
+      return;
+    }
+
+    let cancelled = false;
+    setPlayerStateHydrated(false);
+
+    void (async () => {
+      const state = await fetchPlayerState(user.email);
+      if (cancelled) return;
+
+      if (shouldHydrateFromServer(user.userId, state)) {
+        const next = applyPlayerStateSnapshot(user.userId, state!);
+        inventoryRef.current = next.inventory;
+        balanceRef.current = next.balance;
+        setInventory(next.inventory);
+        setBalance(next.balance);
+        setInputSkins([]);
+        setTargetSkin(null);
+        setMultiplier(null);
+        setCap(null);
+      }
+
+      setPlayerStateHydrated(true);
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [user?.userId, user?.email]);
+
+  useEffect(() => {
+    if (!user || !playerStateHydrated) return;
+
+    if (playerStateSyncTimerRef.current) {
+      window.clearTimeout(playerStateSyncTimerRef.current);
+    }
+
+    playerStateSyncTimerRef.current = window.setTimeout(() => {
+      if (playerStateSyncInFlightRef.current) return;
+      playerStateSyncInFlightRef.current = true;
+      void pushPlayerStateSync(inventoryRef.current, balanceRef.current).finally(() => {
+        playerStateSyncInFlightRef.current = false;
+      });
+    }, 2000);
+
+    return () => {
+      if (playerStateSyncTimerRef.current) {
+        window.clearTimeout(playerStateSyncTimerRef.current);
+        playerStateSyncTimerRef.current = null;
+      }
+    };
+  }, [user, inventory, balance, playerStateHydrated, pushPlayerStateSync]);
 
   useEffect(() => {
     if (!user || !documentVisible) return;
@@ -656,7 +987,7 @@ export default function App() {
     const id = setInterval(() => {
       void pollReset();
       void pollBan();
-    }, 500);
+    }, 12000);
     return () => clearInterval(id);
   }, [user, documentVisible, applyPendingAccountReset, authLogout, openLogin]);
 
@@ -676,7 +1007,8 @@ export default function App() {
     };
 
     void syncSiteState();
-    const id = setInterval(() => { void syncSiteState(); }, 5000);
+    const pollMs = DEV_CLEAN_HEADER_LAYOUT ? DEV_FEED_CLIENT_POLL_MS : 5000;
+    const id = setInterval(() => { void syncSiteState(); }, pollMs);
     return () => {
       cancelled = true;
       clearInterval(id);
@@ -743,13 +1075,12 @@ export default function App() {
     clearPendingUpgrade(user.userId);
 
     if (pending.won) {
-      setInventory(prev => {
-        const next = applyUpgradeWin(prev, pending.targetSkin);
-        inventoryRef.current = next;
-        saveInventory(next, user.userId);
-        return next;
-      });
-      void pushPlayerStateSync(inventoryRef.current, balanceRef.current);
+      const current = loadInventory(user.userId);
+      const next = applyUpgradeWin(current, pending.targetSkin, String(pending.timestamp));
+      inventoryRef.current = next;
+      saveInventory(next, user.userId);
+      setInventory(next);
+      void pushPlayerStateSync(next, balanceRef.current);
     }
 
     finalizeUpgrade({
@@ -810,7 +1141,13 @@ export default function App() {
     ).image;
     const inputTotal = inventoryTotal(inputs);
 
+    const pendingBeforeClear = loadPendingUpgrade(user.userId);
+    const sessionKey = upgradeSessionKeyRef.current
+      ?? (pendingBeforeClear?.timestamp != null ? String(pendingBeforeClear.timestamp) : undefined);
+
     clearPendingUpgrade(user.userId);
+    setLocalPlayerStateRevision(rev => rev + 1);
+    upgradeSessionKeyRef.current = null;
 
     const finalizePayload = {
       won,
@@ -830,7 +1167,12 @@ export default function App() {
     };
 
     if (won) {
-      setInventory(prev => applyUpgradeWin(prev, targetSkin));
+      const current = loadInventory(user.userId);
+      const next = applyUpgradeWin(current, targetSkin, sessionKey);
+      inventoryRef.current = next;
+      saveInventory(next, user.userId);
+      flushSync(() => setInventory(next));
+      void pushPlayerStateSync(next, balanceRef.current);
       finalizeUpgrade(finalizePayload);
       clearSelections();
       return;
@@ -841,15 +1183,13 @@ export default function App() {
       const result = buildLossConsolationCase(inputTotal);
       const grantedSkin = createConsolationGrantedSkin(result.rewardSkin);
 
-      flushSync(() => {
-        setInventory(prev => {
-          const next = [...prev, grantedSkin];
-          inventoryRef.current = next;
-          saveInventory(next, user.userId);
-          return next;
-        });
-      });
-      void pushPlayerStateSync(inventoryRef.current, balanceRef.current);
+      const current = loadInventory(user.userId);
+      const hasConsolation = current.some(s => s.id === grantedSkin.id);
+      const next = hasConsolation ? current : [...current, grantedSkin];
+      inventoryRef.current = next;
+      saveInventory(next, user.userId);
+      flushSync(() => setInventory(next));
+      void pushPlayerStateSync(next, balanceRef.current);
 
       savePendingLossConsolation(user.userId, {
         grantedSkin,
@@ -902,10 +1242,21 @@ export default function App() {
     });
   }, [user, lossCase, finalizeUpgrade, log, pushPlayerStateSync]);
 
-  const handleUpgradeStart = useCallback(() => {
-    if (!user || !inputSkins.length || !targetSkin) return;
+  const handleUpgradeStart = useCallback((): boolean => {
+    if (!user || !inputSkins.length || !targetSkin) return false;
 
-    const inputs = inputSkins.slice();
+    const freshInventory = loadInventory(user.userId);
+    const inputs = inputSkins.filter(s => freshInventory.some(item => item.id === s.id));
+    if (!inputs.length || inputs.length !== inputSkins.length) {
+      log('UPGRADE.start_blocked', {
+        reason: 'missing_inputs',
+        requested: inputSkins.length,
+        available: inputs.length,
+      });
+      setInputSkins(inputs);
+      return false;
+    }
+
     const ids = inputs.map(s => s.id);
     rollingInputsRef.current = inputs;
     rollingInputIdsRef.current = ids;
@@ -920,27 +1271,40 @@ export default function App() {
       inputs[0],
     ).image;
 
+    const sessionTimestamp = Date.now();
+    upgradeSessionKeyRef.current = String(sessionTimestamp);
+
     flushSync(() => {
       setIsUpgradeRolling(true);
-      setInventory(prev => {
-        const next = commitUpgradeStake(prev, inputs);
-        inventoryRef.current = next;
-        saveInventory(next, user.userId);
-        return next;
-      });
+      archiveInventorySkins(user.userId, inputs, 'upgraded');
+      const current = loadInventory(user.userId);
+      const next = commitUpgradeStake(current, inputs);
+      inventoryRef.current = next;
+      saveInventory(next, user.userId);
+      setInventory(next);
     });
 
     void pushPlayerStateSync(inventoryRef.current, balanceRef.current);
 
+    const xpState = addWagerXp(user.userId, stakeTotal);
+    log('XP.wager', {
+      wagered: formatUSD(stakeTotal),
+      gained: stakeTotal * XP_PER_WAGERED_COIN,
+      totalXp: xpState.totalXp,
+      level: xpState.level,
+    });
+
     savePendingUpgrade(user.userId, {
+      inputSkinIds: ids,
       targetSkin,
       inputImage,
       inputLabel,
       inputTotal: stakeTotal,
       targetPrice: targetSkin.price,
       probability,
-      timestamp: Date.now(),
+      timestamp: sessionTimestamp,
     });
+    setLocalPlayerStateRevision(rev => rev + 1);
 
     log('UPGRADE.start', {
       input: inputLabel,
@@ -950,6 +1314,7 @@ export default function App() {
       probability: `${probability}%`,
       turbo,
     });
+    return true;
   }, [user, inputSkins, targetSkin, probability, turbo, log, pushPlayerStateSync]);
 
   const handleUpgradeRollLocked = useCallback((roll: RollResult) => {
@@ -960,11 +1325,15 @@ export default function App() {
   return (
     <LayoutGroup>
       <div className={`relative flex flex-col ${
-        DEV_MOBILE_LAYOUT ? 'min-h-[100dvh] lg:h-screen lg:overflow-hidden' : 'h-screen overflow-hidden'
+        isScrollablePage
+          ? 'h-[100dvh] max-h-[100dvh] overflow-y-auto overscroll-y-contain'
+          : DEV_MOBILE_LAYOUT
+            ? 'min-h-[100dvh] lg:h-screen lg:overflow-hidden'
+            : 'h-screen overflow-hidden'
       }`}
       >
         <ParticleField />
-        <div className="pointer-events-none fixed inset-0 bg-[radial-gradient(ellipse_80%_50%_at_50%_-10%,rgba(255,215,0,0.06),transparent)]" />
+        <div className="pointer-events-none fixed inset-0 bg-[radial-gradient(ellipse_80%_50%_at_50%_-10%,rgba(176,108,255,0.06),transparent)]" />
 
         <LoginModal />
 
@@ -972,6 +1341,13 @@ export default function App() {
           show={thanksToastVisible}
           onDismiss={dismissThanksToast}
           durationMs={5000}
+        />
+
+        <GiveawayWinModal
+          open={giveawayWinOpen}
+          skin={giveawayWinData?.skin ?? null}
+          period={giveawayWinData?.period ?? null}
+          onClose={() => { void dismissGiveawayWin(); }}
         />
 
         <ThanksToast
@@ -994,18 +1370,16 @@ export default function App() {
           />
         )}
 
+        {DEV_CLEAN_HEADER_LAYOUT && (
+          <LiveFeed items={feed} variant="top" className="w-full" />
+        )}
+
         <Header
           inventory={inventory}
           balance={balance}
           lockedSkinIds={effectiveLockedSkinIds}
           totalUpgrades={totalUpgrades}
           playersOnline={playersOnline}
-          turbo={turbo}
-          onTurboToggle={() => {
-            log('CLICK.turbo', { active: !turbo });
-            setTurbo(t => !t);
-          }}
-          onLogout={handleLogout}
           onAdminGrantSkin={handleAdminGrantSkin}
           onWithdrawRequest={handleWithdrawRequest}
           onDepositRequest={handleDepositRequest}
@@ -1017,172 +1391,92 @@ export default function App() {
           onAccountCleared={handleAccountCleared}
         />
 
-        <div className={`mx-auto flex min-h-0 w-full max-w-[1920px] flex-1 gap-2 px-2 pb-2 lg:px-4 ${
-          DEV_MOBILE_LAYOUT ? 'overflow-x-hidden lg:overflow-hidden' : ''
+        <div className={`mx-auto flex w-full max-w-[1920px] flex-col gap-2 px-2 pb-2 lg:px-4 ${
+          !isScrollablePage && DEV_MOBILE_LAYOUT ? 'min-h-0 flex-1 overflow-x-hidden lg:overflow-hidden' : ''
         }`}
         >
-          <LiveFeed items={feed} className="hidden w-[220px] shrink-0 border-r border-white/5 xl:flex" />
+          {!DEV_CLEAN_HEADER_LAYOUT && (
+            <LiveFeed items={feed} className="hidden w-[220px] shrink-0 border-r border-white/5 xl:flex" />
+          )}
 
-          <div className={`flex min-h-0 flex-1 flex-col gap-2 ${
-            DEV_MOBILE_LAYOUT ? 'lg:overflow-hidden' : ''
+          <div className={`flex flex-col gap-2 ${
+            isScrollablePage ? 'w-full' : `min-h-0 flex-1 ${DEV_MOBILE_LAYOUT ? 'lg:overflow-hidden' : ''}`
           }`}
           >
-            {DEV_MOBILE_LAYOUT ? (
-              <>
-                <div className="flex shrink-0 justify-center lg:hidden">
-                  <UpgradeEngine
-                    probability={probability}
-                    wheelSize={wheelSize}
-                    multiplier={multiplier}
-                    cap={cap}
-                    canUpgrade={canUpgrade}
-                    requiresLogin={!user}
-                    onLoginRequired={openLogin}
-                    turbo={turbo}
-                    onMultiplier={handleMultiplier}
-                    onCap={handleCap}
-                    onUpgradeStart={handleUpgradeStart}
-                    onUpgradeRollLocked={handleUpgradeRollLocked}
-                    onComplete={onUpgradeComplete}
-                  />
-                </div>
-                <div className="grid shrink-0 grid-cols-2 gap-2 lg:hidden">
-                  <SelectedSkinSlot
-                    skins={inputSkins}
-                    variant="input"
-                    inputRolling={isUpgradeRolling}
-                    onClear={() => {
-                      if (isUpgradeRolling) return;
-                      log('CLICK.clear_input', { count: inputSkins.length });
-                      setInputSkins([]);
-                    }}
-                  />
-                  <SelectedSkinSlot
-                    skin={targetSkin}
-                    variant="target"
-                    onClear={() => {
-                      log('CLICK.clear_target', { skin: targetSkin?.name ?? '' });
-                      setTargetSkin(null);
-                    }}
-                  />
-                </div>
-                <div className="hidden shrink-0 flex-col gap-2 lg:flex lg:flex-row lg:gap-3">
-                  <SelectedSkinSlot
-                    skins={inputSkins}
-                    variant="input"
-                    inputRolling={isUpgradeRolling}
-                    onClear={() => {
-                      if (isUpgradeRolling) return;
-                      log('CLICK.clear_input', { count: inputSkins.length });
-                      setInputSkins([]);
-                    }}
-                  />
-                  <UpgradeEngine
-                    probability={probability}
-                    wheelSize={wheelSize}
-                    multiplier={multiplier}
-                    cap={cap}
-                    canUpgrade={canUpgrade}
-                    requiresLogin={!user}
-                    onLoginRequired={openLogin}
-                    turbo={turbo}
-                    onMultiplier={handleMultiplier}
-                    onCap={handleCap}
-                    onUpgradeStart={handleUpgradeStart}
-                    onUpgradeRollLocked={handleUpgradeRollLocked}
-                    onComplete={onUpgradeComplete}
-                  />
-                  <SelectedSkinSlot
-                    skin={targetSkin}
-                    variant="target"
-                    onClear={() => {
-                      log('CLICK.clear_target', { skin: targetSkin?.name ?? '' });
-                      setTargetSkin(null);
-                    }}
-                  />
-                </div>
-              </>
-            ) : (
-            <div className="flex shrink-0 gap-2 lg:gap-3">
-              <SelectedSkinSlot
-                skins={inputSkins}
-                variant="input"
-                inputRolling={isUpgradeRolling}
-                onClear={() => {
-                  if (isUpgradeRolling) return;
-                  log('CLICK.clear_input', { count: inputSkins.length });
-                  setInputSkins([]);
-                }}
+            {isProfilePage ? (
+              <ProfilePage
+                inventory={inventory}
+                balance={balance}
+                lockedSkinIds={effectiveLockedSkinIds}
+                onSellSkin={handleSellSkin}
               />
-
-              <UpgradeEngine
+            ) : isFreeCasesPage ? (
+              freeCaseSlug ? (
+                <FreeCaseDetailPage slug={freeCaseSlug} />
+              ) : (
+                <FreeCasesPage />
+              )
+            ) : isGiveawaysPage ? (
+              giveawayPeriod ? (
+                <GiveawayDetailPage period={giveawayPeriod} />
+              ) : (
+                <GiveawaysPage />
+              )
+            ) : isAdminPage ? (
+              <AdminPage />
+            ) : isMainPage ? (
+              caseSlug ? (
+                <CaseDetailPage
+                  slug={caseSlug}
+                  balance={balance}
+                  onPurchase={handleCatalogCasePurchase}
+                />
+              ) : (
+                <MainPage balance={balance} />
+              )
+            ) : (
+              <UpgradePage
+                inventory={inventoryPanelSkins}
+                inputSkins={inputSkins}
+                targetSkin={targetSkin}
+                targetPool={TARGET_POOL}
                 probability={probability}
                 wheelSize={wheelSize}
                 multiplier={multiplier}
                 cap={cap}
                 canUpgrade={canUpgrade}
+                isUpgradeRolling={isUpgradeRolling}
                 requiresLogin={!user}
-                onLoginRequired={openLogin}
                 turbo={turbo}
+                lockedSkinIds={effectiveLockedSkinIds}
+                upgradeRollingIds={upgradeRollingIds}
+                balance={balance}
+                liveHelpLoading={liveHelpLoading}
+                onLoginRequired={openLogin}
                 onMultiplier={handleMultiplier}
                 onCap={handleCap}
                 onUpgradeStart={handleUpgradeStart}
                 onUpgradeRollLocked={handleUpgradeRollLocked}
-                onComplete={onUpgradeComplete}
-              />
-
-              <SelectedSkinSlot
-                skin={targetSkin}
-                variant="target"
-                onClear={() => {
-                  log('CLICK.clear_target', { skin: targetSkin?.name ?? '' });
-                  setTargetSkin(null);
-                }}
-              />
-            </div>
-            )}
-
-            <div className={`grid min-h-0 flex-1 grid-cols-1 gap-2 lg:grid-cols-2 ${
-              DEV_MOBILE_LAYOUT ? 'lg:[&>section]:min-h-0' : ''
-            }`}
-            >
-              <InventoryShopPanel
-                skins={inventoryPanelSkins}
-                selected={inputSkins}
-                maxSelected={MAX_INPUT_SKINS}
-                lockedSkinIds={lockedSkinIds}
-                upgradeRollingIds={upgradeRollingIds}
-                balance={balance}
-                requiresLogin={!user}
-                onLoginRequired={openLogin}
-                onSelect={handleInputSelect}
-                onSell={handleSellSkin}
+                onUpgradeComplete={onUpgradeComplete}
+                onInputSelect={handleInputSelect}
+                onSellSkin={handleSellSkin}
                 onPurchase={handleShopPurchase}
-              />
-              <TargetPanel
-                skins={TARGET_POOL}
-                selected={targetSkin}
-                onLiveHelp={() => { void handleLiveHelp(); }}
-                liveHelpLoading={liveHelpLoading}
-                showAdminPromoCodes={ADMIN_PROMO_CODES_ENABLED && isAdmin(user)}
-                showTransactionHistory={DEV_DEPOSIT_WITHDRAW_HISTORY && isAdmin(user)}
-                showAdminBan={ADMIN_BAN_ENABLED && isAdmin(user)}
-                adminEmail={user?.email}
-                onSelect={s => {
-                  if (targetSkin?.id === s.id) {
-                    log('CLICK.deselect_target', { skin: s.name, price: formatUSD(s.price) });
-                    sfx.select();
-                    setTargetSkin(null);
-                    return;
-                  }
-                  log('CLICK.select_target', { skin: s.name, price: formatUSD(s.price) });
-                  sfx.select();
-                  setTargetSkin(s);
+                onTargetSelect={handleTargetSelect}
+                onClearInput={handleClearInput}
+                onClearTarget={handleClearTarget}
+                onRandomInput={handleRandomInput}
+                onSelectAllInput={handleSelectAllInput}
+                onTurboToggle={() => {
+                  log('CLICK.turbo', { active: !turbo });
+                  setTurbo(t => !t);
                 }}
+                onLiveHelp={() => { void handleLiveHelp(); }}
               />
-            </div>
+            )}
           </div>
         </div>
+
+        {userIsAdmin && user && <AdminLivePresenceFooter adminEmail={user.email} />}
       </div>
     </LayoutGroup>
   );

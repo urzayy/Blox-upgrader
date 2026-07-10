@@ -12,11 +12,19 @@ interface Props {
   open: boolean;
   inventory: Skin[];
   lockedSkinIds?: ReadonlySet<string>;
+  initialSelectedIds?: string[];
   onClose: () => void;
   onRequestWithdraw: (skins: Skin[]) => Promise<string | null>;
 }
 
-export function WithdrawModal({ open, inventory, lockedSkinIds, onClose, onRequestWithdraw }: Props) {
+export function WithdrawModal({
+  open,
+  inventory,
+  lockedSkinIds,
+  initialSelectedIds,
+  onClose,
+  onRequestWithdraw,
+}: Props) {
   const [search, setSearch] = useState('');
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [submitting, setSubmitting] = useState(false);
@@ -28,8 +36,16 @@ export function WithdrawModal({ open, inventory, lockedSkinIds, onClose, onReque
       setSelectedIds(new Set());
       setError('');
       setSubmitting(false);
+      return;
     }
-  }, [open]);
+
+    if (initialSelectedIds?.length) {
+      const allowed = new Set(
+        initialSelectedIds.filter(id => !lockedSkinIds?.has(id)),
+      );
+      setSelectedIds(allowed);
+    }
+  }, [open, initialSelectedIds, lockedSkinIds]);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -98,7 +114,7 @@ export function WithdrawModal({ open, inventory, lockedSkinIds, onClose, onReque
             role="dialog"
             aria-modal="true"
             aria-labelledby="withdraw-modal-title"
-            className="relative flex h-[min(88vh,920px)] w-full max-w-5xl flex-col overflow-hidden rounded-2xl border border-white/20 bg-[#0e1018] shadow-[0_24px_80px_rgba(0,0,0,0.75),0_0_60px_rgba(255,255,255,0.06)]"
+            className="relative flex h-[min(88vh,920px)] w-full max-w-5xl flex-col overflow-hidden rounded-2xl border border-white/20 bg-[#0c0a14] shadow-[0_24px_80px_rgba(0,0,0,0.75),0_0_60px_rgba(255,255,255,0.06)]"
             initial={{ scale: 0.94, y: 16, opacity: 0 }}
             animate={{ scale: 1, y: 0, opacity: 1 }}
             exit={{ scale: 0.96, y: 8, opacity: 0 }}

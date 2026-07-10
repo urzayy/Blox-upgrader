@@ -2,6 +2,7 @@ import type { Skin } from '../data/skins';
 import type { RollResult } from './wheelMath';
 
 export interface PendingUpgrade {
+  inputSkinIds: string[];
   targetSkin: Skin;
   inputImage: string;
   inputLabel: string;
@@ -15,6 +16,17 @@ export interface PendingUpgrade {
 
 function storageKey(userId: string): string {
   return `blox-upgrader/pending-upgrade/${userId}`;
+}
+
+export function getPendingUpgradeStorageKey(userId: string): string {
+  return storageKey(userId);
+}
+
+export function getPendingUpgradeStakedSkinIds(userId: string | null): ReadonlySet<string> {
+  if (!userId) return new Set();
+  const pending = loadPendingUpgrade(userId);
+  if (!pending?.inputSkinIds?.length) return new Set();
+  return new Set(pending.inputSkinIds);
 }
 
 export function savePendingUpgrade(userId: string, pending: PendingUpgrade): void {
@@ -31,6 +43,9 @@ export function loadPendingUpgrade(userId: string): PendingUpgrade | null {
     if (!raw) return null;
     const parsed = JSON.parse(raw) as PendingUpgrade;
     if (!parsed || !parsed.targetSkin?.id) return null;
+    if (!Array.isArray(parsed.inputSkinIds)) {
+      parsed.inputSkinIds = [];
+    }
     return parsed;
   } catch {
     return null;

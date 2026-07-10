@@ -1,0 +1,40 @@
+{
+  "version": 1,
+  "winners": [
+    {
+      "id": "win_1783637081150_ka7ei",
+      "period": "daily",
+      "skin": {
+        "id": "skin_144_hand_wraps_carpet",
+        "name": "Hand Wraps | Carpet",
+        "weapon": "Gloves",
+        "rarity": "extraordinary",
+        "wear": "Field-Tested",
+        "price": 1320,
+        "image": "https://bloxstrike.net/items/bloxstrike-live/116465088725763.png"
+      },
+      "winnerUserId": "usr_1783229707580_9rquiw",
+      "winnerEmail": "urzay1v1@gmail.com",
+      "winnerNickname": "Urzayy",
+      "wonAt": 1783637081150
+    }
+  ],
+  "pending": [
+    {
+      "id": "pending_1783637081151_p0pa9",
+      "userId": "usr_1783229707580_9rquiw",
+      "period": "daily",
+      "skin": {
+        "id": "skin_144_hand_wraps_carpet",
+        "name": "Hand Wraps | Carpet",
+        "weapon": "Gloves",
+        "rarity": "extraordinary",
+        "wear": "Field-Tested",
+        "price": 1320,
+        "image": "https://bloxstrike.net/items/bloxstrike-live/116465088725763.png"
+      },
+      "createdAt": 1783637081151,
+      "acked": true
+    }
+  ]
+}

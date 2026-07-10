@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
+import { createHash } from 'node:crypto';
 
 const ADMIN_EMAILS = new Set(['urzay1v1@gmail.com', 'ecruzcastillo2009@gmail.com']);
 
@@ -78,6 +79,51 @@ export function createSupabaseDb(url, secretKey) {
     return rowToUser(data);
   }
 
+  function hashPassword(password, salt) {
+    return createHash('sha256').update(`${salt}:${String(password)}`).digest('hex');
+  }
+
+  async function getAccountByEmail(email) {
+    const normalizedEmail = normalizeEmail(email);
+    const { data, error } = await supabase
+      .from('blox_accounts')
+      .select('id, email, password_hash, salt, nickname')
+      .eq('email', normalizedEmail)
+      .maybeSingle();
+    if (error) throw error;
+    if (!data) return null;
+    return {
+      id: data.id,
+      email: data.email,
+      passwordHash: data.password_hash,
+      salt: data.salt,
+      nickname: data.nickname,
+    };
+  }
+
+  async function authenticateAccount({ email, password }) {
+    const account = await getAccountByEmail(email);
+    if (!account?.passwordHash || !account.salt) {
+      return { ok: false, notFound: true };
+    }
+    const hash = hashPassword(password, account.salt);
+    if (hash !== account.passwordHash) {
+      return { ok: false, wrongPassword: true };
+    }
+    return {
+      ok: true,
+      userId: account.id,
+      email: account.email,
+      nickname: account.nickname ?? null,
+      salt: account.salt,
+    };
+  }
+
+  async function emailExistsOnServer(email) {
+    const account = await getAccountByEmail(email);
+    return Boolean(account);
+  }
+
   async function registerAccount({
     userId,
     email,
@@ -98,9 +144,15 @@ export function createSupabaseDb(url, secretKey) {
       .eq('email', normalizedEmail)
       .maybeSingle();
 
-    if (byEmail?.id && byEmail.id !== userId) {
-      await supabase.from('blox_user_events').delete().eq('user_id', byEmail.id);
-      await supabase.from('blox_accounts').delete().eq('id', byEmail.id);
+    if (byEmail?.id) {
+      const { data: existingFull } = await supabase
+        .from('blox_accounts')
+        .select('id, password_hash')
+        .eq('email', normalizedEmail)
+        .maybeSingle();
+      if (existingFull?.password_hash || existingFull?.id !== userId) {
+        return { conflict: true };
+      }
     }
 
     const payload = {
@@ -138,15 +190,23 @@ export function createSupabaseDb(url, secretKey) {
     const normalizedEmail = normalizeEmail(email);
     const ts = nowMs();
 
+    const { data: byEmail } = await supabase
+      .from('blox_accounts')
+      .select('id')
+      .eq('email', normalizedEmail)
+      .maybeSingle();
+
+    let resolvedUserId = byEmail?.id ?? userId;
+
     const { data: existing } = await supabase
       .from('blox_accounts')
       .select('*')
-      .eq('id', userId)
+      .eq('id', resolvedUserId)
       .maybeSingle();
 
     if (!existing) {
       await supabase.from('blox_accounts').upsert({
-        id: userId,
+        id: resolvedUserId,
         email: normalizedEmail,
         nickname: nickname?.trim() || null,
         created_at: ts,
@@ -162,20 +222,20 @@ export function createSupabaseDb(url, secretKey) {
         last_login_at: ts,
         nickname: nickname?.trim() || existing.nickname,
         email: normalizedEmail,
-      }).eq('id', userId);
+      }).eq('id', resolvedUserId);
     }
 
-    const user = await upsertUser({ userId, email: normalizedEmail, nickname, isNewAccount: false });
+    const user = await upsertUser({ userId: resolvedUserId, email: normalizedEmail, nickname, isNewAccount: false });
     const line = `[${new Date().toLocaleString('en-US', { hour12: false })}] AUTH.login | email=${normalizedEmail}`;
     const event = await appendEvent({
-      userId,
+      userId: resolvedUserId,
       email: normalizedEmail,
       line,
       action: 'AUTH.login',
       details: { email: normalizedEmail },
     });
 
-    return { user, line: event.line };
+    return { user, line: event.line, canonicalUserId: resolvedUserId };
   }
 
   async function appendEvent({ userId, email, line, action, details }) {
@@ -326,6 +386,9 @@ export function createSupabaseDb(url, secretKey) {
     rootDir: url,
     registerAccount,
     touchAccountLogin,
+    authenticateAccount,
+    emailExistsOnServer,
+    getAccountByEmail,
     upsertUser,
     appendEvent,
     listUsers,
