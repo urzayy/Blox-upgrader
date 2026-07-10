@@ -13,6 +13,20 @@ export interface PlayerStateSyncResult {
   forceReset?: boolean;
   resetAt?: number;
   state?: PlayerStateSnapshot;
+  skippedEmptyOverwrite?: boolean;
+}
+
+export async function fetchPlayerState(email: string): Promise<PlayerStateSnapshot | null> {
+  try {
+    const res = await fetch(
+      `/api/player-state?email=${encodeURIComponent(email.trim().toLowerCase())}`,
+    );
+    if (!res.ok) return null;
+    const data = await res.json() as { state?: PlayerStateSnapshot | null };
+    return data.state ?? null;
+  } catch {
+    return null;
+  }
 }
 
 export async function fetchPendingAccountReset(email: string): Promise<number | null> {
@@ -51,6 +65,7 @@ export async function syncPlayerState(payload: {
       forceReset: data.forceReset,
       resetAt: data.resetAt,
       state: data.state,
+      skippedEmptyOverwrite: data.skippedEmptyOverwrite,
     };
   } catch {
     return { ok: false };

@@ -29,24 +29,24 @@ export function ParticleField() {
     let running = true;
 
     const draw = () => {
-      if (!running || document.hidden) {
-        raf = requestAnimationFrame(draw);
-        return;
+      if (!running) return;
+
+      if (!document.hidden) {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        for (const p of pts) {
+          p.x += p.vx;
+          p.y += p.vy;
+          if (p.y < 0) {
+            p.y = canvas.height;
+            p.x = Math.random() * canvas.width;
+          }
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+          ctx.fillStyle = `rgba(176,108,255,${p.a})`;
+          ctx.fill();
+        }
       }
 
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      for (const p of pts) {
-        p.x += p.vx;
-        p.y += p.vy;
-        if (p.y < 0) {
-          p.y = canvas.height;
-          p.x = Math.random() * canvas.width;
-        }
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
-        ctx.fillStyle = `rgba(255,215,0,${p.a})`;
-        ctx.fill();
-      }
       raf = requestAnimationFrame(draw);
     };
 

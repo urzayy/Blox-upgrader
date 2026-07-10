@@ -1,0 +1,49 @@
+{
+  "version": 1,
+  "giveaways": {
+    "daily": {
+      "period": "daily",
+      "status": "closed",
+      "skin": {
+        "id": "skin_144_hand_wraps_carpet",
+        "name": "Hand Wraps | Carpet",
+        "weapon": "Gloves",
+        "rarity": "extraordinary",
+        "wear": "Field-Tested",
+        "price": 1320,
+        "image": "https://bloxstrike.net/items/bloxstrike-live/116465088725763.png"
+      },
+      "depositRequirement": 5,
+      "startedAt": 1783637059869,
+      "endsAt": 1783723459869,
+      "participants": 1,
+      "openedBy": "urzay1v1@gmail.com",
+      "closedAt": 1783637081146,
+      "totalEntries": 27
+    },
+    "weekly": {
+      "period": "weekly",
+      "status": "closed",
+      "skin": null,
+      "depositRequirement": 0,
+      "startedAt": null,
+      "endsAt": null,
+      "participants": 0,
+      "openedBy": null,
+      "closedAt": null,
+      "totalEntries": 0
+    },
+    "monthly": {
+      "period": "monthly",
+      "status": "closed",
+      "skin": null,
+      "depositRequirement": 0,
+      "startedAt": null,
+      "endsAt": null,
+      "participants": 0,
+      "openedBy": null,
+      "closedAt": null,
+      "totalEntries": 0
+    }
+  }
+}

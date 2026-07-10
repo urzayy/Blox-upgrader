@@ -11,10 +11,22 @@ export function commitUpgradeStake(inventory: Skin[], inputs: Skin[]): Skin[] {
   return inventory.filter(s => !inputIds.has(s.id));
 }
 
-export function applyUpgradeWin(inventory: Skin[], target: Skin): Skin[] {
+export function upgradeWinSkinId(sessionKey: string): string {
+  return `inv_upgrade_${sessionKey}`;
+}
+
+export function applyUpgradeWin(inventory: Skin[], target: Skin, sessionKey?: string): Skin[] {
+  const obtainedAt = Date.now();
+  const id = sessionKey
+    ? upgradeWinSkinId(sessionKey)
+    : `inv_${obtainedAt}_${Math.random().toString(36).slice(2, 7)}`;
+
+  if (inventory.some(s => s.id === id)) return inventory;
+
   const wonSkin: Skin = {
     ...target,
-    id: `inv_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+    id,
+    obtainedAt,
   };
   return [...inventory, wonSkin];
 }
@@ -31,17 +43,21 @@ export function applyUpgradeToInventory(
 }
 
 export function grantSkinToInventory(inventory: Skin[], template: Skin): Skin[] {
+  const obtainedAt = Date.now();
   const granted: Skin = {
     ...template,
-    id: `inv_admin_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+    id: `inv_admin_${obtainedAt}_${Math.random().toString(36).slice(2, 7)}`,
+    obtainedAt,
   };
   return [...inventory, granted];
 }
 
 export function createConsolationGrantedSkin(template: Skin): Skin {
+  const obtainedAt = Date.now();
   return {
     ...template,
-    id: `inv_consolation_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+    id: `inv_consolation_${obtainedAt}_${Math.random().toString(36).slice(2, 7)}`,
+    obtainedAt,
   };
 }
 
@@ -64,6 +80,7 @@ export function purchaseSkinCopies(inventory: Skin[], template: Skin, quantity: 
   const copies: Skin[] = Array.from({ length: quantity }, (_, index) => ({
     ...template,
     id: `inv_shop_${base}_${index}_${Math.random().toString(36).slice(2, 7)}`,
+    obtainedAt: base,
   }));
   return [...inventory, ...copies];
 }

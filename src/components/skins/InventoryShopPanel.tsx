@@ -89,7 +89,7 @@ export function InventoryShopPanel({
             )}
           </span>
         ) : (
-          <div className="flex items-center gap-2 rounded-lg border border-gold/30 bg-gradient-to-r from-gold/10 via-gold/5 to-transparent px-2.5 py-1.5 shadow-[0_0_18px_rgba(255,215,0,0.12)]">
+          <div className="flex items-center gap-2 rounded-lg border border-gold/30 bg-gradient-to-r from-gold/10 via-gold/5 to-transparent px-2.5 py-1.5 shadow-[0_0_18px_rgba(176,108,255,0.12)]">
             <span className="text-[9px] font-bold uppercase tracking-[0.14em] text-white/45">Saldo</span>
             <CoinPrice
               value={balance}

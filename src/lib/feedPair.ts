@@ -54,9 +54,10 @@ export function pickFeedPair(catalog: Skin[] = ALL_SKINS_CATALOG) {
   return { input: cheap, target: expensive };
 }
 
-export function createFeedItem(): FeedItem {
+export function createFeedItem(opts?: { winRate?: number }): FeedItem {
   const { input, target } = pickFeedPair();
-  const won = Math.random() < FEED_WIN_RATE;
+  const winRate = opts?.winRate ?? FEED_WIN_RATE;
+  const won = Math.random() < winRate;
 
   let probability: number;
   if (won) {

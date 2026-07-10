@@ -20,7 +20,7 @@ export function CoinPrice({
         alt=""
         aria-hidden="true"
         draggable={false}
-        className={`shrink-0 object-contain drop-shadow-[0_0_4px_rgba(255,215,0,0.35)] ${iconClassName}`}
+        className={`shrink-0 object-contain drop-shadow-[0_0_4px_rgba(176,108,255,0.35)] ${iconClassName}`}
       />
       <span className={`truncate tabular-nums ${textClassName}`}>{formatPrice(value)}</span>
     </span>

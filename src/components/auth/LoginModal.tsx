@@ -165,7 +165,7 @@ export function LoginModal() {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full rounded-xl bg-gold py-3 font-display text-sm font-black uppercase tracking-wide text-black shadow-[0_4px_24px_rgba(255,204,0,0.35)] transition hover:brightness-110 disabled:opacity-50"
+                className="w-full rounded-xl bg-gradient-to-r from-[#9333ea] via-[#b56bff] to-[#a855f7] py-3 font-display text-sm font-black uppercase tracking-wide text-white shadow-[0_4px_24px_rgba(176,108,255,0.35)] transition hover:brightness-110 disabled:opacity-50"
               >
                 {loading ? 'Entrando...' : showSignupChecks ? 'Crear cuenta y entrar' : 'Entrar'}
               </button>

@@ -63,7 +63,7 @@ export const SkinCard = memo(function SkinCard({
           style={{ background: `radial-gradient(circle at 50% 35%, ${r.color}, transparent 72%)` }}
         />
 
-        <div className="absolute inset-0 bg-gradient-to-b from-[#1c2030] via-[#141820] to-[#0c0e14]" />
+        <div className="absolute inset-0 bg-gradient-to-b from-[#1a1530] via-[#141024] to-[#0a0814]" />
 
         <div className="absolute right-1.5 top-1.5 z-20 max-w-[calc(100%-8px)] rounded-md border border-white/10 bg-black/60 px-1 py-0.5 backdrop-blur-sm">
           <CoinPrice value={skin.price} iconClassName="h-2.5 w-2.5" textClassName="text-[8px] font-bold text-gold font-display" />
@@ -95,11 +95,11 @@ export const SkinCard = memo(function SkinCard({
             e.stopPropagation();
             onSell!(skin);
           }}
-          className="group/sell absolute bottom-1.5 right-1.5 z-30 overflow-hidden rounded border border-gold/45 px-1.5 py-0.5 font-display text-[7px] font-bold uppercase tracking-[0.08em] text-[#1a1400] shadow-[0_0_14px_rgba(255,215,0,0.4),inset_0_1px_0_rgba(255,255,255,0.35)] backdrop-blur-sm transition hover:border-gold hover:shadow-[0_0_22px_rgba(255,215,0,0.55)]"
+          className="group/sell absolute bottom-1.5 right-1.5 z-30 overflow-hidden rounded border border-gold/45 px-1.5 py-0.5 font-display text-[7px] font-bold uppercase tracking-[0.08em] text-[#f5f0ff] shadow-[0_0_14px_rgba(176,108,255,0.4),inset_0_1px_0_rgba(255,255,255,0.35)] backdrop-blur-sm transition hover:border-gold hover:shadow-[0_0_22px_rgba(176,108,255,0.55)]"
         >
           <span
             aria-hidden="true"
-            className="pointer-events-none absolute inset-0 bg-gradient-to-r from-[#ffe566] via-[#ffcc00] to-[#ffb800] opacity-95"
+            className="pointer-events-none absolute inset-0 bg-gradient-to-r from-[#d8b4fe] via-[#c084fc] to-[#a855f7] opacity-95"
           />
           <span className="relative z-10">Sell</span>
         </button>

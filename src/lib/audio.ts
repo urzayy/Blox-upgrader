@@ -3,6 +3,217 @@ let masterGain: GainNode | null = null;
 
 const MASTER_VOL = 0.96;
 const VOL = 1.6;
+const ROLL_SOUND_SRC = '/0710.MP3';
+const ROLL_SOUND_VOL = 0.9;
+const COMMON_DROP_SOUND_SRC = '/Audio%20common.MP3';
+const COMMON_DROP_SOUND_VOL = 0.92;
+const MID_DROP_SOUND_SRC = '/5%25.MP3';
+const MID_DROP_SOUND_VOL = 0.92;
+const ROYAL_LAND_SOUND_SRC = '/RoyalSound.MP3';
+const ROYAL_LAND_SOUND_VOL = 0.95;
+const ROYAL_ROLL_SOUND_SRC = '/ROYAL%20ROLL.MP3';
+const ROYAL_ROLL_SOUND_VOL = 0.9;
+
+let rollAudio: HTMLAudioElement | null = null;
+let commonDropAudio: HTMLAudioElement | null = null;
+let midDropAudio: HTMLAudioElement | null = null;
+let royalLandAudio: HTMLAudioElement | null = null;
+let royalRollAudio: HTMLAudioElement | null = null;
+let rollFadeTimer: ReturnType<typeof setTimeout> | null = null;
+let royalRollFadeTimer: ReturnType<typeof setTimeout> | null = null;
+const ROLL_BASE_VOLUME = ROLL_SOUND_VOL * MASTER_VOL;
+const ROYAL_ROLL_BASE_VOLUME = ROYAL_ROLL_SOUND_VOL * MASTER_VOL;
+const TURBO_ROLL_PLAYBACK_RATE = 2;
+
+function getRollAudio() {
+  if (!rollAudio) {
+    rollAudio = new Audio(ROLL_SOUND_SRC);
+    rollAudio.preload = 'auto';
+    rollAudio.volume = ROLL_BASE_VOLUME;
+  }
+  return rollAudio;
+}
+
+function clearRollFade() {
+  if (rollFadeTimer) {
+    clearTimeout(rollFadeTimer);
+    rollFadeTimer = null;
+  }
+}
+
+function playRollSample(turbo = false) {
+  try {
+    stopRoyalRollSample();
+    clearRollFade();
+    const audio = getRollAudio();
+    audio.loop = false;
+    audio.volume = ROLL_BASE_VOLUME;
+    audio.playbackRate = turbo ? TURBO_ROLL_PLAYBACK_RATE : 1;
+    audio.pause();
+    audio.currentTime = 0;
+    void audio.play().catch(() => {});
+  } catch { /* noop */ }
+}
+
+function stopRollSample() {
+  try {
+    if (!rollAudio) return;
+    clearRollFade();
+    const audio = rollAudio;
+    audio.loop = false;
+
+    if (audio.paused) {
+      audio.playbackRate = 1;
+      return;
+    }
+
+    const startVol = audio.volume;
+    let step = 0;
+    const fadeSteps = 6;
+
+    const fade = () => {
+      step += 1;
+      audio.volume = startVol * Math.max(0, 1 - step / fadeSteps);
+      if (step < fadeSteps) {
+        rollFadeTimer = setTimeout(fade, 18);
+        return;
+      }
+      audio.pause();
+      audio.volume = ROLL_BASE_VOLUME;
+      audio.playbackRate = 1;
+      rollFadeTimer = null;
+    };
+
+    fade();
+  } catch { /* noop */ }
+}
+
+function getRoyalRollAudio() {
+  if (!royalRollAudio) {
+    royalRollAudio = new Audio(ROYAL_ROLL_SOUND_SRC);
+    royalRollAudio.preload = 'auto';
+    royalRollAudio.volume = ROYAL_ROLL_BASE_VOLUME;
+  }
+  return royalRollAudio;
+}
+
+function clearRoyalRollFade() {
+  if (royalRollFadeTimer) {
+    clearTimeout(royalRollFadeTimer);
+    royalRollFadeTimer = null;
+  }
+}
+
+function playRoyalRollSample(turbo = false) {
+  try {
+    stopRollSample();
+    clearRoyalRollFade();
+    const audio = getRoyalRollAudio();
+    audio.loop = false;
+    audio.volume = ROYAL_ROLL_BASE_VOLUME;
+    audio.playbackRate = turbo ? TURBO_ROLL_PLAYBACK_RATE : 1;
+    audio.pause();
+    audio.currentTime = 0;
+    void audio.play().catch(() => {});
+  } catch { /* noop */ }
+}
+
+function stopRoyalRollSample() {
+  try {
+    if (!royalRollAudio) return;
+    clearRoyalRollFade();
+    const audio = royalRollAudio;
+    audio.loop = false;
+
+    if (audio.paused) {
+      audio.playbackRate = 1;
+      return;
+    }
+
+    const startVol = audio.volume;
+    let step = 0;
+    const fadeSteps = 6;
+
+    const fade = () => {
+      step += 1;
+      audio.volume = startVol * Math.max(0, 1 - step / fadeSteps);
+      if (step < fadeSteps) {
+        royalRollFadeTimer = setTimeout(fade, 18);
+        return;
+      }
+      audio.pause();
+      audio.volume = ROYAL_ROLL_BASE_VOLUME;
+      audio.playbackRate = 1;
+      royalRollFadeTimer = null;
+    };
+
+    fade();
+  } catch { /* noop */ }
+}
+
+function getCommonDropAudio() {
+  if (!commonDropAudio) {
+    commonDropAudio = new Audio(COMMON_DROP_SOUND_SRC);
+    commonDropAudio.preload = 'auto';
+    commonDropAudio.volume = COMMON_DROP_SOUND_VOL * MASTER_VOL;
+  }
+  return commonDropAudio;
+}
+
+function playCommonDropSample() {
+  try {
+    const audio = getCommonDropAudio();
+    audio.pause();
+    audio.currentTime = 0;
+    void audio.play().catch(() => {});
+  } catch { /* noop */ }
+}
+
+function getMidDropAudio() {
+  if (!midDropAudio) {
+    midDropAudio = new Audio(MID_DROP_SOUND_SRC);
+    midDropAudio.preload = 'auto';
+    midDropAudio.volume = MID_DROP_SOUND_VOL * MASTER_VOL;
+  }
+  return midDropAudio;
+}
+
+function playMidDropSample() {
+  try {
+    const audio = getMidDropAudio();
+    audio.pause();
+    audio.currentTime = 0;
+    void audio.play().catch(() => {});
+  } catch { /* noop */ }
+}
+
+function getRoyalLandAudio() {
+  if (!royalLandAudio) {
+    royalLandAudio = new Audio(ROYAL_LAND_SOUND_SRC);
+    royalLandAudio.preload = 'auto';
+    royalLandAudio.volume = ROYAL_LAND_SOUND_VOL * MASTER_VOL;
+  }
+  return royalLandAudio;
+}
+
+function playRoyalLandSample() {
+  try {
+    const audio = getRoyalLandAudio();
+    audio.pause();
+    audio.currentTime = 0;
+    void audio.play().catch(() => {});
+  } catch { /* noop */ }
+}
+
+export function preloadRollSound() {
+  try {
+    getRollAudio().load();
+    getRoyalRollAudio().load();
+    getCommonDropAudio().load();
+    getMidDropAudio().load();
+    getRoyalLandAudio().load();
+  } catch { /* noop */ }
+}
 
 function ac() {
   if (!ctx) ctx = new AudioContext();
@@ -79,36 +290,34 @@ function clickPop(vol: number, when = 0, bright = 2200) {
   } catch { /* noop */ }
 }
 
-/** Minimal muted peg — fixed pitch, no sweep, short decay. */
-function wheelTick(intensity: number) {
-  try {
-    const c = ac();
-    const t = c.currentTime;
-    const i = Math.max(0, Math.min(1, intensity));
-    const vol = (0.04 + i * 0.05) * VOL;
-    const dur = 0.012;
-
-    const o = c.createOscillator();
-    const g = c.createGain();
-    const lp = c.createBiquadFilter();
-    lp.type = 'lowpass';
-    lp.frequency.value = 680;
-
-    o.type = 'sine';
-    o.frequency.setValueAtTime(260 + i * 70, t);
-    g.gain.setValueAtTime(0.0001, t);
-    g.gain.linearRampToValueAtTime(vol, t + 0.003);
-    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
-    o.connect(lp);
-    lp.connect(g);
-    g.connect(out());
-    o.start(t);
-    o.stop(t + dur + 0.02);
-  } catch { /* noop */ }
+/** Roll ticks are covered by the custom roll sample. */
+function wheelTick(_intensity: number) {
+  /* noop */
 }
 
-function wheelLand() {
-  punchTone(95, 0.1, 0.1 * VOL, 0, 'sine', 750);
+function wheelLand(options?: { keepRoyalRoll?: boolean }) {
+  stopRollSample();
+  if (!options?.keepRoyalRoll) stopRoyalRollSample();
+}
+
+function upgradeStart(turbo = false) {
+  playRollSample(turbo);
+}
+
+function royalRollStart(turbo = false) {
+  playRoyalRollSample(turbo);
+}
+
+function caseDropCommon() {
+  playCommonDropSample();
+}
+
+function caseDropMid() {
+  playMidDropSample();
+}
+
+function royalLand() {
+  playRoyalLandSample();
 }
 
 function win() {
@@ -139,19 +348,16 @@ function select() {
   punchTone(1174.66, 0.12, 0.15 * VOL, 0.05, 'sine', 7000);
 }
 
-function upgradeStart() {
-  punchTone(220, 0.08, 0.14 * VOL, 0, 'sine', 3000);
-  punchTone(440, 0.1, 0.16 * VOL, 0.04, 'triangle', 5000);
-  punchTone(880, 0.12, 0.14 * VOL, 0.08, 'sine', 6500);
-  clickPop(0.12 * VOL, 0.06, 3400);
-}
-
 export const WHEEL_DEG_PER_TICK = 360 / 48;
 
 export const sfx = {
   upgradeStart,
+  royalRollStart,
   wheelTick,
   wheelLand,
+  caseDropCommon,
+  caseDropMid,
+  royalLand,
   win,
   lose,
   select,
@@ -202,5 +408,7 @@ export class WheelSpinAudio {
 
   finish() {
     sfx.wheelLand();
+    stopRollSample();
+    stopRoyalRollSample();
   }
 }

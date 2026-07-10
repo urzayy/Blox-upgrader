@@ -1,5 +1,11 @@
-import { loginAccountOnServer, registerAccountOnServer } from './userDbApi';
+import { loginAccountOnServer, registerAccountOnServer, requestServerSession } from './userDbApi';
 import { fetchAccountBanStatus } from './accountBanApi';
+import { applyPlayerStateSnapshot } from './playerStateHydration';
+import {
+  type ProfileAvatarId,
+  avatarIdFromEmail,
+  pickRandomAvatarId,
+} from './profileAvatars';
 
 export interface Account {
   id: string;
@@ -10,12 +16,14 @@ export interface Account {
   acceptedAge: boolean;
   acceptedTerms: boolean;
   nickname?: string;
+  avatarId?: ProfileAvatarId;
 }
 
 export interface Session {
   userId: string;
   email: string;
   nickname?: string;
+  avatarId?: ProfileAvatarId;
 }
 
 export interface AuthResult {
@@ -33,10 +41,24 @@ function loadAccounts(): Account[] {
     if (!raw) return [];
     const parsed: unknown = JSON.parse(raw);
     if (!Array.isArray(parsed)) return [];
-    return parsed.filter(isAccount);
+    const accounts = parsed.filter(isAccount);
+    return migrateAccountsAvatars(accounts);
   } catch {
     return [];
   }
+}
+
+function migrateAccountsAvatars(accounts: Account[]): Account[] {
+  let changed = false;
+  const next = accounts.map(account => {
+    if (account.avatarId === 1 || account.avatarId === 2 || account.avatarId === 3) {
+      return account;
+    }
+    changed = true;
+    return { ...account, avatarId: avatarIdFromEmail(account.email) };
+  });
+  if (changed) saveAccounts(next);
+  return next;
 }
 
 function saveAccounts(accounts: Account[]): void {
@@ -59,6 +81,7 @@ function isAccount(value: unknown): value is Account {
     && typeof a.acceptedAge === 'boolean'
     && typeof a.acceptedTerms === 'boolean'
     && (a.nickname === undefined || typeof a.nickname === 'string')
+    && (a.avatarId === undefined || a.avatarId === 1 || a.avatarId === 2 || a.avatarId === 3)
   );
 }
 
@@ -67,6 +90,7 @@ function sessionFromAccount(account: Account): Session {
     userId: account.id,
     email: account.email,
     nickname: account.nickname,
+    avatarId: account.avatarId ?? avatarIdFromEmail(account.email),
   };
 }
 
@@ -134,7 +158,16 @@ export function findAccountByUserId(userId: string): Account | null {
 export async function pushAccountToServer(userId: string): Promise<boolean> {
   const account = findAccountByUserId(userId);
   if (account) {
-    return registerAccountOnServer(account);
+    const result = await registerAccountOnServer(account);
+    if (result === 'ok') return true;
+    if (result === 'conflict') {
+      return loginAccountOnServer({
+        userId: account.id,
+        email: account.email,
+        nickname: account.nickname,
+      });
+    }
+    return false;
   }
   const session = loadSession();
   if (session?.userId === userId) {
@@ -145,6 +178,43 @@ export async function pushAccountToServer(userId: string): Promise<boolean> {
     });
   }
   return false;
+}
+
+async function upsertLocalAccountFromCredentials(
+  accounts: Account[],
+  payload: {
+    userId: string;
+    email: string;
+    password: string;
+    salt?: string;
+    nickname?: string;
+    acceptedAge?: boolean;
+    acceptedTerms?: boolean;
+    createdAt?: number;
+    avatarId?: ProfileAvatarId;
+  },
+): Promise<Account> {
+  const normalized = normalizeEmail(payload.email);
+  const salt = payload.salt ?? randomSalt();
+  const passwordHash = await hashPassword(payload.password, salt);
+  const existing = accounts.find(a => a.email === normalized);
+
+  const account: Account = {
+    id: payload.userId,
+    email: normalized,
+    passwordHash,
+    salt,
+    createdAt: existing?.createdAt ?? payload.createdAt ?? Date.now(),
+    acceptedAge: existing?.acceptedAge ?? payload.acceptedAge ?? true,
+    acceptedTerms: existing?.acceptedTerms ?? payload.acceptedTerms ?? true,
+    nickname: payload.nickname?.trim() || existing?.nickname,
+    avatarId: existing?.avatarId ?? payload.avatarId ?? avatarIdFromEmail(normalized),
+  };
+
+  const nextAccounts = accounts.filter(a => a.email !== normalized && a.id !== payload.userId);
+  nextAccounts.push(account);
+  saveAccounts(nextAccounts);
+  return account;
 }
 
 export async function loginOrRegister(
@@ -161,6 +231,42 @@ export async function loginOrRegister(
 
   const accounts = loadAccounts();
   const existing = accounts.find(a => a.email === normalized);
+  const serverSession = await requestServerSession(normalized, password);
+
+  if (serverSession.wrongPassword) {
+    return { ok: false, error: 'Contraseña incorrecta.' };
+  }
+
+  if (serverSession.ok && serverSession.user) {
+    const banStatus = await fetchAccountBanStatus(normalized);
+    if (banStatus.banned) {
+      return { ok: false, error: 'Cuenta suspendida.' };
+    }
+
+    const account = await upsertLocalAccountFromCredentials(accounts, {
+      userId: serverSession.user.userId,
+      email: normalized,
+      password,
+      salt: serverSession.user.salt,
+      nickname: serverSession.user.nickname ?? existing?.nickname,
+      acceptedAge: existing?.acceptedAge ?? opts.acceptedAge,
+      acceptedTerms: existing?.acceptedTerms ?? opts.acceptedTerms,
+      avatarId: existing?.avatarId,
+    });
+
+    if (serverSession.playerState) {
+      applyPlayerStateSnapshot(account.id, serverSession.playerState);
+    }
+
+    const session = sessionFromAccount(account);
+    saveSession(session);
+    await loginAccountOnServer({
+      userId: account.id,
+      email: account.email,
+      nickname: account.nickname,
+    });
+    return { ok: true, session, isNewAccount: false };
+  }
 
   if (existing) {
     const hash = await hashPassword(password, existing.salt);
@@ -179,6 +285,10 @@ export async function loginOrRegister(
       nickname: existing.nickname,
     });
     return { ok: true, session };
+  }
+
+  if (!serverSession.notFound) {
+    return { ok: false, error: 'No se pudo iniciar sesión. Inténtalo de nuevo.' };
   }
 
   if (!opts.acceptedAge || !opts.acceptedTerms) {
@@ -203,12 +313,19 @@ export async function loginOrRegister(
     createdAt: Date.now(),
     acceptedAge: opts.acceptedAge,
     acceptedTerms: opts.acceptedTerms,
+    avatarId: pickRandomAvatarId(),
   };
 
   saveAccounts([...accounts, account]);
   const session = sessionFromAccount(account);
   saveSession(session);
-  await registerAccountOnServer(account);
+  const registered = await registerAccountOnServer(account);
+  if (registered === 'conflict') {
+    saveSession(null);
+    const withoutNew = accounts.filter(a => a.id !== account.id);
+    saveAccounts(withoutNew);
+    return { ok: false, error: 'Esta cuenta ya existe. Inicia sesión con tu correo.' };
+  }
   return { ok: true, session, isNewAccount: true };
 }
 
