@@ -373,15 +373,15 @@
       },
       {
         "skinId": "skin_140_gut_rusted",
-        "chance": 10
+        "chance": 5
       },
       {
         "skinId": "skin_143_hand_wraps_hunter",
-        "chance": 20
+        "chance": 10
       },
       {
         "skinId": "skin_270_p250_pulse",
-        "chance": 40
+        "chance": 55
       }
     ]
   },
