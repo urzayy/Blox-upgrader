@@ -347,6 +347,40 @@
       }
     ]
   },
+  "hand-wraps-box": {
+    "price": 500,
+    "featuredSkinId": "skin_041_stiletto_blackwidow",
+    "entries": [
+      {
+        "skinId": "skin_041_stiletto_blackwidow",
+        "chance": 1
+      },
+      {
+        "skinId": "skin_067_bayonet_naval",
+        "chance": 1
+      },
+      {
+        "skinId": "skin_113_stiletto_rusted",
+        "chance": 3
+      },
+      {
+        "skinId": "skin_134_operator_gloves_hunter",
+        "chance": 5
+      },
+      {
+        "skinId": "skin_153_glock_18_aurora",
+        "chance": 10
+      },
+      {
+        "skinId": "skin_156_desert_eagle_high_octane",
+        "chance": 20
+      },
+      {
+        "skinId": "skin_272_p90_big_cat",
+        "chance": 60
+      }
+    ]
+  },
   "riot-zone": {
     "price": 1000,
     "featuredSkinId": "skin_019_karambit_scarlet",
