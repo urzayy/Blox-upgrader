@@ -588,6 +588,8 @@ interface Props {
   caseLabel: string;
   turbo: boolean;
   soundOn: boolean;
+  /** Plays BloxRoyal land/roll sounds without enabling every reel's drop sfx. */
+  royalSoundOn?: boolean;
   size?: ReelSize;
   orientation?: 'horizontal' | 'vertical';
   embedded?: boolean;
@@ -608,6 +610,7 @@ export function FreeCaseReelOpener({
   caseLabel,
   turbo,
   soundOn,
+  royalSoundOn = soundOn,
   size = 'default',
   orientation = 'horizontal',
   embedded = false,
@@ -644,6 +647,7 @@ export function FreeCaseReelOpener({
   const revealedRef = useRef(false);
   const rollTurboRef = useRef(turbo);
   const soundOnRef = useRef(soundOn);
+  const royalSoundOnRef = useRef(royalSoundOn);
   const rollSessionRef = useRef(0);
   const rollTweenRef = useRef<gsap.core.Tween | null>(null);
   const royalHoldTimerRef = useRef<number | null>(null);
@@ -657,6 +661,7 @@ export function FreeCaseReelOpener({
   onRevealRef.current = onReveal;
   phaseRef.current = phase;
   soundOnRef.current = soundOn;
+  royalSoundOnRef.current = royalSoundOn;
 
   const clearIntroTimer = () => {
     if (introTimerRef.current) {
@@ -811,9 +816,10 @@ export function FreeCaseReelOpener({
       if (isStale() || !stripRef.current) return;
       const scrollTarget = frozenTargetRef.current;
       setPhase('rolling');
-      if (soundOnRef.current) {
-        if (isRoyalSpinPass) sfx.royalRollStart(useTurbo);
-        else sfx.caseRollStart(useTurbo);
+      if (isRoyalSpinPass) {
+        if (royalSoundOnRef.current) sfx.royalRollStart(useTurbo);
+      } else if (soundOnRef.current) {
+        sfx.caseRollStart(useTurbo);
       }
 
       rollTweenRef.current?.kill();
@@ -824,10 +830,8 @@ export function FreeCaseReelOpener({
         if (!isRoyalSpinPass && pendingBase?.isRoyalSpin && pendingBase.royalReel) {
           setOffset(scrollTarget);
           setPhase('royal-hold');
-          if (soundOnRef.current) {
-            sfx.caseWheelLand();
-            sfx.royalLand();
-          }
+          if (soundOnRef.current) sfx.caseWheelLand();
+          if (royalSoundOnRef.current) sfx.royalLand();
           clearRoyalHoldTimer();
           royalHoldTimerRef.current = window.setTimeout(() => {
             if (phaseRef.current !== 'royal-hold') return;

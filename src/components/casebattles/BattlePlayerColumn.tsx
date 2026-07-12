@@ -218,6 +218,9 @@ export function BattlePlayerColumn({
                   caseLabel={caseLabel}
                   turbo={false}
                   soundOn={slotIndex === 0}
+                  royalSoundOn={Boolean(
+                    roundSession?.result?.isRoyalSpin && roundSession?.result?.royalReel,
+                  )}
                   size={reelSize}
                   orientation="vertical"
                   embedded

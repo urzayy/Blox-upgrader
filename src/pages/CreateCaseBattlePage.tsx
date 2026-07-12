@@ -7,6 +7,7 @@ import { navigateCaseBattle, navigateCaseBattles } from '../lib/appRoute';
 import {
   BATTLE_MODE_DESCRIPTIONS,
   BATTLE_FORMATS,
+  isBattleFormatAvailable,
   battleLoanEntryCost,
   getBattleFormatMeta,
 } from '../lib/caseBattleCreate';
@@ -166,6 +167,10 @@ export function CreateCaseBattlePage({ balance }: Props) {
       setError('You don\'t have enough balance');
       return;
     }
+    if (!isBattleFormatAvailable(format)) {
+      setError('This battle format is no longer available');
+      return;
+    }
     if (!requestChargeBattleEntry(entryCost)) {
       setError('You don\'t have enough balance');
       return;
@@ -305,7 +310,7 @@ export function CreateCaseBattlePage({ balance }: Props) {
                 onChange={event => setFormat(event.target.value as BattleFormat)}
                 className="h-11 w-full rounded-lg border border-white/10 bg-[#171a22] px-3 font-display text-[11px] font-black uppercase tracking-[0.08em] text-white focus:border-lime-400/40 focus:outline-none"
               >
-                {BATTLE_FORMATS.map(option => (
+                {BATTLE_FORMATS.filter(option => isBattleFormatAvailable(option.id)).map(option => (
                   <option key={option.id} value={option.id}>
                     {option.label}
                   </option>

@@ -3,7 +3,7 @@ import type { Skin } from '../data/skins';
 import type { ProfileAvatarId } from './profileAvatars';
 import type { FreeCaseReelResult } from './freeCaseReel';
 import { battleSlotsTotalCost, expandBattleSlots } from './caseBattleCatalog';
-import { battleLoanEntryCost } from './caseBattleCreate';
+import { battleLoanEntryCost, isBattleFormatAvailable } from './caseBattleCreate';
 import { defaultBotSideForSlot, hostBattleSlotIndex, type BattleSide } from './battleSides';
 import { loadLiveBattles, type BattleCaseSlot } from './caseBattlesStorage';
 
@@ -124,7 +124,9 @@ export function isLiveCaseBattle(battle: CaseBattle): boolean {
 }
 
 export function getLiveCaseBattles(): CaseBattle[] {
-  return loadLiveBattles().filter(isLiveCaseBattle);
+  return loadLiveBattles().filter(
+    battle => isLiveCaseBattle(battle) && isBattleFormatAvailable(battle.format),
+  );
 }
 
 export function getCaseBattleById(id: string): CaseBattle | undefined {

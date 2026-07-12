@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 
 import { navigateCaseBattles } from '../lib/appRoute';
+import { isBattleFormatAvailable } from '../lib/caseBattleCreate';
 
 import {
 
@@ -189,6 +190,11 @@ export function CaseBattleDetailPage({ battleId, balance }: Props) {
   const nextOpenSlot = battle ? getNextOpenBattleSlot(battle) : 0;
 
 
+
+  useEffect(() => {
+    if (!battle || isBattleFormatAvailable(battle.format)) return;
+    navigateCaseBattles();
+  }, [battle?.format, battle?.id]);
 
   useEffect(() => {
 

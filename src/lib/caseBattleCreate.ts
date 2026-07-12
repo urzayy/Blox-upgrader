@@ -10,9 +10,15 @@ export const BATTLE_FORMATS: {
   { id: '1v1v1', label: '1 vs 1 vs 1', maxPlayers: 3 },
   { id: '1v1v1v1', label: '1 vs 1 vs 1 vs 1', maxPlayers: 4 },
   { id: '2v2', label: '2 vs 2', maxPlayers: 4, teamSizes: [2, 2] },
-  { id: '2v2v2', label: '2 vs 2 vs 2', maxPlayers: 6, teamSizes: [2, 2, 2] },
   { id: '3v3', label: '3 vs 3', maxPlayers: 6, teamSizes: [3, 3] },
 ];
+
+/** Formats hidden from UI and live listings (legacy battles may still exist in storage). */
+export const DISABLED_BATTLE_FORMATS: BattleFormat[] = ['2v2v2'];
+
+export function isBattleFormatAvailable(format: BattleFormat): boolean {
+  return !DISABLED_BATTLE_FORMATS.includes(format);
+}
 
 export const BATTLE_MODE_DESCRIPTIONS: Record<BattleMode, string> = {
   classic:
