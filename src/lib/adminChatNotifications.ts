@@ -35,15 +35,15 @@ interface Options {
 function buildNewChatPreview(item: AdminInboxItem): string {
   const skinCount = item.ticket.skins.length;
   const type = getTicketType(item.ticket);
-  if (type === 'help') return 'Nuevo chat de ayuda';
+  if (type === 'help') return 'New help chat';
   if (type === 'deposit') {
     return skinCount > 0
-      ? `Nuevo chat de depósito · ${skinCount} skins`
-      : 'Nuevo chat de depósito';
+      ? `New deposit chat · ${skinCount} skins`
+      : 'New deposit chat';
   }
   return skinCount > 0
-    ? `Nuevo chat de retiro · ${skinCount} skins`
-    : 'Nuevo chat de retiro';
+    ? `New withdrawal chat · ${skinCount} skins`
+    : 'New withdrawal chat';
 }
 
 export function useAdminChatNotifications({
@@ -134,7 +134,7 @@ export function useAdminChatNotifications({
               ticketType: getTicketType(item.ticket),
               userLabel: item.ticket.userLabel,
               userEmail: item.ticket.userEmail,
-              preview: item.lastUserMessageText?.trim() || 'Nuevo mensaje en el chat',
+              preview: item.lastUserMessageText?.trim() || 'New message in chat',
               createdAt: Date.now(),
             });
           }

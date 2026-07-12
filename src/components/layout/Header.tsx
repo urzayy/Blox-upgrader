@@ -10,6 +10,7 @@ import { AdminChatNotificationStack } from '../admin/AdminChatNotificationStack'
 import { AdminUserDbPanel } from '../admin/AdminUserDbPanel';
 import { AdminSeePanel } from '../admin/AdminSeePanel';
 import { AdminClearPanel } from '../admin/AdminClearPanel';
+import { AdminAnnouncementPanel } from '../admin/AdminAnnouncementPanel';
 import { WithdrawModal } from '../withdraw/WithdrawModal';
 import { WithdrawChatModal } from '../withdraw/WithdrawChatModal';
 import { DepositModal, type DepositItem } from '../deposit/DepositModal';
@@ -17,6 +18,7 @@ import { DepositMethodModal } from '../deposit/DepositMethodModal';
 import { RobuxDepositModal } from '../deposit/RobuxDepositModal';
 import type { AppliedDepositBonus } from '../../lib/depositBonusCode';
 import { LiveChatsInbox } from '../support/LiveChatsInbox';
+import { LiveChatsFloatingButton } from '../support/LiveChatsFloatingButton';
 import { fetchUserWithdrawTickets, type WithdrawTicket } from '../../lib/withdrawChat';
 import { useAdminChatNotifications } from '../../lib/adminChatNotifications';
 import { useActivityLog } from '../../hooks/useActivityLog';
@@ -70,8 +72,9 @@ export function Header({
   const isUpgradePage = useAppRoute() === 'upgrade';
   const isFreeCasesPage = useAppRoute() === 'free-cases';
   const isGiveawaysPage = useAppRoute() === 'giveaways';
+  const isCaseBattlesPage = useAppRoute() === 'case-battles';
   const isAdminPage = useAppRoute() === 'admin';
-  const isScrollableHeader = isMainPage || isProfilePage || isUpgradePage || isFreeCasesPage || isGiveawaysPage || isAdminPage;
+  const isScrollableHeader = isMainPage || isProfilePage || isUpgradePage || isFreeCasesPage || isGiveawaysPage || isCaseBattlesPage || isAdminPage;
   const [adminOpen, setAdminOpen] = useState(false);
   const [giftOpen, setGiftOpen] = useState(false);
   const [giftMoneyOpen, setGiftMoneyOpen] = useState(false);
@@ -87,6 +90,7 @@ export function Header({
   const [userDbOpen, setUserDbOpen] = useState(false);
   const [seeOpen, setSeeOpen] = useState(false);
   const [clearOpen, setClearOpen] = useState(false);
+  const [announcementOpen, setAnnouncementOpen] = useState(false);
   const [openLiveChatCount, setOpenLiveChatCount] = useState(0);
 
   const activeAdminTicketId = isAdmin && supportChatOpen ? supportChatTicketId : null;
@@ -154,6 +158,10 @@ export function Header({
       log('CLICK.open_admin');
       setAdminOpen(true);
     });
+    registerAdminPanelHandler('announcement', () => {
+      log('CLICK.open_admin_announcement');
+      setAnnouncementOpen(true);
+    });
     return () => {
       registerAdminPanelHandler('clear', null);
       registerAdminPanelHandler('see', null);
@@ -162,6 +170,7 @@ export function Header({
       registerAdminPanelHandler('gift', null);
       registerAdminPanelHandler('userDb', null);
       registerAdminPanelHandler('skinPicker', null);
+      registerAdminPanelHandler('announcement', null);
     };
   }, [isAdmin, log]);
 
@@ -284,6 +293,16 @@ export function Header({
         />
       )}
       {user && (
+        <LiveChatsFloatingButton
+          open={liveChatsOpen}
+          openCount={openLiveChatCount}
+          onOpen={() => {
+            log('CLICK.open_live_chats_fab');
+            setLiveChatsOpen(true);
+          }}
+        />
+      )}
+      {user && (
         <WithdrawChatModal
           open={supportChatOpen}
           ticketId={supportChatTicketId}
@@ -304,6 +323,13 @@ export function Header({
           adminEmail={user.email}
           onClose={() => setClearOpen(false)}
           onAccountCleared={onAccountCleared}
+        />
+      )}
+      {user && isAdmin && (
+        <AdminAnnouncementPanel
+          open={announcementOpen}
+          adminEmail={user.email}
+          onClose={() => setAnnouncementOpen(false)}
         />
       )}
       {user && isAdmin && (
@@ -329,7 +355,7 @@ export function Header({
 
       <header className={
         DEV_MOBILE_LAYOUT
-          ? `${isScrollableHeader ? 'relative' : 'sticky top-0'} z-50 border-b backdrop-blur-xl lg:px-4 ${
+          ? `${isScrollableHeader ? 'relative' : 'sticky top-0'} z-50 border-b backdrop-blur-xl max-lg:border-white/5 max-lg:bg-[#0a0812]/90 lg:px-4 ${
             DEV_CLEAN_HEADER_LAYOUT
               ? cleanHeaderShell('lg:px-10')
               : 'border-white/5 bg-deep/90 lg:py-3'
@@ -347,14 +373,8 @@ export function Header({
           inventory={inventory}
           playersOnline={playersOnline}
           user={user}
-          openLiveChatCount={openLiveChatCount}
-          liveChatsOpen={liveChatsOpen}
           withdrawOpen={withdrawOpen}
           onOpenLogin={openLogin}
-          onOpenLiveChats={() => {
-            log('CLICK.open_live_chats');
-            setLiveChatsOpen(true);
-          }}
           onOpenDeposit={openDepositFlow}
           onOpenWithdraw={() => openWithdrawFlow()}
         />
@@ -393,7 +413,7 @@ export function Header({
           <div className="flex items-center gap-1.5 pl-0.5">
             <span className="h-2 w-2 animate-pulse rounded-full bg-win shadow-[0_0_8px_rgba(0,230,118,0.65)]" />
             <span className="font-display text-[11px] font-semibold tabular-nums text-white/75">
-              {playersOnline.toLocaleString('es-ES')}
+              {playersOnline.toLocaleString('en-US')}
             </span>
             <span className="text-[10px] font-medium uppercase tracking-wide text-white/40">online</span>
           </div>
@@ -402,13 +422,13 @@ export function Header({
           <div className="flex items-center gap-1.5 rounded-lg border border-white/5 bg-panel/80 px-2.5 py-1">
             <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-win" />
             <span className="font-display text-[11px] font-semibold tabular-nums text-white/80">
-              {playersOnline.toLocaleString('es-ES')}
+              {playersOnline.toLocaleString('en-US')}
             </span>
             <span className="text-[10px] text-white/40">online</span>
           </div>
           <div className="flex items-center gap-1.5 rounded-lg border border-white/5 bg-panel/80 px-2.5 py-1">
             <span className="font-display text-[11px] font-semibold tabular-nums text-gold">
-              {totalUpgrades.toLocaleString('es-ES')}
+              {totalUpgrades.toLocaleString('en-US')}
             </span>
             <span className="text-[10px] text-white/40">upgrades</span>
           </div>
@@ -426,7 +446,7 @@ export function Header({
         {!DEV_CLEAN_HEADER_LAYOUT && (
         <div className="flex items-center gap-1.5">
           <Stat label="Inventory value" value={inventoryTotal(inventory)} />
-          <Stat label="SALDO" value={balance} />
+          <Stat label="BALANCE" value={balance} />
         </div>
         )}
       </div>
@@ -444,7 +464,7 @@ export function Header({
                   log('CLICK.open_live_chats');
                   setLiveChatsOpen(true);
                 }}
-                className={`relative rounded-md border font-display font-bold uppercase transition ${
+                className={`relative hidden rounded-md border font-display font-bold uppercase transition lg:inline-flex ${
                   DEV_CLEAN_HEADER_LAYOUT
                     ? 'px-4 py-2.5 text-xs tracking-[0.1em]'
                     : 'px-3 py-1.5 text-[10px] tracking-[0.12em] backdrop-blur-xl'
@@ -471,7 +491,7 @@ export function Header({
                 )}
               </button>
               {DEV_CLEAN_HEADER_LAYOUT && (
-                <Stat label="SALDO" value={balance} slim cleanChip />
+                <Stat label="BALANCE" value={balance} slim cleanChip />
               )}
             <button
               type="button"

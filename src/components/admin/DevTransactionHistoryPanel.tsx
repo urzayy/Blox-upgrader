@@ -16,7 +16,7 @@ interface Props {
 }
 
 function formatWhen(timestamp: number): string {
-  return new Date(timestamp).toLocaleString('es-ES', {
+  return new Date(timestamp).toLocaleString('en-US', {
     day: '2-digit',
     month: '2-digit',
     year: 'numeric',
@@ -28,7 +28,7 @@ function formatWhen(timestamp: number): string {
 function statusLabel(status: WithdrawTicketStatus): string {
   if (status === 'completed') return 'Completado';
   if (status === 'cancelled') return 'Cancelado';
-  return 'Abierto';
+  return 'Open';
 }
 
 function statusClass(status: WithdrawTicketStatus): string {
@@ -38,7 +38,7 @@ function statusClass(status: WithdrawTicketStatus): string {
 }
 
 function typeLabel(ticket: WithdrawTicket): string {
-  return getTicketType(ticket) === 'deposit' ? 'Depósito' : 'Retiro';
+  return getTicketType(ticket) === 'deposit' ? 'Deposit' : 'Withdrawal';
 }
 
 function typeClass(ticket: WithdrawTicket): string {
@@ -71,7 +71,7 @@ export function DevTransactionHistoryPanel({ open, onClose }: Props) {
       setError('');
     } catch {
       setTickets([]);
-      setError('No se pudo cargar el historial.');
+      setError('Could not load history.');
     } finally {
       setLoading(false);
     }
@@ -103,7 +103,7 @@ export function DevTransactionHistoryPanel({ open, onClose }: Props) {
         >
           <button
             type="button"
-            aria-label="Cerrar historial"
+            aria-label="Close history"
             className="absolute inset-0 bg-black/80 backdrop-blur-sm"
             onClick={onClose}
           />
@@ -121,10 +121,10 @@ export function DevTransactionHistoryPanel({ open, onClose }: Props) {
             <div className="flex shrink-0 items-center justify-between gap-3 border-b border-gold/15 px-4 py-3">
               <div>
                 <h2 id="dev-history-title" className="font-display text-base font-bold uppercase tracking-wide text-gold">
-                  Historial
+                  History
                 </h2>
                 <p className="text-[11px] text-white/45">
-                  Todos los depósitos y retiros registrados
+                  All registered deposits and withdrawals
                 </p>
               </div>
               <div className="flex items-center gap-2">
@@ -134,14 +134,14 @@ export function DevTransactionHistoryPanel({ open, onClose }: Props) {
                   disabled={loading}
                   className="rounded-lg border border-white/10 px-3 py-1.5 text-xs text-white/60 transition hover:border-white/25 hover:text-white disabled:opacity-40"
                 >
-                  Actualizar
+                  Refresh
                 </button>
                 <button
                   type="button"
                   onClick={onClose}
                   className="rounded-lg border border-white/10 px-3 py-1.5 text-xs text-white/50 transition hover:border-white/25 hover:text-white"
                 >
-                  Cerrar
+                  Close
                 </button>
               </div>
             </div>
@@ -152,10 +152,10 @@ export function DevTransactionHistoryPanel({ open, onClose }: Props) {
                   Total: {totals.all}
                 </span>
                 <span className="rounded-md border border-gold/20 bg-gold/10 px-2 py-1 text-gold">
-                  Depósitos: {totals.deposits}
+                  Deposits: {totals.deposits}
                 </span>
                 <span className="rounded-md border border-white/15 bg-white/5 px-2 py-1 text-white/70">
-                  Retiros: {totals.withdraws}
+                  Withdrawals: {totals.withdraws}
                 </span>
               </div>
             </div>
@@ -168,9 +168,9 @@ export function DevTransactionHistoryPanel({ open, onClose }: Props) {
               )}
 
               {loading && tickets.length === 0 ? (
-                <p className="py-16 text-center text-sm text-white/40">Cargando historial…</p>
+                <p className="py-16 text-center text-sm text-white/40">Loading history…</p>
               ) : tickets.length === 0 ? (
-                <p className="py-16 text-center text-sm text-white/40">No hay depósitos ni retiros registrados.</p>
+                <p className="py-16 text-center text-sm text-white/40">No deposits or withdrawals recorded.</p>
               ) : (
                 <div className="space-y-2">
                   {tickets.map(ticket => (

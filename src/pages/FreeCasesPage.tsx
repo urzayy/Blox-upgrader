@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState, type MouseEvent } from 'react';
+import { useAuth } from '../context/AuthContext';
 import { navigateFreeCase } from '../lib/appRoute';
-import { isFreeCaseUnlockedForPlayer } from '../lib/devFreeCaseBypass';
+import { canPlayerOpenFreeCase } from '../lib/freeCaseUnlock';
 import { caseHasRoyalLoot } from '../lib/freeCaseRoyal';
 import { FREE_CASE_TIERS, pathForFreeCaseSlug, slugForTier, type FreeCaseTier } from '../lib/freeCaseTiers';
-import { usePlayerLevel } from '../hooks/usePlayerLevel';
 import { useFreeCaseCooldown } from '../hooks/useFreeCaseCooldown';
 import { FreeCasePortada } from '../components/freecases/FreeCaseCover';
 
@@ -36,11 +36,16 @@ function FreeCaseCard({
 
   const handleClick = (e: MouseEvent<HTMLAnchorElement>) => {
     e.preventDefault();
+    if (!unlocked) return;
     navigateFreeCase(slug);
   };
 
   const linkClass =
-    'block cursor-pointer rounded-xl transition duration-200 hover:scale-[1.02] hover:brightness-110 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-400';
+    `block rounded-xl transition duration-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-400 ${
+      unlocked
+        ? 'cursor-pointer hover:scale-[1.02] hover:brightness-110'
+        : 'cursor-not-allowed opacity-80'
+    }`;
 
   return (
     <a
@@ -61,7 +66,7 @@ function FreeCaseCard({
         {unlocked ? (
           ready ? (
             <span className="font-display text-xs font-bold uppercase tracking-[0.14em] text-win sm:text-sm">
-              Lista para abrir
+              Ready to open
             </span>
           ) : (
             <div className="flex items-center justify-center gap-2">
@@ -100,10 +105,10 @@ function HowItWorksMenu() {
   }, [open]);
 
   const steps = [
-    { n: '1', title: 'Juega', desc: 'Haz upgrades y juega en BloxUpgrader para ganar experiencia.' },
-    { n: '2', title: 'Gana XP', desc: 'Cada partida te da XP según tu actividad en la plataforma.' },
-    { n: '3', title: 'Sube de nivel', desc: 'Al acumular XP subes de nivel y desbloqueas nuevos rangos.' },
-    { n: '4', title: 'Consigue cajas', desc: 'Cada nivel desbloquea una caja diaria gratis de Bloxstrike.' },
+    { n: '1', title: 'Play', desc: 'Upgrade and play on BloxUpgrader to earn experience.' },
+    { n: '2', title: 'Earn XP', desc: 'Each session grants XP based on your activity.' },
+    { n: '3', title: 'Level up', desc: 'Accumulate XP to unlock new ranks.' },
+    { n: '4', title: 'Get cases', desc: 'Each level unlocks a new daily free Bloxstrike case.' },
   ];
 
   return (
@@ -118,9 +123,9 @@ function HowItWorksMenu() {
       </button>
 
       {open && (
-        <div className="absolute right-0 top-full z-30 mt-2 w-[min(100vw-2rem,20rem)] rounded-xl border border-white/10 bg-[#141024]/95 p-4 shadow-[0_16px_40px_-12px_rgba(0,0,0,0.65)] backdrop-blur-md">
+        <div className="absolute left-1/2 top-full z-30 mt-2 w-[min(calc(100vw-1.5rem),20rem)] -translate-x-1/2 rounded-xl border border-white/10 bg-[#141024]/95 p-4 shadow-[0_16px_40px_-12px_rgba(0,0,0,0.65)] backdrop-blur-md sm:left-auto sm:right-0 sm:translate-x-0">
           <p className="mb-3 font-display text-[10px] font-bold uppercase tracking-[0.14em] text-violet-300">
-            Cómo funcionan las cajas
+            How free cases work
           </p>
           <ul className="space-y-3">
             {steps.map(step => (
@@ -142,10 +147,10 @@ function HowItWorksMenu() {
 }
 
 export function FreeCasesPage() {
-  const { level: playerLevel } = usePlayerLevel();
+  const { user } = useAuth();
 
   return (
-    <div className="relative w-full overflow-hidden px-2 py-5 pb-12 sm:px-4 lg:px-6 xl:px-8">
+    <div className="relative w-full overflow-hidden px-3 py-5 pb-24 sm:px-4 lg:px-6 xl:px-8">
       <div className="pointer-events-none absolute -left-24 top-0 h-72 w-72 rounded-full bg-violet-600/20 blur-[100px]" />
       <div className="pointer-events-none absolute -right-20 top-32 h-80 w-80 rounded-full bg-fuchsia-600/15 blur-[110px]" />
       <div className="pointer-events-none absolute bottom-0 left-1/3 h-64 w-96 -translate-x-1/2 rounded-full bg-indigo-600/10 blur-[90px]" />
@@ -168,13 +173,13 @@ export function FreeCasesPage() {
             <FreeCaseCard
               key={tier.level}
               tier={tier}
-              unlocked={isFreeCaseUnlockedForPlayer(tier.level, playerLevel, slugForTier(tier))}
+              unlocked={user ? canPlayerOpenFreeCase(user.userId, slugForTier(tier)) : false}
             />
           ))}
         </div>
 
         <p className="mt-8 text-center text-xs text-white/35">
-          Sube de nivel para desbloquear más cajas diarias. Las recompensas estarán disponibles muy pronto.
+          Level up to unlock more daily cases. Rewards will be available soon.
         </p>
       </section>
     </div>

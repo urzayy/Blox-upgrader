@@ -33,11 +33,11 @@ export async function uploadProfilePhoto(
       message?: string;
     };
     if (!res.ok) {
-      return { ok: false, error: data.message ?? data.error ?? 'No se pudo subir la foto.' };
+      return { ok: false, error: data.message ?? data.error ?? 'Could not upload photo.' };
     }
     return { ok: true, photo: data.photo };
   } catch {
-    return { ok: false, error: 'No se pudo conectar con el servidor.' };
+    return { ok: false, error: 'Could not connect to server.' };
   }
 }
 

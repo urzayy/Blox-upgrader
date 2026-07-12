@@ -44,7 +44,7 @@ export function AdminSeePanel({ open, adminEmail, localSession, onClose }: Props
   const handleSearch = async () => {
     const email = normalizeGrantEmail(targetEmail);
     if (!isValidGrantEmail(email)) {
-      setError('Introduce un correo electrónico válido.');
+      setError('Enter a valid email address.');
       setState(null);
       return;
     }
@@ -82,12 +82,12 @@ export function AdminSeePanel({ open, adminEmail, localSession, onClose }: Props
           inventory: localSession.inventory,
           updatedAt: Date.now(),
         });
-        setError('Mostrando inventario de este navegador. Aún no sincronizado en el servidor.');
+        setError('Showing inventory from this browser. Not yet synced to server.');
         return;
       }
 
       setState(null);
-      setError('Este jugador aún no ha sincronizado su inventario. Debe entrar al sitio al menos una vez.');
+      setError("This player hasn't synced inventory yet. They must visit the site at least once.");
     } catch (err) {
       if (
         localSession
@@ -103,17 +103,17 @@ export function AdminSeePanel({ open, adminEmail, localSession, onClose }: Props
         });
         setError(
           err instanceof Error && err.message.includes('column')
-            ? 'Falta configurar Supabase. Mostrando inventario local de este navegador.'
-            : 'Servidor no disponible. Mostrando inventario local de este navegador.',
+            ? 'Supabase not configured. Showing local inventory from this browser.'
+            : 'Server unavailable. Showing local inventory from this browser.',
         );
         return;
       }
       setError(
         err instanceof Error
           ? (err.message.includes('column') || err.message.includes('schema cache')
-            ? 'Falta ejecutar el SQL de inventario en Supabase. Mientras tanto, solo verás jugadores que hayan entrado recientemente.'
+            ? 'Inventory SQL must be run in Supabase. Until then, you will only see players who have visited recently.'
             : err.message)
-          : 'No se pudo cargar el inventario.',
+          : 'Could not load inventory.',
       );
       setState(null);
     } finally {
@@ -132,7 +132,7 @@ export function AdminSeePanel({ open, adminEmail, localSession, onClose }: Props
         >
           <button
             type="button"
-            aria-label="Cerrar"
+            aria-label="Close"
             className="absolute inset-0 bg-black/80 backdrop-blur-sm"
             onClick={onClose}
           />
@@ -153,7 +153,7 @@ export function AdminSeePanel({ open, adminEmail, localSession, onClose }: Props
                   See Inventory
                 </h2>
                 <p className="text-[11px] text-white/45">
-                  Busca el inventario de un jugador por correo
+                  Look up a player's inventory by email
                 </p>
               </div>
               <button
@@ -161,7 +161,7 @@ export function AdminSeePanel({ open, adminEmail, localSession, onClose }: Props
                 onClick={onClose}
                 className="rounded-lg border border-white/10 px-3 py-1.5 text-xs text-white/50 transition hover:border-white/25 hover:text-white"
               >
-                Cerrar
+                Close
               </button>
             </div>
 
@@ -174,7 +174,7 @@ export function AdminSeePanel({ open, adminEmail, localSession, onClose }: Props
                   onKeyDown={e => {
                     if (e.key === 'Enter') void handleSearch();
                   }}
-                  placeholder="correo@ejemplo.com"
+                  placeholder="email@example.com"
                   className="input-filter min-w-0 flex-1 text-sm"
                 />
                 <button
@@ -198,15 +198,15 @@ export function AdminSeePanel({ open, adminEmail, localSession, onClose }: Props
                 <>
                   <div className="mb-3 flex flex-wrap items-center gap-3 rounded-xl border border-white/10 bg-[#141820] px-3 py-2">
                     <div>
-                      <p className="text-[10px] uppercase tracking-wide text-white/40">Jugador</p>
+                      <p className="text-[10px] uppercase tracking-wide text-white/40">Player</p>
                       <p className="text-sm font-semibold text-white">{searchedEmail}</p>
                     </div>
                     <div>
-                      <p className="text-[10px] uppercase tracking-wide text-white/40">Saldo</p>
+                      <p className="text-[10px] uppercase tracking-wide text-white/40">Balance</p>
                       <CoinPrice value={state.balance} textClassName="font-display text-sm font-bold text-gold" />
                     </div>
                     <div>
-                      <p className="text-[10px] uppercase tracking-wide text-white/40">Inventario</p>
+                      <p className="text-[10px] uppercase tracking-wide text-white/40">Inventory</p>
                       <CoinPrice
                         value={inventoryTotal(state.inventory)}
                         textClassName="font-display text-sm font-bold text-gold"
@@ -218,13 +218,13 @@ export function AdminSeePanel({ open, adminEmail, localSession, onClose }: Props
                     </div>
                     {state.updatedAt > 0 && (
                       <div className="ml-auto text-[10px] text-white/30">
-                        Actualizado {new Date(state.updatedAt).toLocaleString('es-ES', { hour12: false })}
+                        Updated {new Date(state.updatedAt).toLocaleString('en-US', { hour12: false })}
                       </div>
                     )}
                   </div>
 
                   {sortedInventory.length === 0 ? (
-                    <p className="py-12 text-center text-sm text-white/40">Inventario vacío.</p>
+                    <p className="py-12 text-center text-sm text-white/40">Empty inventory.</p>
                   ) : (
                     <div className="grid grid-cols-[repeat(auto-fill,minmax(96px,1fr))] gap-2 sm:grid-cols-[repeat(auto-fill,minmax(108px,1fr))]">
                       {sortedInventory.map(skin => (
@@ -237,7 +237,7 @@ export function AdminSeePanel({ open, adminEmail, localSession, onClose }: Props
 
               {!state && !error && !loading && (
                 <p className="py-16 text-center text-sm text-white/40">
-                  Escribe un correo y pulsa Ver.
+                  Enter an email and click View.
                 </p>
               )}
             </div>

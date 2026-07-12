@@ -89,7 +89,7 @@ export function GiveawayCard({ giveaway, runtime }: Props) {
         <div className="flex items-center gap-1.5 rounded-full border border-white/[0.08] bg-black/25 px-2.5 py-1">
           <ParticipantsIcon />
           <span className="font-display text-xs font-bold tabular-nums text-white/55">
-            {runtime.participants.toLocaleString('es-ES')}
+            {runtime.participants.toLocaleString('en-US')}
           </span>
         </div>
       </header>
@@ -108,7 +108,7 @@ export function GiveawayCard({ giveaway, runtime }: Props) {
                 <rect x="4" y="9" width="16" height="11" rx="1.5" />
                 <path d="M12 9V4M8.5 6.5 12 4l3.5 2.5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
               </svg>
-              <span className="font-display text-[10px] font-bold uppercase tracking-[0.14em]">Sorteo cerrado</span>
+              <span className="font-display text-[10px] font-bold uppercase tracking-[0.14em]">Giveaway closed</span>
             </div>
           )}
         </div>
@@ -140,14 +140,14 @@ export function GiveawayCard({ giveaway, runtime }: Props) {
         </div>
       ) : (
         <p className="relative mb-4 text-center font-display text-xs font-bold uppercase tracking-[0.14em] text-white/30">
-          Esperando próximo sorteo
+          Waiting for next giveaway
         </p>
       )}
 
       <div className="relative mt-auto space-y-3">
         {active && runtime.depositRequirement > 0 && (
           <p className="text-center text-[10px] uppercase tracking-[0.12em] text-white/40">
-            Depósito mínimo:{' '}
+            Minimum deposit:{' '}
             <CoinPrice
               value={runtime.depositRequirement}
               iconClassName="h-3 w-3"
@@ -158,7 +158,7 @@ export function GiveawayCard({ giveaway, runtime }: Props) {
 
         <div className="flex items-center justify-between gap-2 rounded-lg border border-white/[0.06] bg-[#0a0812]/80 px-3 py-2.5">
           <span className="font-display text-[10px] font-bold uppercase tracking-[0.14em] text-white/40">
-            Valor total
+            Total value
           </span>
           <div className="flex items-center gap-2">
             <span className="rounded border border-white/[0.08] bg-[#141024] px-2 py-0.5 font-display text-xs font-bold text-white/50">
@@ -184,7 +184,7 @@ export function GiveawayCard({ giveaway, runtime }: Props) {
               : 'cursor-not-allowed border-white/[0.06] bg-[#1a1830] text-white/35'
           }`}
         >
-          {active ? 'Unirse al sorteo' : 'Sorteo cerrado'}
+          {active ? 'Join giveaway' : 'Giveaway closed'}
         </button>
       </div>
     </article>

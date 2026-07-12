@@ -35,11 +35,11 @@ export function AdminClearPanel({ open, adminEmail, onClose, onAccountCleared }:
   const handleClear = async () => {
     const email = normalizeGrantEmail(targetEmail);
     if (!isValidGrantEmail(email)) {
-      setError('Introduce un correo electrónico válido.');
+      setError('Enter a valid email address.');
       return;
     }
     if (confirmText.trim().toUpperCase() !== 'CLEAR') {
-      setError('Escribe CLEAR para confirmar.');
+      setError('Type CLEAR to confirm.');
       return;
     }
 
@@ -51,13 +51,13 @@ export function AdminClearPanel({ open, adminEmail, onClose, onAccountCleared }:
       onAccountCleared?.(result.email);
       setSuccess(
         result.clearedAccount
-          ? `Cuenta de ${result.email} borrada. Inventario: 0 skins. Saldo: 0 coins. Chats eliminados: ${result.chatsRemoved}.`
-          : `Datos de ${result.email} reseteados. Inventario y saldo a 0. Chats eliminados: ${result.chatsRemoved}.`,
+          ? `Account for ${result.email} deleted. Inventory: 0 skins. Balance: 0 coins. Chats removed: ${result.chatsRemoved}.`
+          : `Data for ${result.email} reset. Inventory and balance to 0. Chats removed: ${result.chatsRemoved}.`,
       );
       setTargetEmail('');
       setConfirmText('');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'No se pudo borrar la cuenta.');
+      setError(err instanceof Error ? err.message : 'Could not delete account.');
     } finally {
       setLoading(false);
     }
@@ -74,7 +74,7 @@ export function AdminClearPanel({ open, adminEmail, onClose, onAccountCleared }:
         >
           <button
             type="button"
-            aria-label="Cerrar"
+            aria-label="Close"
             className="absolute inset-0 bg-black/80 backdrop-blur-sm"
             onClick={onClose}
           />
@@ -95,7 +95,7 @@ export function AdminClearPanel({ open, adminEmail, onClose, onAccountCleared }:
                   Clear Account
                 </h2>
                 <p className="text-[11px] text-white/45">
-                  Borra cuenta, inventario (0 skins), saldo (0 coins), logs, grants y chats
+                  Wipes account, inventory (0 skins), balance (0 coins), logs, grants, and chats
                 </p>
               </div>
               <button
@@ -103,27 +103,27 @@ export function AdminClearPanel({ open, adminEmail, onClose, onAccountCleared }:
                 onClick={onClose}
                 className="rounded-lg border border-white/10 px-3 py-1.5 text-xs text-white/50 transition hover:border-white/25 hover:text-white"
               >
-                Cerrar
+                Close
               </button>
             </div>
 
             <div className="space-y-3 px-4 py-4">
               <div>
                 <label className="mb-1 block text-[10px] uppercase tracking-wide text-white/40">
-                  Correo a resetear
+                  Email to reset
                 </label>
                 <input
                   type="email"
                   value={targetEmail}
                   onChange={e => setTargetEmail(e.target.value)}
-                  placeholder="correo@ejemplo.com"
+                  placeholder="email@example.com"
                   className="input-filter w-full text-sm"
                 />
               </div>
 
               <div>
                 <label className="mb-1 block text-[10px] uppercase tracking-wide text-white/40">
-                  Escribe CLEAR para confirmar
+                  Type CLEAR to confirm
                 </label>
                 <input
                   type="text"
@@ -135,7 +135,7 @@ export function AdminClearPanel({ open, adminEmail, onClose, onAccountCleared }:
               </div>
 
               <p className="rounded-lg border border-risk/20 bg-risk/5 px-3 py-2 text-[11px] text-white/55">
-                Esta acción es irreversible. No se puede usar en cuentas admin.
+                This action is irreversible. Cannot be used on admin accounts.
               </p>
 
               {error && (
@@ -155,7 +155,7 @@ export function AdminClearPanel({ open, adminEmail, onClose, onAccountCleared }:
                 onClick={() => { void handleClear(); }}
                 className="w-full rounded-lg border border-risk/50 bg-risk/20 px-4 py-2.5 font-display text-[11px] font-bold uppercase tracking-wide text-risk transition hover:border-risk hover:bg-risk/30 disabled:cursor-not-allowed disabled:opacity-40"
               >
-                {loading ? 'Borrando…' : 'Borrar todo'}
+                {loading ? 'Deleting…' : 'Delete all'}
               </button>
             </div>
           </motion.div>

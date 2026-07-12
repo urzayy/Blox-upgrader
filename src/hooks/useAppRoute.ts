@@ -1,5 +1,13 @@
 import { useEffect, useState } from 'react';
-import { caseSlugFromPathname, freeCaseSlugFromPathname, giveawayPeriodFromPathname, routeFromPathname, type AppRoute } from '../lib/appRoute';
+import {
+  battleIdFromPathname,
+  caseSlugFromPathname,
+  freeCaseSlugFromPathname,
+  giveawayPeriodFromPathname,
+  isCreateCaseBattlePath,
+  routeFromPathname,
+  type AppRoute,
+} from '../lib/appRoute';
 
 export function useCaseSlug(): string | null {
   const [slug, setSlug] = useState<string | null>(() => caseSlugFromPathname());
@@ -47,4 +55,28 @@ export function useGiveawayPeriod(): string | null {
   }, []);
 
   return period;
+}
+
+export function useBattleId(): string | null {
+  const [battleId, setBattleId] = useState<string | null>(() => battleIdFromPathname());
+
+  useEffect(() => {
+    const sync = () => setBattleId(battleIdFromPathname());
+    window.addEventListener('popstate', sync);
+    return () => window.removeEventListener('popstate', sync);
+  }, []);
+
+  return battleId;
+}
+
+export function useIsCreateCaseBattle(): boolean {
+  const [isCreate, setIsCreate] = useState(() => isCreateCaseBattlePath());
+
+  useEffect(() => {
+    const sync = () => setIsCreate(isCreateCaseBattlePath());
+    window.addEventListener('popstate', sync);
+    return () => window.removeEventListener('popstate', sync);
+  }, []);
+
+  return isCreate;
 }

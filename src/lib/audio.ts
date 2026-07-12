@@ -13,12 +13,15 @@ const ROYAL_LAND_SOUND_SRC = '/RoyalSound.MP3';
 const ROYAL_LAND_SOUND_VOL = 0.95;
 const ROYAL_ROLL_SOUND_SRC = '/ROYAL%20ROLL.MP3';
 const ROYAL_ROLL_SOUND_VOL = 0.9;
+const BATTLE_FINISHED_SOUND_SRC = '/BattleFinished.MP3';
+const BATTLE_FINISHED_SOUND_VOL = 0.95;
 
 let rollAudio: HTMLAudioElement | null = null;
 let commonDropAudio: HTMLAudioElement | null = null;
 let midDropAudio: HTMLAudioElement | null = null;
 let royalLandAudio: HTMLAudioElement | null = null;
 let royalRollAudio: HTMLAudioElement | null = null;
+let battleFinishedAudio: HTMLAudioElement | null = null;
 let rollFadeTimer: ReturnType<typeof setTimeout> | null = null;
 let royalRollFadeTimer: ReturnType<typeof setTimeout> | null = null;
 const ROLL_BASE_VOLUME = ROLL_SOUND_VOL * MASTER_VOL;
@@ -205,6 +208,24 @@ function playRoyalLandSample() {
   } catch { /* noop */ }
 }
 
+function getBattleFinishedAudio() {
+  if (!battleFinishedAudio) {
+    battleFinishedAudio = new Audio(BATTLE_FINISHED_SOUND_SRC);
+    battleFinishedAudio.preload = 'auto';
+    battleFinishedAudio.volume = BATTLE_FINISHED_SOUND_VOL * MASTER_VOL;
+  }
+  return battleFinishedAudio;
+}
+
+function playBattleFinishedSample() {
+  try {
+    const audio = getBattleFinishedAudio();
+    audio.pause();
+    audio.currentTime = 0;
+    void audio.play().catch(() => {});
+  } catch { /* noop */ }
+}
+
 export function preloadRollSound() {
   try {
     getRollAudio().load();
@@ -212,6 +233,7 @@ export function preloadRollSound() {
     getCommonDropAudio().load();
     getMidDropAudio().load();
     getRoyalLandAudio().load();
+    getBattleFinishedAudio().load();
   } catch { /* noop */ }
 }
 
@@ -290,17 +312,140 @@ function clickPop(vol: number, when = 0, bright = 2200) {
   } catch { /* noop */ }
 }
 
-/** Roll ticks are covered by the custom roll sample. */
-function wheelTick(_intensity: number) {
-  /* noop */
+/** Minimal muted peg — fixed pitch, no sweep, short decay. */
+function wheelTick(intensity: number) {
+  try {
+    const c = ac();
+    const t = c.currentTime;
+    const i = Math.max(0, Math.min(1, intensity));
+    const vol = (0.04 + i * 0.05) * VOL;
+    const dur = 0.012;
+
+    const o = c.createOscillator();
+    const g = c.createGain();
+    const lp = c.createBiquadFilter();
+    lp.type = 'lowpass';
+    lp.frequency.value = 680;
+
+    o.type = 'sine';
+    o.frequency.setValueAtTime(260 + i * 70, t);
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.linearRampToValueAtTime(vol, t + 0.003);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    o.connect(lp);
+    lp.connect(g);
+    g.connect(out());
+    o.start(t);
+    o.stop(t + dur + 0.02);
+  } catch { /* noop */ }
 }
 
-function wheelLand(options?: { keepRoyalRoll?: boolean }) {
+type UpgradeTone = {
+  freq: number;
+  dur: number;
+  vol: number;
+  when: number;
+  type?: OscillatorType;
+  lpHz?: number;
+};
+
+type UpgradeStartPreset = {
+  tones: UpgradeTone[];
+  click?: { vol: number; when: number; bright?: number };
+};
+
+const UPGRADE_START_PRESETS: UpgradeStartPreset[] = [
+  {
+    tones: [
+      { freq: 220, dur: 0.08, vol: 0.14 * VOL, when: 0, type: 'sine', lpHz: 3000 },
+      { freq: 440, dur: 0.1, vol: 0.16 * VOL, when: 0.04, type: 'triangle', lpHz: 5000 },
+      { freq: 880, dur: 0.12, vol: 0.14 * VOL, when: 0.08, type: 'sine', lpHz: 6500 },
+    ],
+    click: { vol: 0.12 * VOL, when: 0.06, bright: 3400 },
+  },
+  {
+    tones: [
+      { freq: 165, dur: 0.1, vol: 0.16 * VOL, when: 0, type: 'sine', lpHz: 2200 },
+      { freq: 330, dur: 0.11, vol: 0.15 * VOL, when: 0.05, type: 'triangle', lpHz: 4000 },
+      { freq: 494, dur: 0.13, vol: 0.13 * VOL, when: 0.1, type: 'sine', lpHz: 5500 },
+    ],
+    click: { vol: 0.1 * VOL, when: 0.08, bright: 2800 },
+  },
+  {
+    tones: [
+      { freq: 392, dur: 0.07, vol: 0.15 * VOL, when: 0, type: 'triangle', lpHz: 5000 },
+      { freq: 587, dur: 0.08, vol: 0.14 * VOL, when: 0.035, type: 'sine', lpHz: 6200 },
+      { freq: 784, dur: 0.1, vol: 0.13 * VOL, when: 0.07, type: 'triangle', lpHz: 7000 },
+    ],
+    click: { vol: 0.14 * VOL, when: 0.05, bright: 3800 },
+  },
+  {
+    tones: [
+      { freq: 261, dur: 0.09, vol: 0.15 * VOL, when: 0, type: 'square', lpHz: 2800 },
+      { freq: 523, dur: 0.1, vol: 0.14 * VOL, when: 0.045, type: 'sine', lpHz: 4800 },
+      { freq: 698, dur: 0.11, vol: 0.12 * VOL, when: 0.09, type: 'triangle', lpHz: 6000 },
+    ],
+    click: { vol: 0.11 * VOL, when: 0.07, bright: 3200 },
+  },
+  {
+    tones: [
+      { freq: 196, dur: 0.08, vol: 0.13 * VOL, when: 0, type: 'sine', lpHz: 2600 },
+      { freq: 349, dur: 0.09, vol: 0.15 * VOL, when: 0.04, type: 'triangle', lpHz: 4200 },
+      { freq: 622, dur: 0.11, vol: 0.16 * VOL, when: 0.085, type: 'sine', lpHz: 5800 },
+      { freq: 932, dur: 0.09, vol: 0.12 * VOL, when: 0.13, type: 'sine', lpHz: 6800 },
+    ],
+    click: { vol: 0.13 * VOL, when: 0.1, bright: 3600 },
+  },
+];
+
+function playUpgradeStartPreset(preset: UpgradeStartPreset, turbo = false) {
+  const speed = turbo ? 0.85 : 1;
+  const volScale = turbo ? 1.08 : 1;
+
+  for (const tone of preset.tones) {
+    punchTone(
+      tone.freq,
+      tone.dur * speed,
+      tone.vol * volScale,
+      tone.when * speed,
+      tone.type ?? 'sine',
+      tone.lpHz ?? 5200,
+    );
+  }
+
+  if (preset.click) {
+    clickPop(
+      preset.click.vol * volScale,
+      preset.click.when * speed,
+      preset.click.bright ?? 3200,
+    );
+  }
+}
+
+function upgradeWheelLand() {
+  const landFreq = 85 + Math.random() * 30;
+  punchTone(landFreq, 0.1, 0.1 * VOL, 0, 'sine', 750);
+}
+
+function caseWheelLand(options?: { keepRoyalRoll?: boolean }) {
   stopRollSample();
   if (!options?.keepRoyalRoll) stopRoyalRollSample();
 }
 
+function wheelLand(options?: { keepRoyalRoll?: boolean }) {
+  if (options) {
+    caseWheelLand(options);
+    return;
+  }
+  upgradeWheelLand();
+}
+
 function upgradeStart(turbo = false) {
+  const preset = UPGRADE_START_PRESETS[Math.floor(Math.random() * UPGRADE_START_PRESETS.length)];
+  playUpgradeStartPreset(preset, turbo);
+}
+
+function caseRollStart(turbo = false) {
   playRollSample(turbo);
 }
 
@@ -318,6 +463,10 @@ function caseDropMid() {
 
 function royalLand() {
   playRoyalLandSample();
+}
+
+function battleFinished() {
+  playBattleFinishedSample();
 }
 
 function win() {
@@ -352,12 +501,15 @@ export const WHEEL_DEG_PER_TICK = 360 / 48;
 
 export const sfx = {
   upgradeStart,
+  caseRollStart,
   royalRollStart,
   wheelTick,
   wheelLand,
+  caseWheelLand,
   caseDropCommon,
   caseDropMid,
   royalLand,
+  battleFinished,
   win,
   lose,
   select,
@@ -408,7 +560,5 @@ export class WheelSpinAudio {
 
   finish() {
     sfx.wheelLand();
-    stopRollSample();
-    stopRoyalRollSample();
   }
 }

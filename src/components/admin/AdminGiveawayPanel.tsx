@@ -46,12 +46,12 @@ export function AdminGiveawayPanel({ open, adminEmail, slots, onClose, onUpdated
 
   const handleOpen = async () => {
     if (!selectedSkin) {
-      setError('Selecciona una skin de premio.');
+      setError('Select a prize skin.');
       return;
     }
     const deposit = Number(depositRequirement);
     if (!Number.isFinite(deposit) || deposit < 0) {
-      setError('Depósito mínimo no válido.');
+      setError('Invalid minimum deposit.');
       return;
     }
 
@@ -66,10 +66,10 @@ export function AdminGiveawayPanel({ open, adminEmail, slots, onClose, onUpdated
     });
     setBusy(false);
     if (!result.ok) {
-      setError(result.error ?? 'No se pudo abrir el sorteo.');
+      setError(result.error ?? 'Could not open giveaway.');
       return;
     }
-    setMessage(`Sorteo ${PERIOD_LABELS[period]} abierto por ${GIVEAWAY_PERIOD_DAYS[period]} día(s).`);
+    setMessage(`Giveaway ${PERIOD_LABELS[period]} open for ${GIVEAWAY_PERIOD_DAYS[period]} day(s).`);
     onUpdated();
   };
 
@@ -81,19 +81,19 @@ export function AdminGiveawayPanel({ open, adminEmail, slots, onClose, onUpdated
     setBusy(false);
     if (!result.ok) {
       const errorMap: Record<string, string> = {
-        no_eligible_winner: 'No hay participantes con entradas para sortear ganador.',
-        giveaway_not_active: 'Este sorteo no está activo.',
-        missing_prize_skin: 'No hay skin de premio configurada.',
-        grants_unavailable: 'No se pudo entregar el premio al inventario.',
+        no_eligible_winner: 'No participants with entries to draw a winner.',
+        giveaway_not_active: 'This giveaway is not active.',
+        missing_prize_skin: 'No prize skin configured.',
+        grants_unavailable: 'Could not deliver prize to inventory.',
       };
-      setError(errorMap[result.error ?? ''] ?? result.error ?? 'No se pudo cerrar el sorteo.');
+      setError(errorMap[result.error ?? ''] ?? result.error ?? 'Could not close giveaway.');
       return;
     }
     if (pickWinner && result.winner) {
       const label = result.winner.nickname || result.winner.email;
-      setMessage(`Sorteo ${PERIOD_LABELS[period]} cerrado. Ganador: ${label}.`);
+      setMessage(`Giveaway ${PERIOD_LABELS[period]} closed. Winner: ${label}.`);
     } else {
-      setMessage(`Sorteo ${PERIOD_LABELS[period]} cerrado sin ganador.`);
+      setMessage(`Giveaway ${PERIOD_LABELS[period]} closed with no winner.`);
     }
     onUpdated();
   };
@@ -109,7 +109,7 @@ export function AdminGiveawayPanel({ open, adminEmail, slots, onClose, onUpdated
         >
           <button
             type="button"
-            aria-label="Cerrar panel admin"
+            aria-label="Close admin panel"
             className="absolute inset-0 bg-black/80 backdrop-blur-sm"
             onClick={onClose}
           />
@@ -129,7 +129,7 @@ export function AdminGiveawayPanel({ open, adminEmail, slots, onClose, onUpdated
                   Admin · Giveaways
                 </h2>
                 <p className="text-[11px] text-white/45">
-                  Abre o cierra sorteos con skin premio, categoría y depósito mínimo
+                  Open or close giveaways with prize skin, category, and minimum deposit
                 </p>
               </div>
               <button
@@ -137,7 +137,7 @@ export function AdminGiveawayPanel({ open, adminEmail, slots, onClose, onUpdated
                 onClick={onClose}
                 className="rounded-lg border border-white/10 px-3 py-1.5 text-xs text-white/50 transition hover:border-white/25 hover:text-white"
               >
-                Cerrar
+                Close
               </button>
             </div>
 
@@ -164,7 +164,7 @@ export function AdminGiveawayPanel({ open, adminEmail, slots, onClose, onUpdated
                         slot.status === 'active' ? 'text-emerald-400' : 'text-white/35'
                       }`}
                       >
-                        {slot.status === 'active' ? 'Activo' : 'Cerrado'}
+                        {slot.status === 'active' ? 'Active' : 'Closed'}
                       </span>
                     </button>
                   );
@@ -181,17 +181,17 @@ export function AdminGiveawayPanel({ open, adminEmail, slots, onClose, onUpdated
                   {currentSlot.status === 'active' && currentSlot.skin ? (
                     <div className="mt-2 space-y-1 text-xs text-white/65">
                       <p className="font-semibold text-white">{currentSlot.skin.name}</p>
-                      <p>Depósito mín.: <CoinPrice value={currentSlot.depositRequirement} textClassName="text-xs font-bold text-gold" /></p>
-                      <p>Participantes: {currentSlot.participants}</p>
+                      <p>Min. deposit: <CoinPrice value={currentSlot.depositRequirement} textClassName="text-xs font-bold text-gold" /></p>
+                      <p>Participants: {currentSlot.participants}</p>
                     </div>
                   ) : (
-                    <p className="mt-2 text-xs text-white/40">No hay sorteo activo.</p>
+                    <p className="mt-2 text-xs text-white/40">No active giveaway.</p>
                   )}
                 </div>
 
                 <label className="mb-3 block">
                   <span className="mb-1.5 block font-display text-[10px] font-bold uppercase tracking-[0.14em] text-white/45">
-                    Depósito mínimo requerido
+                    Required minimum deposit
                   </span>
                   <input
                     type="number"
@@ -206,7 +206,7 @@ export function AdminGiveawayPanel({ open, adminEmail, slots, onClose, onUpdated
                 {selectedSkin && (
                   <div className="mb-3 rounded-lg border border-emerald-500/25 bg-emerald-500/5 p-2.5">
                     <p className="font-display text-[10px] font-bold uppercase tracking-wide text-emerald-300">
-                      Premio seleccionado
+                      Selected prize
                     </p>
                     <p className="mt-1 text-xs font-semibold text-white">{selectedSkin.name}</p>
                     <CoinPrice value={selectedSkin.price} textClassName="text-xs font-bold text-gold" />
@@ -223,7 +223,7 @@ export function AdminGiveawayPanel({ open, adminEmail, slots, onClose, onUpdated
                     onClick={() => void handleOpen()}
                     className="rounded-lg bg-gradient-to-r from-violet-600 to-fuchsia-600 px-4 py-2 font-display text-[10px] font-black uppercase tracking-[0.12em] text-white transition hover:brightness-110 disabled:opacity-45"
                   >
-                    Abrir sorteo
+                    Open giveaway
                   </button>
                   <button
                     type="button"
@@ -231,7 +231,7 @@ export function AdminGiveawayPanel({ open, adminEmail, slots, onClose, onUpdated
                     onClick={() => void handleClose(true)}
                     className="rounded-lg border border-emerald-500/35 bg-emerald-500/10 px-4 py-2 font-display text-[10px] font-black uppercase tracking-[0.12em] text-emerald-300 transition hover:bg-emerald-500/20 disabled:opacity-45"
                   >
-                    Cerrar y dar ganador
+                    Close and pick winner
                   </button>
                   <button
                     type="button"
@@ -239,7 +239,7 @@ export function AdminGiveawayPanel({ open, adminEmail, slots, onClose, onUpdated
                     onClick={() => void handleClose(false)}
                     className="rounded-lg border border-rose-500/35 bg-rose-500/10 px-4 py-2 font-display text-[10px] font-black uppercase tracking-[0.12em] text-rose-300 transition hover:bg-rose-500/20 disabled:opacity-45"
                   >
-                    Cerrar sin ganador
+                    Close without winner
                   </button>
                 </div>
               </div>
@@ -250,7 +250,7 @@ export function AdminGiveawayPanel({ open, adminEmail, slots, onClose, onUpdated
                     type="text"
                     value={search}
                     onChange={e => setSearch(e.target.value)}
-                    placeholder="Buscar skin premio..."
+                    placeholder="Search prize skin..."
                     className="input-filter w-full text-sm"
                   />
                 </div>

@@ -21,6 +21,7 @@ function wrapSync(db) {
     appendEvent: async (payload) => db.appendEvent(payload),
     listUsers: async () => db.listUsers(),
     listRegisteredEmails: async () => db.listRegisteredEmails(),
+    countAccounts: async () => db.listUsers().then(users => users.length),
     getUser: async (userId) => db.getUser(userId),
     getUserEvents: async (userId, limit) => db.getUserEvents(userId, limit),
     exportUserTxt: async (userId) => db.exportUserTxt(userId),

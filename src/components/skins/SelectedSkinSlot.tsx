@@ -40,8 +40,8 @@ export function SelectedSkinSlot({
         }`}
         >
           {isInput
-            ? 'Selecciona hasta 5 skins de tu inventario abajo'
-            : 'Selecciona la skin objetivo abajo'}
+            ? 'Select up to 5 skins from your inventory below'
+            : 'Select the target skin below'}
         </p>
       )}
 
@@ -147,7 +147,7 @@ function MultiInputDisplay({
       {onClear && !rolling && <ClearSlotButton onClick={onClear} className="right-1.5 top-1.5" />}
       <div className="mb-2 flex items-center justify-between gap-2 px-1">
         <span className="text-[10px] font-semibold text-white/60">
-          {skins.length} skins seleccionadas
+          {skins.length} skins selected
         </span>
         <CoinPrice value={total} iconClassName="h-3 w-3" textClassName="font-display text-xs font-bold text-gold" />
       </div>
@@ -180,10 +180,10 @@ function EmptySlot({ isInput }: { isInput: boolean }) {
     return (
       <div className="relative flex h-full w-full flex-col px-3 py-3">
         <p className="text-center text-[11px] font-semibold leading-snug text-white/90">
-          Selecciona skins o skins y saldo para usar
+          Select skins or skins and balance to use
         </p>
         <p className="mt-1 text-center text-[10px] text-white/40">
-          Puedes seleccionar varias skins
+          You can select multiple skins
         </p>
 
         <div className="relative mt-2 flex min-h-[100px] flex-1 items-center justify-center">
@@ -202,7 +202,7 @@ function EmptySlot({ isInput }: { isInput: boolean }) {
   return (
     <div className="relative flex h-full w-full flex-col px-3 py-3">
       <p className="text-center text-[11px] font-semibold leading-snug text-white/90">
-        Selecciona la skin objetivo
+        Select target skin
       </p>
       <p className="mt-1 text-center text-[10px] text-white/40">
         Elige una skin del panel de abajo
@@ -226,7 +226,7 @@ function ClearSlotButton({ onClick, className = '' }: { onClick: () => void; cla
     <button
       type="button"
       onClick={onClick}
-      aria-label="Quitar selección"
+      aria-label="Remove selection"
       className={`absolute z-10 flex h-8 w-8 items-center justify-center rounded-lg border border-gold/50 bg-gold/15 text-base font-bold text-gold shadow-[0_0_12px_rgba(176,108,255,0.25)] transition hover:border-gold hover:bg-gold/25 hover:text-[#D8B4FE] ${className}`}
     >
       ✕

@@ -31,7 +31,7 @@ function wearShort(wear: string): string {
 export function TargetPanel({
   skins,
   selected,
-  title = 'Seleccionar skin',
+  title = 'Select skin',
   variant = 'classic',
   onSelect,
   onLiveHelp,
@@ -92,7 +92,7 @@ export function TargetPanel({
         <div className="mb-2 flex flex-wrap gap-1.5">
           <input
             type="text"
-            placeholder="Buscar..."
+            placeholder="Search..."
             value={search}
             onChange={e => setSearch(e.target.value)}
             className="input-filter min-w-[100px] flex-1 text-[10px]"

@@ -11,11 +11,11 @@ interface Props {
 
 function toastTitle(toast: AdminChatToast): string {
   if (toast.kind === 'new_chat') {
-    if (toast.ticketType === 'help') return 'Nueva ayuda';
-    return toast.ticketType === 'deposit' ? 'Nuevo depósito' : 'Nuevo retiro';
+    if (toast.ticketType === 'help') return 'New help';
+    return toast.ticketType === 'deposit' ? 'New deposit' : 'New withdrawal';
   }
-  if (toast.ticketType === 'help') return 'Mensaje · Ayuda';
-  return toast.ticketType === 'deposit' ? 'Mensaje · Depósito' : 'Mensaje · Retiro';
+  if (toast.ticketType === 'help') return 'Message · Ayuda';
+  return toast.ticketType === 'deposit' ? 'Message · Deposit' : 'Message · Withdrawal';
 }
 
 function toastIcon(toast: AdminChatToast): string {
@@ -81,12 +81,12 @@ export function AdminChatNotificationStack({
               <p className="truncate text-[12px] font-semibold text-white">{toast.userLabel}</p>
               <p className="mt-0.5 line-clamp-2 text-[11px] text-white/50">{toast.preview}</p>
               <p className="mt-1 text-[10px] font-semibold uppercase tracking-wide text-white/30">
-                Toca para abrir chat
+                Tap to open chat
               </p>
             </div>
             <button
               type="button"
-              aria-label="Cerrar notificación"
+              aria-label="Close notification"
               onClick={event => {
                 event.stopPropagation();
                 onDismiss(toast.id);

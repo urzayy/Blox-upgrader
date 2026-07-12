@@ -11,6 +11,7 @@ import { AdminChatNotificationStack } from '../admin/AdminChatNotificationStack'
 import { AdminUserDbPanel } from '../admin/AdminUserDbPanel';
 import { AdminSeePanel } from '../admin/AdminSeePanel';
 import { AdminClearPanel } from '../admin/AdminClearPanel';
+import { AdminAnnouncementPanel } from '../admin/AdminAnnouncementPanel';
 import { WithdrawModal } from '../withdraw/WithdrawModal';
 import { WithdrawChatModal } from '../withdraw/WithdrawChatModal';
 import { DepositModal, type DepositItem } from '../deposit/DepositModal';
@@ -18,9 +19,11 @@ import { DepositMethodModal } from '../deposit/DepositMethodModal';
 import { RobuxDepositModal } from '../deposit/RobuxDepositModal';
 import type { AppliedDepositBonus } from '../../lib/depositBonusCode';
 import { LiveChatsInbox } from '../support/LiveChatsInbox';
+import { LiveChatsFloatingButton } from '../support/LiveChatsFloatingButton';
 import { fetchUserWithdrawTickets, type WithdrawTicket } from '../../lib/withdrawChat';
 import { useAdminChatNotifications } from '../../lib/adminChatNotifications';
 import { useActivityLog } from '../../hooks/useActivityLog';
+import { registerAdminPanelHandler } from '../../lib/uiActions';
 import { DEV_MOBILE_LAYOUT } from '../../lib/devMobileLayout';
 import { MobileHeaderBar } from './ProdMobileHeaderBar';
 import type { Skin } from '../../data/skins';
@@ -79,6 +82,7 @@ export function Header({
   const [userDbOpen, setUserDbOpen] = useState(false);
   const [seeOpen, setSeeOpen] = useState(false);
   const [clearOpen, setClearOpen] = useState(false);
+  const [announcementOpen, setAnnouncementOpen] = useState(false);
   const [openLiveChatCount, setOpenLiveChatCount] = useState(0);
 
   const activeAdminTicketId = isAdmin && supportChatOpen ? supportChatTicketId : null;
@@ -119,6 +123,15 @@ export function Header({
     const id = setInterval(() => { void load(); }, 8000);
     return () => clearInterval(id);
   }, [user, liveChatsOpen, supportChatOpen, withdrawOpen, depositOpen]);
+
+  useEffect(() => {
+    if (!isAdmin) return;
+    registerAdminPanelHandler('announcement', () => {
+      log('CLICK.open_admin_announcement');
+      setAnnouncementOpen(true);
+    });
+    return () => registerAdminPanelHandler('announcement', null);
+  }, [isAdmin, log]);
 
   return (
     <>
@@ -217,6 +230,16 @@ export function Header({
         />
       )}
       {user && (
+        <LiveChatsFloatingButton
+          open={liveChatsOpen}
+          openCount={openLiveChatCount}
+          onOpen={() => {
+            log('CLICK.open_live_chats_fab');
+            setLiveChatsOpen(true);
+          }}
+        />
+      )}
+      {user && (
         <WithdrawChatModal
           open={supportChatOpen}
           ticketId={supportChatTicketId}
@@ -237,6 +260,13 @@ export function Header({
           adminEmail={user.email}
           onClose={() => setClearOpen(false)}
           onAccountCleared={onAccountCleared}
+        />
+      )}
+      {user && isAdmin && (
+        <AdminAnnouncementPanel
+          open={announcementOpen}
+          adminEmail={user.email}
+          onClose={() => setAnnouncementOpen(false)}
         />
       )}
       {user && isAdmin && (
@@ -344,13 +374,13 @@ export function Header({
           <div className="flex items-center gap-1.5 rounded-lg border border-white/5 bg-panel/80 px-2.5 py-1">
             <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-win" />
             <span className="font-display text-[11px] font-semibold tabular-nums text-white/80">
-              {playersOnline.toLocaleString('es-ES')}
+              {playersOnline.toLocaleString('en-US')}
             </span>
             <span className="text-[10px] text-white/40">online</span>
           </div>
           <div className="flex items-center gap-1.5 rounded-lg border border-white/5 bg-panel/80 px-2.5 py-1">
             <span className="font-display text-[11px] font-semibold tabular-nums text-gold">
-              {totalUpgrades.toLocaleString('es-ES')}
+              {totalUpgrades.toLocaleString('en-US')}
             </span>
             <span className="text-[10px] text-white/40">upgrades</span>
           </div>
@@ -366,7 +396,7 @@ export function Header({
                 log('CLICK.open_admin_clear');
                 setClearOpen(true);
               }}
-              title="Resetear cuenta por correo — borra todo"
+              title="Reset account by email — wipes everything"
               className={`shrink-0 rounded-lg border-2 px-2.5 py-2 font-display text-[10px] font-black uppercase tracking-wider transition ${
                 clearOpen
                   ? 'border-[#ff3344] bg-[#ff3344] text-white shadow-[0_0_20px_rgba(255,51,68,0.45)]'
@@ -381,7 +411,7 @@ export function Header({
                 log('CLICK.open_admin_see');
                 setSeeOpen(true);
               }}
-              title="Ver inventario de un jugador por correo"
+              title="View a player's inventory by email"
               className={`shrink-0 rounded-lg border px-2 py-2 font-display text-[10px] font-bold uppercase tracking-wider transition ${
                 seeOpen
                   ? 'border-white/40 bg-white/15 text-white shadow-[0_0_20px_rgba(255,255,255,0.15)]'
@@ -396,7 +426,7 @@ export function Header({
                 log('CLICK.open_withdraw_inbox');
                 setAdminInboxOpen(true);
               }}
-              title="Chats en vivo — deposit y withdraw"
+              title="Live chats — deposit and withdraw"
               className={`relative rounded-lg border px-3 py-2 font-display text-[10px] font-bold uppercase tracking-wider transition ${
                 adminInboxOpen || supportChatOpen
                   ? 'border-white/40 bg-white/15 text-white shadow-[0_0_20px_rgba(255,255,255,0.15)]'
@@ -416,7 +446,7 @@ export function Header({
                 log('CLICK.open_admin_gift_money');
                 setGiftMoneyOpen(true);
               }}
-              title="Regalar SALDO a cualquier usuario por email"
+              title="Gift BALANCE to any user by email"
               className={`rounded-lg border px-3 py-2 font-display text-[10px] font-bold uppercase tracking-wider transition ${
                 giftMoneyOpen
                   ? 'border-gold bg-gold/20 text-gold shadow-[0_0_20px_rgba(255,215,0,0.25)]'
@@ -431,7 +461,7 @@ export function Header({
                 log('CLICK.open_admin_gift');
                 setGiftOpen(true);
               }}
-              title="Regalar skins a cualquier usuario por email"
+              title="Gift skins to any user by email"
               className={`rounded-lg border px-3 py-2 font-display text-[10px] font-bold uppercase tracking-wider transition ${
                 giftOpen
                   ? 'border-gold bg-gold/20 text-gold shadow-[0_0_20px_rgba(255,215,0,0.25)]'
@@ -461,7 +491,7 @@ export function Header({
               log('CLICK.open_admin');
               setAdminOpen(true);
             }}
-            title="Admin Mode — añadir skins a tu inventario"
+            title="Admin Mode — add skins to your inventory"
             className={`rounded-lg border px-3 py-2 font-display text-[10px] font-bold uppercase tracking-wider transition ${
               adminOpen
                 ? 'border-win bg-win/20 text-win shadow-[0_0_20px_rgba(0,230,118,0.25)]'
@@ -475,9 +505,9 @@ export function Header({
         <button
           type="button"
           onClick={onTurboToggle}
-          title={turbo ? 'Turbo activado' : 'Turbo desactivado'}
+          title={turbo ? 'Turbo enabled' : 'Turbo disabled'}
           aria-pressed={turbo}
-          aria-label={turbo ? 'Desactivar turbo' : 'Activar turbo'}
+          aria-label={turbo ? 'Disable turbo' : 'Enable turbo'}
           className={`flex h-[42px] w-[42px] items-center justify-center rounded-lg border transition ${
             turbo
               ? 'border-gold bg-gold/15 shadow-gold'
@@ -488,7 +518,7 @@ export function Header({
         </button>
         <div className="flex items-center gap-1.5">
           <Stat label="Inventory value" value={inventoryTotal(inventory)} />
-          <Stat label="SALDO" value={balance} />
+          <Stat label="BALANCE" value={balance} />
         </div>
       </div>
 
@@ -563,7 +593,7 @@ export function Header({
                 log('CLICK.open_nickname');
                 setNicknameOpen(true);
               }}
-              title="Clic para cambiar tu apodo"
+              title="Click to change your nickname"
               className="hidden max-w-[180px] truncate rounded-lg border border-white/10 bg-panel/80 px-2.5 py-1.5 text-[11px] text-white/70 transition hover:border-gold/30 hover:text-gold sm:inline"
             >
               {profileLabel}
@@ -573,7 +603,7 @@ export function Header({
               onClick={onLogout}
               className="rounded-lg border border-white/10 bg-panel px-3 py-1.5 text-[11px] font-semibold text-white/60 transition hover:border-white/25 hover:text-white"
             >
-              Salir
+              Sign out
             </button>
           </>
         ) : (

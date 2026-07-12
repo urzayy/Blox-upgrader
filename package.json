@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "node scripts/generate-feed-catalog.mjs && vite",
-    "build": "node scripts/generate-feed-catalog.mjs && node scripts/generate-case-catalog.mjs && tsc -b && vite build",
+    "build": "node scripts/generate-feed-catalog.mjs && tsc -b && vite build",
     "generate:cases": "node scripts/generate-case-catalog.mjs",
     "start": "node scripts/generate-feed-catalog.mjs && node server.mjs",
     "preview": "vite preview"

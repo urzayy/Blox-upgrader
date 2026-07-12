@@ -34,7 +34,7 @@ export function AdminSkinPicker({ open, onClose, onGrant }: Props) {
         >
           <button
             type="button"
-            aria-label="Cerrar"
+            aria-label="Close"
             className="absolute inset-0 bg-black/80 backdrop-blur-sm"
             onClick={onClose}
           />
@@ -55,7 +55,7 @@ export function AdminSkinPicker({ open, onClose, onGrant }: Props) {
                   Admin Mode
                 </h2>
                 <p className="text-[11px] text-white/45">
-                  Pulsa una skin para añadirla a tu inventario
+                  Tap a skin to add it to your inventory
                 </p>
               </div>
               <div className="flex items-center gap-2">
@@ -67,7 +67,7 @@ export function AdminSkinPicker({ open, onClose, onGrant }: Props) {
                   onClick={onClose}
                   className="rounded-lg border border-white/10 px-3 py-1.5 text-xs text-white/50 transition hover:border-white/25 hover:text-white"
                 >
-                  Cerrar
+                  Close
                 </button>
               </div>
             </div>
@@ -77,7 +77,7 @@ export function AdminSkinPicker({ open, onClose, onGrant }: Props) {
                 type="text"
                 value={search}
                 onChange={e => setSearch(e.target.value)}
-                placeholder="Buscar por nombre o tipo de arma..."
+                placeholder="Search by name or weapon type..."
                 className="input-filter w-full text-sm"
                 autoFocus
               />
@@ -85,7 +85,7 @@ export function AdminSkinPicker({ open, onClose, onGrant }: Props) {
 
             <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-3">
               {filtered.length === 0 ? (
-                <p className="py-16 text-center text-sm text-white/40">No hay skins con ese filtro.</p>
+                <p className="py-16 text-center text-sm text-white/40">No skins match that filter.</p>
               ) : (
                 <div className="grid grid-cols-[repeat(auto-fill,minmax(96px,1fr))] gap-2 content-start items-start sm:grid-cols-[repeat(auto-fill,minmax(108px,1fr))] md:grid-cols-[repeat(auto-fill,minmax(118px,1fr))]">
                   {filtered.map(skin => (
@@ -96,7 +96,7 @@ export function AdminSkinPicker({ open, onClose, onGrant }: Props) {
             </div>
 
             <div className="shrink-0 border-t border-win/10 bg-win/5 px-4 py-2 text-center text-[10px] text-win/70">
-              Solo administradores · acceso restringido
+              Administrators only · restricted access
             </div>
           </motion.div>
         </motion.div>
@@ -114,7 +114,7 @@ function AdminSkinTile({ skin, onGrant }: { skin: Skin; onGrant: (skin: Skin) =>
       onClick={() => onGrant(skin)}
       whileHover={{ y: -3, scale: 1.02 }}
       whileTap={{ scale: 0.96 }}
-      title={`Añadir ${skin.name} · ${formatPrice(skin.price)}`}
+      title={`Add ${skin.name} · ${formatPrice(skin.price)}`}
       className="group relative w-full self-start overflow-hidden rounded-lg border border-white/10 bg-[#141820] text-left transition hover:border-win/50 hover:shadow-[0_0_16px_rgba(0,230,118,0.15)]"
     >
       <div className="absolute inset-x-0 top-0 z-10 h-0.5" style={{ background: r.color }} />

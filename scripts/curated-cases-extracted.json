@@ -1,0 +1,393 @@
+{
+  "edge-protocol": {
+    "price": 5,
+    "featuredSkinId": "skin_233_ak_47_red_baron",
+    "entries": [
+      {
+        "skinId": "skin_233_ak_47_red_baron",
+        "chance": 50
+      },
+      {
+        "skinId": "skin_217_five_seven_x_ray",
+        "chance": 50
+      }
+    ]
+  },
+  "striker-knife": {
+    "price": 25,
+    "featuredSkinId": "skin_234_aug_hot_rod",
+    "entries": [
+      {
+        "skinId": "skin_234_aug_hot_rod",
+        "chance": 50
+      },
+      {
+        "skinId": "skin_192_glock_18_midas",
+        "chance": 50
+      }
+    ]
+  },
+  "sport-palm": {
+    "price": 90,
+    "featuredSkinId": "skin_206_m4a1_s_castroil",
+    "entries": [
+      {
+        "skinId": "skin_206_m4a1_s_castroil",
+        "chance": 50
+      },
+      {
+        "skinId": "skin_235_aug_overgrowth",
+        "chance": 50
+      }
+    ]
+  },
+  "blade-roulette": {
+    "price": 203,
+    "featuredSkinId": "skin_158_ak_47_sakura",
+    "entries": [
+      {
+        "skinId": "skin_158_ak_47_sakura",
+        "chance": 50
+      },
+      {
+        "skinId": "skin_237_aug_tension",
+        "chance": 50
+      }
+    ]
+  },
+  "operator-wrap": {
+    "price": 750,
+    "featuredSkinId": "skin_139_hand_wraps_checkers",
+    "entries": [
+      {
+        "skinId": "skin_139_hand_wraps_checkers",
+        "chance": 50
+      },
+      {
+        "skinId": "skin_239_desert_eagle_turbo",
+        "chance": 50
+      }
+    ]
+  },
+  "chrome-factory": {
+    "price": 30,
+    "featuredSkinId": "skin_129_gut_whiteout",
+    "entries": [
+      {
+        "skinId": "skin_129_gut_whiteout",
+        "chance": 0.01
+      },
+      {
+        "skinId": "skin_174_mp9_high_octane",
+        "chance": 5
+      },
+      {
+        "skinId": "skin_206_m4a1_s_castroil",
+        "chance": 4.99
+      },
+      {
+        "skinId": "skin_218_glock_18_fuji",
+        "chance": 20
+      },
+      {
+        "skinId": "skin_248_galil_ar_irradiated",
+        "chance": 70
+      }
+    ]
+  },
+  "violet-storm": {
+    "price": 100,
+    "featuredSkinId": "skin_033_flip_tiger_stripes",
+    "entries": [
+      {
+        "skinId": "skin_033_flip_tiger_stripes",
+        "chance": 0.5
+      },
+      {
+        "skinId": "skin_079_skeleton_blackwidow",
+        "chance": 0.5
+      },
+      {
+        "skinId": "skin_108_driver_gloves_cardinal_weave",
+        "chance": 2.5
+      },
+      {
+        "skinId": "skin_105_flip_doodle",
+        "chance": 2.5
+      },
+      {
+        "skinId": "skin_094_operator_gloves_agent",
+        "chance": 2
+      },
+      {
+        "skinId": "skin_097_stiletto_woodland",
+        "chance": 2
+      },
+      {
+        "skinId": "skin_095_skeleton_violet",
+        "chance": 1
+      },
+      {
+        "skinId": "skin_245_famas_medic",
+        "chance": 89
+      }
+    ]
+  },
+  "ember-core": {
+    "price": 200,
+    "featuredSkinId": "skin_143_hand_wraps_hunter",
+    "entries": [
+      {
+        "skinId": "skin_145_m4a1_s_anodized_red",
+        "chance": 4
+      },
+      {
+        "skinId": "skin_144_hand_wraps_carpet",
+        "chance": 3
+      },
+      {
+        "skinId": "skin_143_hand_wraps_hunter",
+        "chance": 3
+      },
+      {
+        "skinId": "skin_148_package_tec_9_medal_tv",
+        "chance": 6
+      },
+      {
+        "skinId": "skin_247_galil_ar_feral",
+        "chance": 84
+      }
+    ]
+  },
+  "toxic-alley": {
+    "price": 300,
+    "featuredSkinId": "skin_100_skeleton_safari",
+    "entries": [
+      {
+        "skinId": "skin_100_skeleton_safari",
+        "chance": 2
+      },
+      {
+        "skinId": "skin_099_gut_damascus",
+        "chance": 2
+      },
+      {
+        "skinId": "skin_098_flip_vanilla",
+        "chance": 2
+      },
+      {
+        "skinId": "skin_097_stiletto_woodland",
+        "chance": 2
+      },
+      {
+        "skinId": "skin_095_skeleton_violet",
+        "chance": 2
+      },
+      {
+        "skinId": "skin_096_driver_gloves_leopard",
+        "chance": 1
+      },
+      {
+        "skinId": "skin_240_desert_eagle_velocity",
+        "chance": 89
+      }
+    ]
+  },
+  "midnight-run": {
+    "price": 500,
+    "featuredSkinId": "skin_023_butterfly_scarlet",
+    "entries": [
+      {
+        "skinId": "skin_023_butterfly_scarlet",
+        "chance": 0.2
+      },
+      {
+        "skinId": "skin_034_skeleton_scarlet",
+        "chance": 0.3
+      },
+      {
+        "skinId": "skin_044_flip_scarlet",
+        "chance": 1.5
+      },
+      {
+        "skinId": "skin_089_gut_scarlet",
+        "chance": 8
+      },
+      {
+        "skinId": "skin_233_ak_47_red_baron",
+        "chance": 90
+      }
+    ]
+  },
+  "gold-reserve": {
+    "price": 50,
+    "featuredSkinId": "skin_174_mp9_high_octane",
+    "entries": [
+      {
+        "skinId": "skin_174_mp9_high_octane",
+        "chance": 1
+      },
+      {
+        "skinId": "skin_183_mp9_x_ray",
+        "chance": 4
+      },
+      {
+        "skinId": "skin_184_desert_eagle_permafrost",
+        "chance": 15
+      },
+      {
+        "skinId": "skin_186_famas_mind",
+        "chance": 10
+      },
+      {
+        "skinId": "skin_187_m4a4_bubblepop",
+        "chance": 30
+      },
+      {
+        "skinId": "skin_247_galil_ar_feral",
+        "chance": 40
+      }
+    ]
+  },
+  "ruby-raid": {
+    "price": 150,
+    "featuredSkinId": "skin_153_glock_18_aurora",
+    "entries": [
+      {
+        "skinId": "skin_153_glock_18_aurora",
+        "chance": 1
+      },
+      {
+        "skinId": "skin_171_famas_heirloom",
+        "chance": 4
+      },
+      {
+        "skinId": "skin_157_m4a1_s_phaseprint",
+        "chance": 5
+      },
+      {
+        "skinId": "skin_175_usp_s_supersoaked",
+        "chance": 10
+      },
+      {
+        "skinId": "skin_177_m4a1_s_retro",
+        "chance": 20
+      },
+      {
+        "skinId": "skin_206_m4a1_s_castroil",
+        "chance": 20
+      },
+      {
+        "skinId": "skin_245_famas_medic",
+        "chance": 40
+      }
+    ]
+  },
+  "sapphire-code": {
+    "price": 250,
+    "featuredSkinId": "skin_145_m4a1_s_anodized_red",
+    "entries": [
+      {
+        "skinId": "skin_145_m4a1_s_anodized_red",
+        "chance": 1.5
+      },
+      {
+        "skinId": "skin_153_glock_18_aurora",
+        "chance": 3.5
+      },
+      {
+        "skinId": "skin_158_ak_47_sakura",
+        "chance": 5
+      },
+      {
+        "skinId": "skin_159_awp_tekko",
+        "chance": 10
+      },
+      {
+        "skinId": "skin_157_m4a1_s_phaseprint",
+        "chance": 20
+      },
+      {
+        "skinId": "skin_174_mp9_high_octane",
+        "chance": 20
+      },
+      {
+        "skinId": "skin_247_galil_ar_feral",
+        "chance": 40
+      }
+    ]
+  },
+  "phantom-grid": {
+    "price": 500,
+    "featuredSkinId": "skin_121_flip_violet",
+    "entries": [
+      {
+        "skinId": "skin_121_flip_violet",
+        "chance": 2
+      },
+      {
+        "skinId": "skin_153_glock_18_aurora",
+        "chance": 8
+      },
+      {
+        "skinId": "skin_155_package_ak_47_pinpoint",
+        "chance": 20
+      },
+      {
+        "skinId": "skin_156_desert_eagle_high_octane",
+        "chance": 20
+      },
+      {
+        "skinId": "skin_158_ak_47_sakura",
+        "chance": 10
+      },
+      {
+        "skinId": "skin_271_p250_zen",
+        "chance": 40
+      }
+    ]
+  },
+  "riot-zone": {
+    "price": 1000,
+    "featuredSkinId": "skin_019_karambit_scarlet",
+    "entries": [
+      {
+        "skinId": "skin_019_karambit_scarlet",
+        "chance": 2
+      },
+      {
+        "skinId": "skin_048_karambit_naval",
+        "chance": 3
+      },
+      {
+        "skinId": "skin_081_butterfly_midnight",
+        "chance": 5
+      },
+      {
+        "skinId": "skin_089_gut_scarlet",
+        "chance": 10
+      },
+      {
+        "skinId": "skin_133_gut_midnight",
+        "chance": 10
+      },
+      {
+        "skinId": "skin_140_gut_rusted",
+        "chance": 10
+      },
+      {
+        "skinId": "skin_143_hand_wraps_hunter",
+        "chance": 20
+      },
+      {
+        "skinId": "skin_270_p250_pulse",
+        "chance": 40
+      }
+    ]
+  },
+  "covert-reactor": {
+    "price": 800,
+    "featuredSkinId": "",
+    "entries": []
+  }
+}

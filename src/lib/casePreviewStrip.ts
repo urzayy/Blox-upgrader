@@ -42,6 +42,29 @@ export function buildCasePreviewSkins(slug: string, loot: FreeCaseLootItem[]): S
   return picks.slice(0, 6);
 }
 
+export function splitPreviewSides(skins: Skin[]): { left: Skin[]; right: Skin[] } {
+  if (!skins.length) return { left: [], right: [] };
+  const leftCount = Math.ceil(skins.length / 2);
+  return {
+    left: skins.slice(0, leftCount),
+    right: skins.slice(leftCount),
+  };
+}
+
+function padPreviewSkins(skins: Skin[]): Skin[] {
+  if (skins.length >= 6) return skins.slice(0, 6);
+  if (!skins.length) return [];
+
+  const padded = [...skins];
+  let index = 0;
+  while (padded.length < 6) {
+    padded.push(skins[index % skins.length]);
+    index += 1;
+  }
+
+  return padded.slice(0, 6);
+}
+
 /** Map preview skins onto the first visible reel band so the spin starts from the same weapons. */
 export function applyPreviewPrefixToReel(
   reel: FreeCaseReelItem[],
@@ -49,9 +72,10 @@ export function applyPreviewPrefixToReel(
   previewSkins: Skin[],
   winIndex: number,
 ): void {
-  if (previewSkins.length < 6) return;
+  const padded = padPreviewSkins(previewSkins);
+  if (padded.length < 6) return;
 
-  const [left0, left1, left2, right0, right1, right2] = previewSkins;
+  const [left0, left1, left2, right0, right1, right2] = padded;
   const slotSkins: Record<number, Skin> = {
     0: left0,
     1: left1,

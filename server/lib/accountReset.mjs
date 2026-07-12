@@ -31,6 +31,28 @@ function clearWithdrawChatsForEmail(chatsDir, email) {
   return removed;
 }
 
+export async function resetPlayerProgressByEmail(email, {
+  playerStateStore,
+  resetMarkerStore,
+}) {
+  const normalizedEmail = normalizeEmail(email);
+  if (!normalizedEmail) {
+    throw new Error('Email required');
+  }
+
+  const resetAt = resetMarkerStore?.markReset(normalizedEmail) ?? Date.now();
+  const state = await playerStateStore.clearByEmail(normalizedEmail);
+
+  return {
+    ok: true,
+    email: normalizedEmail,
+    userId: state?.userId ?? null,
+    resetAt,
+    balance: 0,
+    inventoryCount: 0,
+  };
+}
+
 export async function clearAccountByEmail(email, {
   userStore,
   playerStateStore,

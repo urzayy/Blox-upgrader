@@ -280,21 +280,50 @@ export function createSupabaseDb(url, secretKey) {
     };
   }
 
-  async function listUsers() {
-    const { data, error } = await supabase
+  async function fetchAllAccountRows() {
+    const pageSize = 1000;
+    const allRows = [];
+    let from = 0;
+
+    while (true) {
+      const { data, error } = await supabase
+        .from('blox_accounts')
+        .select('*')
+        .order('last_seen_at', { ascending: false })
+        .range(from, from + pageSize - 1);
+
+      if (error) throw error;
+
+      const batch = data ?? [];
+      allRows.push(...batch);
+      if (batch.length < pageSize) break;
+      from += pageSize;
+    }
+
+    return allRows;
+  }
+
+  async function countAccounts() {
+    const { count, error } = await supabase
       .from('blox_accounts')
-      .select('*')
-      .order('last_seen_at', { ascending: false });
+      .select('id', { count: 'exact', head: true });
 
     if (error) throw error;
+    return count ?? 0;
+  }
 
+  function dedupeUsersByEmail(rows) {
     const byEmail = new Map();
-    for (const row of data ?? []) {
+    for (const row of rows) {
       const user = rowToUser(row);
       const prev = byEmail.get(user.email);
       if (!prev || user.lastSeenAt > prev.lastSeenAt) byEmail.set(user.email, user);
     }
-    return [...byEmail.values()];
+    return [...byEmail.values()].sort((a, b) => b.lastSeenAt - a.lastSeenAt);
+  }
+
+  async function listUsers() {
+    return dedupeUsersByEmail(await fetchAllAccountRows());
   }
 
   async function listRegisteredEmails() {
@@ -393,6 +422,7 @@ export function createSupabaseDb(url, secretKey) {
     appendEvent,
     listUsers,
     listRegisteredEmails,
+    countAccounts,
     getUser,
     getUserEvents,
     exportUserTxt,

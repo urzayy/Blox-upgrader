@@ -18,7 +18,7 @@ interface Props {
 
 function formatExpiry(entry: PromoCodeEntry): string {
   if (entry.expiresAt == null) return 'Permanent';
-  return new Date(entry.expiresAt).toLocaleString('es-ES');
+  return new Date(entry.expiresAt).toLocaleString('en-US');
 }
 
 export function AdminPromoCodePanel({ open, mode, adminEmail, onClose }: Props) {
@@ -305,7 +305,7 @@ export function AdminPromoCodePanel({ open, mode, adminEmail, onClose }: Props) 
                         +{entry.percent}% bonus · {formatExpiry(entry)}
                       </p>
                       <p className="mt-0.5 text-[10px] text-white/30">
-                        Created {new Date(entry.createdAt).toLocaleString('es-ES')} · {entry.createdBy}
+                        Created {new Date(entry.createdAt).toLocaleString('en-US')} · {entry.createdBy}
                       </p>
                     </div>
                   ))}

@@ -43,7 +43,7 @@ export function SkinCatalogCart({
   className = '',
   submitLabel,
   submitIcon = 'cart',
-  emptyError = 'Selecciona al menos una skin.',
+  emptyError = 'Select at least one skin.',
   paginated = true,
   priceSort = 'asc',
   maxItemQuantity = 99,
@@ -180,7 +180,7 @@ export function SkinCatalogCart({
     try {
       const result = await onSubmit(cartItems);
       if (result === false) {
-        setStatus({ type: 'err', text: 'No se pudo completar la acción.' });
+        setStatus({ type: 'err', text: 'Could not complete the action.' });
         return;
       }
       clearCart();
@@ -226,7 +226,7 @@ export function SkinCatalogCart({
           type="text"
           value={search}
           onChange={e => { setSearch(e.target.value); setPage(0); }}
-          placeholder="Buscar..."
+          placeholder="Search..."
           className="input-filter min-w-[88px] flex-1 py-1.5 text-[10px]"
         />
         <div className="relative flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-gold/35 bg-gold/10 text-gold">
@@ -252,7 +252,7 @@ export function SkinCatalogCart({
 
       <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-2">
         {visibleItems.length === 0 ? (
-          <p className="py-16 text-center text-sm text-white/40">No hay skins con ese filtro.</p>
+          <p className="py-16 text-center text-sm text-white/40">No skins match that filter.</p>
         ) : (
           <div className="grid grid-cols-[repeat(auto-fill,minmax(112px,1fr))] content-start items-start gap-2 sm:grid-cols-[repeat(auto-fill,minmax(124px,1fr))]">
             {visibleItems.map(skin => {
@@ -314,7 +314,7 @@ export function SkinCatalogCart({
             type="button"
             disabled={!cartCount}
             onClick={clearCart}
-            title="Vaciar selección"
+            title="Clear selection"
             className="flex h-9 w-9 items-center justify-center rounded-lg border border-white/10 bg-[#141820] text-white/45 transition enabled:hover:border-risk/30 enabled:hover:text-risk disabled:opacity-30"
           >
             <TrashIcon className="h-4 w-4" />

@@ -169,7 +169,7 @@ export function GiveawayDetailPage({ period: rawPeriod }: Props) {
 
         <div className="text-center">
 
-          <p className="text-white/50">Sorteo no encontrado.</p>
+          <p className="text-white/50">Giveaway not found.</p>
 
           <button
 
@@ -181,7 +181,7 @@ export function GiveawayDetailPage({ period: rawPeriod }: Props) {
 
           >
 
-            Volver a giveaways
+            Back to giveaways
 
           </button>
 
@@ -221,7 +221,7 @@ export function GiveawayDetailPage({ period: rawPeriod }: Props) {
 
         >
 
-          ← Volver a giveaways
+          ← Back to giveaways
 
         </button>
 
@@ -255,7 +255,7 @@ export function GiveawayDetailPage({ period: rawPeriod }: Props) {
 
                 )}
 
-                label="Termina en"
+                label="Ends in"
 
                 value={active ? formatGiveawayCountdown(countdown) : '—'}
 
@@ -275,7 +275,7 @@ export function GiveawayDetailPage({ period: rawPeriod }: Props) {
 
                 )}
 
-                label="Suma total de premios"
+                label="Total prize pool"
 
                 value={<CoinPrice value={prize.price} iconClassName="h-4 w-4" textClassName="text-sm font-bold text-amber-300" />}
 
@@ -293,9 +293,9 @@ export function GiveawayDetailPage({ period: rawPeriod }: Props) {
 
                 )}
 
-                label="Participantes"
+                label="Participants"
 
-                value={(runtime?.participants ?? 0).toLocaleString('es-ES')}
+                value={(runtime?.participants ?? 0).toLocaleString('en-US')}
 
               />
 
@@ -319,7 +319,7 @@ export function GiveawayDetailPage({ period: rawPeriod }: Props) {
 
                 <span className="font-display text-[10px] font-bold uppercase tracking-[0.14em] text-white/45">
 
-                  Tus entradas
+                  Your entries
 
                 </span>
 
@@ -333,13 +333,13 @@ export function GiveawayDetailPage({ period: rawPeriod }: Props) {
 
               <p className="mt-2 font-display text-[10px] font-bold uppercase tracking-[0.12em] text-white/35">
 
-                Tu oportunidad: {myChance.toFixed(myChance > 0 && myChance < 1 ? 2 : 1)}%
+                Your chance: {myChance.toFixed(myChance > 0 && myChance < 1 ? 2 : 1)}%
 
               </p>
 
               <p className="mt-3 text-[10px] leading-relaxed text-white/35">
 
-                Cada {GIVEAWAY_COINS_PER_ENTRY} monedas depositadas = 1 entrada. Se acumulan.
+                Cada {GIVEAWAY_COINS_PER_ENTRY} coins deposited = 1 entry. They stack.
 
               </p>
 
@@ -367,24 +367,24 @@ export function GiveawayDetailPage({ period: rawPeriod }: Props) {
 
                     <p className="font-display text-xs font-bold uppercase tracking-wide text-lime-200/90">
 
-                      Deposita: {formatUSD(depositTarget)}
+                      Deposit: {formatUSD(depositTarget)}
 
                     </p>
 
                     <p className="mt-1 max-w-xl text-xs leading-relaxed text-white/45">
-                      Cuanto más deposites, más entradas tendrás y mejores serán tus probabilidades.
+                      The more you deposit, the more entries you get and the better your odds.
                       {isParticipant && myEntries > 0 && (
-                        <> Te faltan <span className="text-lime-300">{formatUSD(nextEntryProgress)}</span> para la siguiente entrada.</>
+                        <> You need <span className="text-lime-300">{formatUSD(nextEntryProgress)}</span> more for the next entry.</>
                       )}
                     </p>
                     {user && (
                       <p className="mt-2 text-[10px] uppercase tracking-wide text-white/35">
-                        Total depositado en este sorteo: {formatUSD(myDeposited)}
+                        Total deposited in this giveaway: {formatUSD(myDeposited)}
                       </p>
                     )}
                     {user && !isParticipant && (
                       <p className="mt-2 text-xs font-semibold text-amber-300/90">
-                        No has depositado en este sorteo. Deposita para participar.
+                        You haven't deposited in this giveaway. Deposit to participate.
                       </p>
                     )}
 
@@ -401,13 +401,13 @@ export function GiveawayDetailPage({ period: rawPeriod }: Props) {
                     onClick={handleDeposit}
                     className="rounded-xl bg-lime-400 px-6 py-3 font-display text-xs font-black uppercase tracking-[0.12em] text-[#101010] transition hover:bg-lime-300 disabled:cursor-not-allowed disabled:opacity-40"
                   >
-                    {isParticipant ? 'Depositar' : 'Depositar para unirte'}
+                    {isParticipant ? 'Deposit' : 'Deposit to join'}
                   </button>
                 </div>
               </div>
               <p className="mt-3 text-[10px] leading-relaxed text-white/35">
-                Un depósito cuenta para todos los sorteos activos (daily, weekly, monthly).
-                Cuando termine un sorteo, tendrás que volver a depositar para entrar al siguiente.
+                One deposit counts for all active giveaways (daily, weekly, monthly).
+                When a giveaway ends, you must deposit again to join the next one.
               </p>
 
             </div>
@@ -446,7 +446,7 @@ export function GiveawayDetailPage({ period: rawPeriod }: Props) {
 
                 ) : (
 
-                  <span className="text-xs uppercase tracking-wide text-white/30">Sin premio</span>
+                  <span className="text-xs uppercase tracking-wide text-white/30">No prize</span>
 
                 )}
 
@@ -492,7 +492,7 @@ export function GiveawayDetailPage({ period: rawPeriod }: Props) {
 
             <h3 className="mb-4 font-display text-sm font-black uppercase tracking-[0.14em] text-white/80">
 
-              Participantes del sorteo
+              Giveaway participants
 
             </h3>
 
@@ -512,7 +512,7 @@ export function GiveawayDetailPage({ period: rawPeriod }: Props) {
 
                       key={participant.userId}
 
-                      title={`${participant.nickname || participant.email.split('@')[0]} · ${participant.entries} entradas`}
+                      title={`${participant.nickname || participant.email.split('@')[0]} · ${participant.entries} entries`}
 
                       className={`overflow-hidden rounded-md ${
 
@@ -536,7 +536,7 @@ export function GiveawayDetailPage({ period: rawPeriod }: Props) {
 
               <p className="text-sm text-white/35">
 
-                Aún no hay participantes. Sé el primero en unirte.
+                No participants yet. Be the first to join.
 
               </p>
 
@@ -552,7 +552,7 @@ export function GiveawayDetailPage({ period: rawPeriod }: Props) {
 
           <p className="mt-4 text-center font-display text-xs font-bold uppercase tracking-[0.14em] text-white/35">
 
-            Este sorteo está cerrado
+            This giveaway is closed
 
           </p>
 

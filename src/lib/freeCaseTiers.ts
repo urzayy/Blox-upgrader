@@ -15,7 +15,7 @@ export interface FreeCaseTier {
 }
 
 export const FREE_CASE_TIERS: FreeCaseTier[] = [
-  { level: 1, name: 'Bronze', rankLabel: 'WOOD', iconUrl: 'https://cdn.casehug.com/leveling-ranks/WOOD.webp?width=64&quality=85', gradient: 'from-[#3d2514] via-[#5a3418] to-[#8b4518]', glow: 'rgba(217,119,6,0.32)', badge: 'from-amber-600 to-amber-900', chest: '#B87333', accent: '#E8943A', image: '/images/free-cases/bronze-chest.png?v=9' },
+  { level: 2, name: 'Bronze', rankLabel: 'WOOD', iconUrl: 'https://cdn.casehug.com/leveling-ranks/WOOD.webp?width=64&quality=85', gradient: 'from-[#3d2514] via-[#5a3418] to-[#8b4518]', glow: 'rgba(217,119,6,0.32)', badge: 'from-amber-600 to-amber-900', chest: '#B87333', accent: '#E8943A', image: '/images/free-cases/bronze-chest.png?v=9' },
   { level: 7, name: 'Iron', iconUrl: 'https://cdn.casehug.com/leveling-ranks/IRON.webp?width=64&quality=85', gradient: 'from-[#2a3344] via-[#151a24] to-[#1e2430]', glow: 'rgba(148,163,184,0.3)', badge: 'from-slate-500 to-slate-700', chest: '#64748B', accent: '#94A3B8', image: '/images/free-cases/iron-vault.png?v=2' },
   { level: 12, name: 'Copper', iconUrl: 'https://cdn.casehug.com/leveling-ranks/BRONZE.webp?width=128&quality=85', gradient: 'from-[#3d2a14] via-[#5a3a18] to-[#8b5a28]', glow: 'rgba(205,127,50,0.32)', badge: 'from-orange-700 to-amber-900', chest: '#B45309', accent: '#F59E0B', image: '/images/free-cases/copper-treasure.png?v=2' },
   { level: 20, name: 'Silver', iconUrl: 'https://cdn.casehug.com/leveling-ranks/SILVER.webp?width=64&quality=85', gradient: 'from-[#2a3348] via-[#3d4a5c] to-[#6b7d94]', glow: 'rgba(203,213,225,0.28)', badge: 'from-slate-300 to-slate-500', chest: '#CBD5E1', accent: '#E2E8F0', image: '/images/free-cases/silver-case.png?v=2' },

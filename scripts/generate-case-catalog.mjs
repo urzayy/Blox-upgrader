@@ -290,6 +290,7 @@ function fmtLoot(entries) {
 }
 
 const file = `import type { FreeCaseLootTable } from './freeCaseLoot';
+import { applyCuratedCaseOverrides } from './curatedCaseConfig';
 
 export type CaseTier = 'budget' | 'mid' | 'premium' | 'elite' | 'knife' | 'glove';
 
@@ -306,8 +307,8 @@ export interface CatalogCase {
   loot: FreeCaseLootTable;
 }
 
-/** 50 mixed-weapon cases — images TBD. Loot sums to 100% per case. */
-export const CASE_CATALOG: CatalogCase[] = [
+/** 50 mixed-weapon cases — curated overrides applied from curatedCaseConfig.ts */
+const GENERATED_CASE_CATALOG: CatalogCase[] = [
 ${cases
   .map(
     c => `  {
@@ -330,6 +331,8 @@ ${fmtLoot(c.loot.entries)}
   )
   .join('\n')}
 ];
+
+export const CASE_CATALOG: CatalogCase[] = applyCuratedCaseOverrides(GENERATED_CASE_CATALOG);
 
 export function getCatalogCaseBySlug(slug: string): CatalogCase | undefined {
   const normalized = slug.toLowerCase();

@@ -29,8 +29,8 @@ export function LogoutDoorButton() {
     <button
       type="button"
       onClick={logout}
-      title="Cerrar sesión"
-      aria-label="Cerrar sesión"
+      title="Log out"
+      aria-label="Log out"
       className={`flex shrink-0 items-center justify-center rounded-full border transition ${sizeClass} ${
         clean
           ? `${cleanHeaderChip(false)} border-rose-500/35 text-rose-400 hover:border-rose-400/55 hover:bg-rose-500/10 hover:text-rose-300`

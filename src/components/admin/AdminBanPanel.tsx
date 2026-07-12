@@ -15,17 +15,17 @@ interface Props {
 }
 
 const BAN_DURATION_OPTIONS = [
-  { label: '1 día', value: 1 },
-  { label: '3 días', value: 3 },
-  { label: '7 días', value: 7 },
-  { label: '14 días', value: 14 },
-  { label: '30 días', value: 30 },
-  { label: '90 días', value: 90 },
-  { label: 'Permanente', value: 0 },
+  { label: '1 day', value: 1 },
+  { label: '3 days', value: 3 },
+  { label: '7 days', value: 7 },
+  { label: '14 days', value: 14 },
+  { label: '30 days', value: 30 },
+  { label: '90 days', value: 90 },
+  { label: 'Permanent', value: 0 },
 ] as const;
 
 function formatBanExpiry(ban: AccountBanRecord): string {
-  if (ban.permanent || ban.bannedUntil == null) return 'Permanente';
+  if (ban.permanent || ban.bannedUntil == null) return 'Permanent';
   const remaining = ban.bannedUntil - Date.now();
   if (remaining <= 0) return 'Expirado';
   const days = Math.ceil(remaining / 86_400_000);
@@ -52,7 +52,7 @@ export function AdminBanPanel({ open, adminEmail, onClose }: Props) {
       const next = await fetchActiveBans(adminEmail);
       setBans(next);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'No se pudo cargar los baneos.');
+      setError(err instanceof Error ? err.message : 'Could not load bans.');
     } finally {
       setListLoading(false);
     }
@@ -75,7 +75,7 @@ export function AdminBanPanel({ open, adminEmail, onClose }: Props) {
   const handleBan = async () => {
     const email = normalizeGrantEmail(targetEmail);
     if (!isValidGrantEmail(email)) {
-      setError('Introduce un correo electrónico válido.');
+      setError('Enter a valid email address.');
       return;
     }
 
@@ -84,13 +84,13 @@ export function AdminBanPanel({ open, adminEmail, onClose }: Props) {
     setSuccess('');
     try {
       const ban = await banUserByEmail(adminEmail, email, days === 0 ? null : days, reason);
-      const durationLabel = ban.permanent ? 'permanentemente' : `por ${ban.days} día(s)`;
-      setSuccess(`${ban.email} baneado ${durationLabel}.`);
+      const durationLabel = ban.permanent ? 'permanently' : `por ${ban.days} day(s)`;
+      setSuccess(`${ban.email} banned ${durationLabel}.`);
       setTargetEmail('');
       setReason('');
       await loadBans();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'No se pudo banear al usuario.');
+      setError(err instanceof Error ? err.message : 'Could not ban user.');
     } finally {
       setLoading(false);
     }
@@ -101,10 +101,10 @@ export function AdminBanPanel({ open, adminEmail, onClose }: Props) {
     setSuccess('');
     try {
       await unbanUserByEmail(adminEmail, email);
-      setSuccess(`${email} desbaneado.`);
+      setSuccess(`${email} unbanned.`);
       await loadBans();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'No se pudo desbanear al usuario.');
+      setError(err instanceof Error ? err.message : 'Could not unban user.');
     }
   };
 
@@ -119,7 +119,7 @@ export function AdminBanPanel({ open, adminEmail, onClose }: Props) {
         >
           <button
             type="button"
-            aria-label="Cerrar"
+            aria-label="Close"
             className="absolute inset-0 bg-black/80 backdrop-blur-sm"
             onClick={onClose}
           />
@@ -137,10 +137,10 @@ export function AdminBanPanel({ open, adminEmail, onClose }: Props) {
             <div className="flex shrink-0 items-center justify-between gap-3 border-b border-risk/20 bg-risk/10 px-4 py-3">
               <div>
                 <h2 id="admin-ban-title" className="font-display text-base font-bold uppercase tracking-wide text-risk">
-                  Banear usuario
+                  Ban user
                 </h2>
                 <p className="text-[11px] text-white/45">
-                  El usuario baneado no puede iniciar sesión — verá &quot;Cuenta suspendida&quot;
+                  Banned users cannot sign in — they will see &quot;Account suspended&quot;
                 </p>
               </div>
               <button
@@ -148,7 +148,7 @@ export function AdminBanPanel({ open, adminEmail, onClose }: Props) {
                 onClick={onClose}
                 className="rounded-lg border border-white/10 px-3 py-1.5 text-xs text-white/50 transition hover:border-white/25 hover:text-white"
               >
-                Cerrar
+                Close
               </button>
             </div>
 
@@ -156,20 +156,20 @@ export function AdminBanPanel({ open, adminEmail, onClose }: Props) {
               <div className="grid gap-3 sm:grid-cols-2">
                 <div className="sm:col-span-2">
                   <label className="mb-1 block text-[10px] uppercase tracking-wide text-white/40">
-                    Correo a banear
+                    Email to ban
                   </label>
                   <input
                     type="email"
                     value={targetEmail}
                     onChange={e => setTargetEmail(e.target.value)}
-                    placeholder="correo@ejemplo.com"
+                    placeholder="email@example.com"
                     className="input-filter w-full text-sm"
                   />
                 </div>
 
                 <div>
                   <label className="mb-1 block text-[10px] uppercase tracking-wide text-white/40">
-                    Duración
+                    Duration
                   </label>
                   <select
                     value={days}
@@ -186,13 +186,13 @@ export function AdminBanPanel({ open, adminEmail, onClose }: Props) {
 
                 <div>
                   <label className="mb-1 block text-[10px] uppercase tracking-wide text-white/40">
-                    Motivo (opcional)
+                    Reason (optional)
                   </label>
                   <input
                     type="text"
                     value={reason}
                     onChange={e => setReason(e.target.value)}
-                    placeholder="Ej. abuso, spam, etc."
+                    placeholder="e.g. abuse, spam, etc."
                     className="input-filter w-full text-sm"
                     maxLength={200}
                   />
@@ -205,7 +205,7 @@ export function AdminBanPanel({ open, adminEmail, onClose }: Props) {
                 onClick={() => { void handleBan(); }}
                 className="w-full rounded-lg border border-risk/50 bg-risk/20 px-4 py-2.5 font-display text-[11px] font-bold uppercase tracking-wide text-risk transition hover:border-risk hover:bg-risk/30 disabled:cursor-not-allowed disabled:opacity-40"
               >
-                {loading ? 'Baneando…' : 'Banear usuario'}
+                {loading ? 'Banning…' : 'Ban user'}
               </button>
 
               {error && (
@@ -222,7 +222,7 @@ export function AdminBanPanel({ open, adminEmail, onClose }: Props) {
               <div className="border-t border-white/10 pt-4">
                 <div className="mb-2 flex items-center justify-between gap-2">
                   <h3 className="font-display text-[11px] font-bold uppercase tracking-wide text-white/70">
-                    Baneos activos ({bans.length})
+                    Active bans ({bans.length})
                   </h3>
                   <button
                     type="button"
@@ -230,14 +230,14 @@ export function AdminBanPanel({ open, adminEmail, onClose }: Props) {
                     disabled={listLoading}
                     className="rounded border border-white/10 px-2 py-1 text-[10px] text-white/50 transition hover:border-white/25 hover:text-white disabled:opacity-40"
                   >
-                    {listLoading ? '…' : 'Actualizar'}
+                    {listLoading ? '…' : 'Refresh'}
                   </button>
                 </div>
 
                 {listLoading && bans.length === 0 ? (
-                  <p className="py-6 text-center text-[11px] text-white/35">Cargando…</p>
+                  <p className="py-6 text-center text-[11px] text-white/35">Loading…</p>
                 ) : bans.length === 0 ? (
-                  <p className="py-6 text-center text-[11px] text-white/35">No hay baneos activos.</p>
+                  <p className="py-6 text-center text-[11px] text-white/35">No active bans.</p>
                 ) : (
                   <ul className="space-y-2">
                     {bans.map(ban => (

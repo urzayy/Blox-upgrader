@@ -51,7 +51,7 @@ export function ProfileHeaderCard({ balance }: Props) {
   const handleFileChange = async (file: File | undefined) => {
     if (!file || !user) return;
     if (!/^image\/(jpeg|jpg|png)$/i.test(file.type)) {
-      setUploadError('Solo JPG o PNG.');
+      setUploadError('JPG or PNG only.');
       return;
     }
     setUploading(true);
@@ -60,13 +60,13 @@ export function ProfileHeaderCard({ balance }: Props) {
       const dataUrl = await resizeImageFile(file);
       const result = await uploadProfilePhoto(user.userId, user.email, dataUrl);
       if (!result.ok) {
-        setUploadError(result.error ?? 'No se pudo subir la foto.');
+        setUploadError(result.error ?? 'Could not upload photo.');
         return;
       }
       notifyProfilePhotoUpdated();
       void refreshProfilePhoto();
     } catch {
-      setUploadError('No se pudo procesar la imagen.');
+      setUploadError('Could not process image.');
     } finally {
       setUploading(false);
     }
@@ -84,7 +84,7 @@ export function ProfileHeaderCard({ balance }: Props) {
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2">
                   <p className="truncate font-display text-xl font-bold text-white lg:text-2xl">{displayName}</p>
-                  <span className="text-sky-400" title="Verificado">✓</span>
+                  <span className="text-sky-400" title="Verified">✓</span>
                 </div>
                 <p className="mt-1 font-display text-base font-bold uppercase tracking-wide text-[#A855F7] lg:text-lg">
                   {level.rankLabel} | {level.level} LEVEL
@@ -96,7 +96,7 @@ export function ProfileHeaderCard({ balance }: Props) {
                   />
                 </div>
                 <p className="mt-2 text-sm text-white/45">
-                  {level.xp.toLocaleString('es-ES')} / {level.xpToNext.toLocaleString('es-ES')} XP
+                  {level.xp.toLocaleString('en-US')} / {level.xpToNext.toLocaleString('en-US')} XP
                 </p>
               </div>
             </div>
@@ -107,7 +107,7 @@ export function ProfileHeaderCard({ balance }: Props) {
             <button
               type="button"
               onClick={() => fileRef.current?.click()}
-              title="Subir foto de perfil (JPG/PNG)"
+              title="Upload profile photo (JPG/PNG)"
               className="group relative"
             >
               <div
@@ -134,7 +134,7 @@ export function ProfileHeaderCard({ balance }: Props) {
               </span>
               <span className="pointer-events-none absolute inset-0 flex items-center justify-center rounded-full bg-black/45 opacity-0 transition group-hover:opacity-100">
                 <span className="text-[10px] font-bold uppercase tracking-wide text-white">
-                  {uploading ? 'Subiendo…' : 'Cambiar foto'}
+                  {uploading ? 'Uploading…' : 'Change photo'}
                 </span>
               </span>
             </button>
@@ -203,7 +203,7 @@ export function ProfileHeaderCard({ balance }: Props) {
         <div className="fixed inset-0 z-[130] flex items-center justify-center p-4">
           <button
             type="button"
-            aria-label="Cerrar"
+            aria-label="Close"
             className="absolute inset-0 bg-black/75 backdrop-blur-sm"
             onClick={() => setAffiliateOpen(false)}
           />
@@ -217,7 +217,7 @@ export function ProfileHeaderCard({ balance }: Props) {
               onClick={() => setAffiliateOpen(false)}
               className="mt-5 rounded-lg border border-white/10 px-4 py-2 text-sm text-white/60 hover:text-white"
             >
-              Cerrar
+              Close
             </button>
           </div>
         </div>

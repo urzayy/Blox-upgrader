@@ -83,6 +83,8 @@ interface PortadaProps {
   /** Open price shown on catalog grid cards. */
   price?: number;
   title?: string;
+  /** Shown to the right of the case name on catalog grid cards. */
+  titleSuffix?: string;
   className?: string;
   hasRoyalLoot?: boolean;
 }
@@ -96,32 +98,53 @@ export function FreeCasePortada({
   catalogGrid = false,
   price,
   title,
+  titleSuffix,
   className = '',
   hasRoyalLoot = false,
 }: PortadaProps) {
   const ornate = tier.level >= 50;
   const label = title ?? rankLabelForTier(tier);
+  const displayName = title ?? tier.name;
+
+  const catalogTitle = (
+    <h3 className="flex items-center justify-center gap-2 text-center font-display text-[15px] font-black uppercase tracking-[0.08em] text-white sm:text-base">
+      <span className="drop-shadow-[0_2px_8px_rgba(0,0,0,0.85)]">{displayName}</span>
+      {titleSuffix ? (
+        <span className="rounded bg-violet-500/20 px-1.5 py-0.5 font-display text-[10px] font-black tabular-nums tracking-wide text-violet-200 sm:text-[11px]">
+          {titleSuffix}
+        </span>
+      ) : null}
+    </h3>
+  );
 
   if (catalogGrid) {
     const hasImage = Boolean(tier.image);
+    const catalogScale = tier.imageScale ?? 1.01;
+    const fillCatalog = catalogScale > 1.1;
 
     if (hasImage) {
       return (
         <article
-          className={`relative min-h-[21rem] overflow-hidden rounded-xl bg-[#1a1d26] sm:min-h-[23.625rem] ${className}`}
+          className={`relative min-h-[14.5rem] overflow-hidden rounded-xl bg-[#1a1d26] sm:min-h-[18rem] lg:min-h-[21rem] xl:min-h-[23.625rem] ${className}`}
         >
           <img
             src={tier.image}
             alt=""
-            className="absolute inset-0 h-full w-full object-cover object-center"
+            className={
+              fillCatalog
+                ? 'absolute inset-x-0 top-0 bottom-[2.75rem] h-full w-full object-cover object-center sm:bottom-[3.5rem]'
+                : 'absolute inset-x-0 top-0 bottom-[3rem] h-auto w-full object-contain object-center px-0 sm:bottom-[4rem]'
+            }
+            style={{
+              transform: `scale(${catalogScale})`,
+              transformOrigin: 'center center',
+            }}
             draggable={false}
           />
-          <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-[#0a0c12]/95 via-[#0a0c12]/35 to-transparent" />
+          <div className="pointer-events-none absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-[#0a0c12]/95 via-[#0a0c12]/55 to-transparent sm:h-28" />
 
-          <div className="relative flex h-full min-h-[21rem] flex-col justify-end px-3 pb-3 sm:min-h-[23.625rem] sm:px-4 sm:pb-3.5">
-            <h3 className="text-center font-display text-[15px] font-black uppercase tracking-[0.08em] text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.85)] sm:text-base">
-              {title ?? tier.name}
-            </h3>
+          <div className="relative flex h-full min-h-[14.5rem] flex-col justify-end px-2.5 pb-2.5 sm:min-h-[18rem] sm:px-4 sm:pb-3.5 lg:min-h-[21rem] xl:min-h-[23.625rem]">
+            {catalogTitle}
 
             {price != null && (
               <div className="mt-2 flex justify-center">
@@ -141,15 +164,13 @@ export function FreeCasePortada({
 
     return (
       <article
-        className={`relative flex min-h-[21rem] flex-col overflow-hidden rounded-xl bg-[#1a1d26] sm:min-h-[23.625rem] ${className}`}
+        className={`relative flex min-h-[14.5rem] flex-col overflow-hidden rounded-xl bg-[#1a1d26] sm:min-h-[18rem] lg:min-h-[21rem] xl:min-h-[23.625rem] ${className}`}
       >
         <div className="relative flex min-h-[13.9rem] flex-1 items-center justify-center px-5 pb-2 pt-6 sm:min-h-[16.5rem] sm:px-6 sm:pt-7">
           <CaseChest tier={tier} catalog bare />
         </div>
 
-        <h3 className="px-4 py-2.5 text-center font-display text-[15px] font-black uppercase tracking-[0.08em] text-white sm:text-base">
-          {title ?? tier.name}
-        </h3>
+        {catalogTitle}
 
         {price != null && (
           <div className="flex justify-center px-4 pb-3.5 sm:pb-4">

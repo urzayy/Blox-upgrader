@@ -1,4 +1,5 @@
 import { slugForTier, type FreeCaseTier } from './freeCaseTiers';
+import { canPlayerOpenFreeCase } from './freeCaseUnlock';
 
 export const FREE_CASE_COOLDOWN_MS = 24 * 60 * 60 * 1000;
 const STORAGE_VERSION = 1;
@@ -46,10 +47,13 @@ export function getCooldownRemainingMs(
 }
 
 export function canOpenFreeCase(userId: string | null | undefined, slug: string, now = Date.now()): boolean {
+  if (!canPlayerOpenFreeCase(userId, slug)) return false;
   return getCooldownRemainingMs(userId, slug, now) === 0;
 }
 
 export function recordFreeCaseOpen(userId: string, slug: string, openedAt = Date.now()): void {
+  if (!canPlayerOpenFreeCase(userId, slug)) return;
+
   const map = loadMap(userId);
   map[slug.toLowerCase()] = openedAt;
   saveMap(userId, map);

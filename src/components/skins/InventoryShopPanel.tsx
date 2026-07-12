@@ -82,7 +82,7 @@ export function InventoryShopPanel({
           <span className={`text-[10px] ${atMax ? 'text-gold/80' : 'text-white/35'}`}>
             {skins.length} skins · {selected.length}/{maxSelected} max
             {skins.length > PAGE_SIZE && (
-              <span className="text-white/30"> · pág. {safePage + 1}/{totalPages}</span>
+              <span className="text-white/30"> · page {safePage + 1}/{totalPages}</span>
             )}
             {lockedCount > 0 && (
               <span className="text-gold/70"> · {lockedCount} locked</span>
@@ -90,7 +90,7 @@ export function InventoryShopPanel({
           </span>
         ) : (
           <div className="flex items-center gap-2 rounded-lg border border-gold/30 bg-gradient-to-r from-gold/10 via-gold/5 to-transparent px-2.5 py-1.5 shadow-[0_0_18px_rgba(176,108,255,0.12)]">
-            <span className="text-[9px] font-bold uppercase tracking-[0.14em] text-white/45">Saldo</span>
+            <span className="text-[9px] font-bold uppercase tracking-[0.14em] text-white/45">Balance</span>
             <CoinPrice
               value={balance}
               iconClassName="h-3.5 w-3.5"
@@ -105,7 +105,7 @@ export function InventoryShopPanel({
           <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-2">
             {skins.length === 0 ? (
               <p className="py-12 text-center text-sm text-white/40">
-                Tu inventario está vacío. Compra skins en la tienda.
+                Your inventory is empty. Buy skins in the shop.
               </p>
             ) : (
               <div className="grid grid-cols-[repeat(auto-fill,minmax(96px,1fr))] content-start items-start gap-2 sm:grid-cols-[repeat(auto-fill,minmax(108px,1fr))] md:grid-cols-[repeat(auto-fill,minmax(118px,1fr))]">
@@ -142,7 +142,7 @@ export function InventoryShopPanel({
                 disabled={safePage <= 0}
                 onClick={() => setPage(p => Math.max(0, p - 1))}
                 className="flex h-8 w-8 items-center justify-center rounded-lg border border-white/10 text-white/50 transition enabled:hover:border-white/25 enabled:hover:text-white disabled:opacity-30"
-                aria-label="Página anterior"
+                aria-label="Previous page"
               >
                 ‹
               </button>
@@ -154,7 +154,7 @@ export function InventoryShopPanel({
                 disabled={safePage >= totalPages - 1}
                 onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))}
                 className="flex h-8 w-8 items-center justify-center rounded-lg border border-white/10 text-white/50 transition enabled:hover:border-white/25 enabled:hover:text-white disabled:opacity-30"
-                aria-label="Página siguiente"
+                aria-label="Next page"
               >
                 ›
               </button>

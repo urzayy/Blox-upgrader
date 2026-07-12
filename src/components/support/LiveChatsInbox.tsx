@@ -27,7 +27,7 @@ export function LiveChatsInbox({ open, userId, onClose, onOpenTicket }: Props) {
         setTickets(await fetchUserWithdrawTickets(userId));
         setError('');
       } catch {
-        setError('No se pudieron cargar tus chats.');
+        setError('Could not load your chats.');
       }
     };
     void load();
@@ -46,7 +46,7 @@ export function LiveChatsInbox({ open, userId, onClose, onOpenTicket }: Props) {
         >
           <button
             type="button"
-            aria-label="Cerrar"
+            aria-label="Close"
             className="absolute inset-0 bg-black/80 backdrop-blur-sm"
             onClick={onClose}
           />
@@ -67,7 +67,7 @@ export function LiveChatsInbox({ open, userId, onClose, onOpenTicket }: Props) {
                   Live Chats
                 </h2>
                 <p className="text-[11px] text-white/45">
-                  Todos tus chats de deposit y withdraw — el historial no se borra
+                  All your deposit and withdraw chats — history is not deleted
                 </p>
               </div>
               <button
@@ -75,7 +75,7 @@ export function LiveChatsInbox({ open, userId, onClose, onOpenTicket }: Props) {
                 onClick={onClose}
                 className="rounded-lg border border-white/10 px-3 py-1.5 text-xs text-white/50 transition hover:border-white/25 hover:text-white"
               >
-                Cerrar
+                Close
               </button>
             </div>
 
@@ -87,7 +87,7 @@ export function LiveChatsInbox({ open, userId, onClose, onOpenTicket }: Props) {
               )}
               {tickets.length === 0 ? (
                 <p className="py-16 text-center text-sm text-white/40">
-                  Aún no tienes chats. Usa Deposit, Withdraw o el botón Ayuda para abrir uno.
+                  You don't have any chats yet. Use Deposit, Withdraw, or the Help button to open one.
                 </p>
               ) : (
                 <div className="space-y-2">
@@ -108,15 +108,15 @@ export function LiveChatsInbox({ open, userId, onClose, onOpenTicket }: Props) {
                         </div>
                         <p className="mt-1 text-[11px] text-white/70">
                           {getTicketType(ticket) === 'help'
-                            ? 'Chat de ayuda en vivo'
+                            ? 'Live help chat'
                             : isRobuxDeposit(ticket)
-                              ? `Depósito de ${ticket.robuxAmount!.toLocaleString('en-US')} Robux → ${ticket.total.toLocaleString('es-ES')} saldo`
+                              ? `Deposit of ${ticket.robuxAmount!.toLocaleString('en-US')} Robux → ${ticket.total.toLocaleString('en-US')} balance`
                               : getTicketType(ticket) === 'deposit'
-                                ? `${ticket.skins.length} skins para depositar`
-                                : `${ticket.skins.length} skins para retirar`}
+                                ? `${ticket.skins.length} skins to deposit`
+                                : `${ticket.skins.length} skins to withdraw`}
                         </p>
                         <p className="mt-0.5 text-[10px] text-white/35">
-                          {new Date(ticket.createdAt).toLocaleString('es-ES')}
+                          {new Date(ticket.createdAt).toLocaleString('en-US')}
                         </p>
                       </div>
                       {getTicketType(ticket) !== 'help' && isRobuxDeposit(ticket) && (

@@ -224,23 +224,23 @@ export async function loginOrRegister(
 ): Promise<AuthResult & { session?: Session }> {
   const normalized = normalizeEmail(email);
 
-  if (!normalized) return { ok: false, error: 'Introduce tu correo electrónico.' };
-  if (!isValidEmail(normalized)) return { ok: false, error: 'Correo electrónico no válido.' };
-  if (!password) return { ok: false, error: 'Introduce tu contraseña.' };
-  if (password.length < 6) return { ok: false, error: 'La contraseña debe tener al menos 6 caracteres.' };
+  if (!normalized) return { ok: false, error: 'Enter your email address.' };
+  if (!isValidEmail(normalized)) return { ok: false, error: 'Invalid email address.' };
+  if (!password) return { ok: false, error: 'Enter your password.' };
+  if (password.length < 6) return { ok: false, error: 'Password must be at least 6 characters.' };
 
   const accounts = loadAccounts();
   const existing = accounts.find(a => a.email === normalized);
   const serverSession = await requestServerSession(normalized, password);
 
   if (serverSession.wrongPassword) {
-    return { ok: false, error: 'Contraseña incorrecta.' };
+    return { ok: false, error: 'Incorrect password.' };
   }
 
   if (serverSession.ok && serverSession.user) {
     const banStatus = await fetchAccountBanStatus(normalized);
     if (banStatus.banned) {
-      return { ok: false, error: 'Cuenta suspendida.' };
+      return { ok: false, error: 'Account suspended.' };
     }
 
     const account = await upsertLocalAccountFromCredentials(accounts, {
@@ -271,11 +271,11 @@ export async function loginOrRegister(
   if (existing) {
     const hash = await hashPassword(password, existing.salt);
     if (hash !== existing.passwordHash) {
-      return { ok: false, error: 'Contraseña incorrecta.' };
+      return { ok: false, error: 'Incorrect password.' };
     }
     const banStatus = await fetchAccountBanStatus(normalized);
     if (banStatus.banned) {
-      return { ok: false, error: 'Cuenta suspendida.' };
+      return { ok: false, error: 'Account suspended.' };
     }
     const session = sessionFromAccount(existing);
     saveSession(session);
@@ -288,19 +288,19 @@ export async function loginOrRegister(
   }
 
   if (!serverSession.notFound) {
-    return { ok: false, error: 'No se pudo iniciar sesión. Inténtalo de nuevo.' };
+    return { ok: false, error: 'Could not log in. Please try again.' };
   }
 
   if (!opts.acceptedAge || !opts.acceptedTerms) {
     return {
       ok: false,
-      error: 'Debes aceptar ser mayor de 18 años y los términos del servicio para crear tu cuenta.',
+      error: 'You must confirm you are 18 or older and accept the terms of service to create your account.',
     };
   }
 
   const banStatus = await fetchAccountBanStatus(normalized);
   if (banStatus.banned) {
-    return { ok: false, error: 'Cuenta suspendida.' };
+    return { ok: false, error: 'Account suspended.' };
   }
 
   const salt = randomSalt();
@@ -324,7 +324,7 @@ export async function loginOrRegister(
     saveSession(null);
     const withoutNew = accounts.filter(a => a.id !== account.id);
     saveAccounts(withoutNew);
-    return { ok: false, error: 'Esta cuenta ya existe. Inicia sesión con tu correo.' };
+    return { ok: false, error: 'This account already exists. Log in with your email.' };
   }
   return { ok: true, session, isNewAccount: true };
 }
@@ -346,15 +346,15 @@ export function updateNickname(
 ): { ok: boolean; error?: string; session?: Session } {
   const trimmed = nickname.trim();
   if (trimmed.length > 20) {
-    return { ok: false, error: 'El apodo puede tener como máximo 20 caracteres.' };
+    return { ok: false, error: 'Nickname can be at most 20 characters.' };
   }
   if (trimmed && !/^[\w\s.-]{2,20}$/u.test(trimmed)) {
-    return { ok: false, error: 'Usa entre 2 y 20 caracteres (letras, números, espacios, . - _).' };
+    return { ok: false, error: 'Use 2–20 characters (letters, numbers, spaces, . - _).' };
   }
 
   const accounts = loadAccounts();
   const index = accounts.findIndex(a => a.id === userId);
-  if (index === -1) return { ok: false, error: 'Cuenta no encontrada.' };
+  if (index === -1) return { ok: false, error: 'Account not found.' };
 
   const nextNickname = trimmed || undefined;
   accounts[index] = { ...accounts[index], nickname: nextNickname };

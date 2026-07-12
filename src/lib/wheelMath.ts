@@ -168,7 +168,7 @@ export function resolveOutcome(probability: number): boolean {
 }
 
 export function formatRoll(n: number) {
-  return new Intl.NumberFormat('es-ES').format(n);
+  return new Intl.NumberFormat('en-US').format(n);
 }
 
 export function polar(cx: number, cy: number, r: number, deg: number) {

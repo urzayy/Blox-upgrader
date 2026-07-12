@@ -19,7 +19,7 @@ export interface PlayerLevelState {
 }
 
 export const MAX_LEVEL = 90;
-export const XP_PER_WAGERED_COIN = 7;
+export const XP_PER_WAGERED_COIN = 3;
 
 /**
  * XP required while at level L to reach level L+1.

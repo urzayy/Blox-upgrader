@@ -103,7 +103,11 @@ export function AdminUserDbPanel({ open, adminEmail, onClose }: Props) {
                 {status && (
                   <p className={`mt-1 text-[10px] ${status.storage.ok ? 'text-win' : 'text-risk'}`}>
                     {status.storage.ok
-                      ? `${status.registeredEmailCount} emails · ${status.backend === 'supabase' ? 'Supabase' : 'Local files'}`
+                      ? `${status.registeredEmailCount} emails${
+                          status.totalAccountRows != null && status.totalAccountRows !== status.registeredEmailCount
+                            ? ` · ${status.totalAccountRows} rows`
+                            : ''
+                        } · ${status.backend === 'supabase' ? 'Supabase' : 'Local files'}`
                       : `Database error — ${status.storage.error ?? 'run scripts/supabase-schema.sql in Supabase SQL Editor'}`}
                   </p>
                 )}

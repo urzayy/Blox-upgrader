@@ -10,11 +10,12 @@ import {
 } from './src/lib/feedBot.mjs';
 import { createUserStore } from './server/lib/userStore.mjs';
 import { createPlayerStateStore } from './server/lib/playerStateStore.mjs';
-import { clearAccountByEmail as resetAccountByEmail } from './server/lib/accountReset.mjs';
+import { clearAccountByEmail as resetAccountByEmail, resetPlayerProgressByEmail } from './server/lib/accountReset.mjs';
 import { createAccountResetMarkerStore } from './server/lib/accountResetMarker.mjs';
 import { createAccountBanStore } from './server/lib/accountBanStore.mjs';
 import { resolveDepositBonus, resolveRobuxDepositBonus, initPromoCodeStore } from './server/lib/depositBonus.mjs';
 import { createPromoCodeStore } from './server/lib/promoCodeStore.mjs';
+import { createAnnouncementStore } from './server/lib/announcementStore.mjs';
 
 dotenv.config();
 
@@ -32,6 +33,7 @@ const GRANTS_DIR = process.env.GRANTS_DIR || path.join(DATA_DIR, 'inventory-gran
 const BALANCE_GRANTS_DIR = process.env.BALANCE_GRANTS_DIR || path.join(DATA_DIR, 'balance-grants');
 const STATE_DIR = process.env.STATE_DIR || path.join(DATA_DIR, 'site-state');
 const PROMO_CODES_DIR = process.env.PROMO_CODES_DIR || path.join(DATA_DIR, 'promo-codes');
+const ANNOUNCEMENTS_DIR = process.env.ANNOUNCEMENTS_DIR || path.join(DATA_DIR, 'announcements');
 const STATE_FILE = path.join(STATE_DIR, 'state.json');
 
 const PORT = Number(process.env.PORT) || 4173;
@@ -40,13 +42,14 @@ const BASE_TOTAL_UPGRADES = 13_200;
 const MIN_DEPOSIT_TOTAL = 100;
 const MIN_WITHDRAW_TOTAL = 20;
 
-for (const dir of [LOGS_DIR, USER_DB_DIR, path.join(USER_DB_DIR, 'events'), PLAYER_STATE_DIR, ACCOUNT_RESETS_DIR, ACCOUNT_BANS_DIR, CHATS_DIR, GRANTS_DIR, BALANCE_GRANTS_DIR, STATE_DIR, PROMO_CODES_DIR]) {
+for (const dir of [LOGS_DIR, USER_DB_DIR, path.join(USER_DB_DIR, 'events'), PLAYER_STATE_DIR, ACCOUNT_RESETS_DIR, ACCOUNT_BANS_DIR, CHATS_DIR, GRANTS_DIR, BALANCE_GRANTS_DIR, STATE_DIR, PROMO_CODES_DIR, ANNOUNCEMENTS_DIR]) {
   if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
 }
 
 const userStore = createUserStore({ userDbDir: USER_DB_DIR });
 const promoCodeStore = createPromoCodeStore(PROMO_CODES_DIR);
 initPromoCodeStore(promoCodeStore);
+const announcementStore = createAnnouncementStore(ANNOUNCEMENTS_DIR);
 const playerStateStore = createPlayerStateStore({ playerStateDir: PLAYER_STATE_DIR });
 const resetMarkerStore = createAccountResetMarkerStore(ACCOUNT_RESETS_DIR);
 const banStore = createAccountBanStore(ACCOUNT_BANS_DIR);
@@ -561,6 +564,48 @@ app.post('/api/admin/clear-account', async (req, res) => {
   }
 });
 
+app.post('/api/admin/reset-all-progress', async (req, res) => {
+  try {
+    const { adminEmail } = req.body ?? {};
+    if (!userStore.isAdminEmail(String(adminEmail ?? '').trim())) {
+      sendJson(res, 403, { error: 'forbidden' });
+      return;
+    }
+
+    const registeredEmails = await userStore.listRegisteredEmails();
+    const skippedAdmins = [];
+    const reset = [];
+
+    for (const email of registeredEmails) {
+      const normalizedEmail = String(email).trim().toLowerCase();
+      if (!normalizedEmail) continue;
+      if (userStore.isAdminEmail(normalizedEmail) || playerStateStore.isAdminEmail(normalizedEmail)) {
+        skippedAdmins.push(normalizedEmail);
+        continue;
+      }
+
+      const result = await resetPlayerProgressByEmail(normalizedEmail, {
+        playerStateStore,
+        resetMarkerStore,
+      });
+      reset.push(result);
+    }
+
+    sendJson(res, 200, {
+      ok: true,
+      resetCount: reset.length,
+      skippedAdminCount: skippedAdmins.length,
+      skippedAdmins,
+    });
+  } catch (error) {
+    console.error('[admin/reset-all-progress]', error);
+    sendJson(res, 500, {
+      error: 'error',
+      message: error instanceof Error ? error.message : (error?.message ?? 'reset failed'),
+    });
+  }
+});
+
 app.get('/api/admin/user-db/status', async (req, res) => {
   const adminEmail = String(req.query.adminEmail ?? '');
   if (!userStore.isAdminEmail(adminEmail)) {
@@ -570,12 +615,16 @@ app.get('/api/admin/user-db/status', async (req, res) => {
   await refreshStorageStatus();
   const users = await userStore.listUsers();
   const emails = await userStore.listRegisteredEmails();
+  const totalAccountRows = typeof userStore.countAccounts === 'function'
+    ? await userStore.countAccounts()
+    : users.length;
   sendJson(res, 200, {
     storage: storageStatus,
     backend: userStore.type ?? 'file',
     dataDir: userStore.type === 'supabase' ? process.env.SUPABASE_URL : DATA_DIR,
     logsDir: LOGS_DIR,
     userCount: users.length,
+    totalAccountRows,
     registeredEmailCount: emails.length,
     registeredEmails: emails,
     siteUrl: SITE_URL,
@@ -665,6 +714,46 @@ app.delete('/api/admin/promo-codes/:code', (req, res) => {
     return;
   }
   sendJson(res, 200, { ok: true, entry: result.entry });
+});
+
+app.get('/api/announcement/active', (_req, res) => {
+  sendJson(res, 200, { announcement: announcementStore.getActive() });
+});
+
+app.get('/api/admin/announcement', (req, res) => {
+  const adminEmail = String(req.query.adminEmail ?? '').trim();
+  if (!userStore.isAdminEmail(adminEmail)) {
+    sendJson(res, 403, { error: 'forbidden' });
+    return;
+  }
+  sendJson(res, 200, { announcement: announcementStore.getActive() });
+});
+
+app.post('/api/admin/announcement', (req, res) => {
+  const body = req.body ?? {};
+  if (!userStore.isAdminEmail(String(body.adminEmail ?? '').trim())) {
+    sendJson(res, 403, { error: 'forbidden' });
+    return;
+  }
+  const result = announcementStore.publish({
+    title: body.title,
+    message: body.message,
+    createdBy: body.adminEmail,
+  });
+  if (result.error) {
+    sendJson(res, 400, { error: result.error });
+    return;
+  }
+  sendJson(res, 200, result);
+});
+
+app.post('/api/admin/announcement/clear', (req, res) => {
+  const body = req.body ?? {};
+  if (!userStore.isAdminEmail(String(body.adminEmail ?? '').trim())) {
+    sendJson(res, 403, { error: 'forbidden' });
+    return;
+  }
+  sendJson(res, 200, announcementStore.clear());
 });
 
 app.get('/api/site-state', (_req, res) => {

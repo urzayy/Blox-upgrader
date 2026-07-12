@@ -1,5 +1,6 @@
 import { CoinPrice } from '../ui/CoinPrice';
 import { inventoryTotal } from '../../lib/inventory';
+import { MobileNavMenuButton } from '../layout/MobileNavDrawer';
 import type { Skin } from '../../data/skins';
 
 interface Props {
@@ -73,16 +74,22 @@ export function MobileHeaderBar({
 }: Props) {
   return (
     <div className="flex flex-col gap-2.5 px-2 py-2 lg:hidden">
-      <div className="text-center">
-        <h1 className="font-display text-sm font-bold tracking-[0.12em] uppercase sm:text-base">
-          Blox<span className="text-gold">Upgrader</span>
-          <span className="text-[10px] font-semibold tracking-normal text-white/40">.com</span>
-        </h1>
+      <div className="flex items-center gap-2">
+        <MobileNavMenuButton />
+
+        <div className="min-w-0 flex-1 text-center">
+          <h1 className="font-display text-sm font-bold tracking-[0.12em] uppercase sm:text-base">
+            Blox<span className="text-gold">Upgrader</span>
+            <span className="text-[10px] font-semibold tracking-normal text-white/40">.com</span>
+          </h1>
+        </div>
+
+        <div className="h-11 w-11 shrink-0 lg:hidden" aria-hidden="true" />
       </div>
 
       <div className="flex flex-wrap items-center justify-center gap-2">
         <div className="flex items-center gap-1 rounded-lg border border-white/5 bg-panel/90 px-2 py-1">
-          <span className="text-[8px] font-semibold uppercase tracking-wide text-white/40">Saldo</span>
+          <span className="text-[8px] font-semibold uppercase tracking-wide text-white/40">Balance</span>
           <CoinPrice value={balance} iconClassName="h-3 w-3" textClassName="font-display text-[11px] font-bold text-gold" />
         </div>
         <div className="flex items-center gap-1 rounded-lg border border-white/5 bg-panel/90 px-2 py-1">
@@ -93,7 +100,7 @@ export function MobileHeaderBar({
           type="button"
           onClick={onTurboToggle}
           aria-pressed={turbo}
-          aria-label={turbo ? 'Desactivar turbo' : 'Activar turbo'}
+          aria-label={turbo ? 'Disable turbo' : 'Enable turbo'}
           className={`flex h-9 w-9 items-center justify-center rounded-lg border transition ${
             turbo ? 'border-gold bg-gold/15 shadow-gold' : 'border-white/10 bg-panel hover:border-gold/40'
           }`}
@@ -148,7 +155,7 @@ export function MobileHeaderBar({
             onClick={onLogout}
             className="rounded-lg border border-white/10 bg-panel px-3 py-2 text-[10px] font-semibold text-white/60"
           >
-            Salir
+            Sign out
           </button>
         </div>
       ) : (

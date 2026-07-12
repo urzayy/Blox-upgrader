@@ -142,7 +142,7 @@ export function RobuxDepositModal({ open, onClose, onSubmit }: Props) {
               How many robux do you want to deposit?
             </p>
             <p className="mt-1 text-center text-[11px] font-semibold text-gold">
-              1 Robux = {ROBUX_TO_SALDO_RATE} saldo · Minimum {MIN_ROBUX_DEPOSIT.toLocaleString('en-US')} Robux
+              1 Robux = {ROBUX_TO_SALDO_RATE} balance · Minimum {MIN_ROBUX_DEPOSIT.toLocaleString('en-US')} Robux
             </p>
 
             <form onSubmit={e => { void handleSubmit(e); }} className="mt-5 space-y-3">

@@ -12,7 +12,7 @@ export function GiveawaysPage() {
   const [adminOpen, setAdminOpen] = useState(false);
 
   return (
-    <div className="relative w-full overflow-hidden px-2 py-5 pb-12 sm:px-4 lg:px-6 xl:px-8">
+    <div className="relative w-full overflow-hidden px-3 py-5 pb-24 sm:px-4 lg:px-6 xl:px-8">
       <div className="pointer-events-none absolute -left-24 top-0 h-72 w-72 rounded-full bg-violet-600/20 blur-[100px]" />
       <div className="pointer-events-none absolute -right-20 top-32 h-80 w-80 rounded-full bg-fuchsia-600/15 blur-[110px]" />
       <div className="pointer-events-none absolute bottom-0 left-1/3 h-64 w-96 -translate-x-1/2 rounded-full bg-indigo-600/10 blur-[90px]" />
@@ -37,7 +37,7 @@ export function GiveawaysPage() {
               onClick={() => setAdminOpen(true)}
               className="rounded-lg border border-violet-500/35 bg-violet-500/10 px-4 py-2 font-display text-[10px] font-black uppercase tracking-[0.14em] text-violet-200 transition hover:bg-violet-500/20"
             >
-              Admin · Gestionar sorteos
+              Admin · Manage giveaways
             </button>
           )}
         </div>

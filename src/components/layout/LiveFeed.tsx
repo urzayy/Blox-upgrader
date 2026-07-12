@@ -90,7 +90,7 @@ function LiveFeedTopBar({ items, className }: { items: FeedItem[]; className?: s
         </div>
 
         {wins.length === 0 ? (
-          <div className="flex items-center text-[11px] text-white/25">Esperando upgrades…</div>
+          <div className="flex items-center text-[11px] text-white/25">Waiting for upgrades…</div>
         ) : (
           <AnimatePresence initial={false} mode="popLayout">
             {wins.map(item => (
@@ -138,7 +138,7 @@ const FeedTopCard = memo(function FeedTopCard({
       }}
       className="group relative h-[96px] w-[74px] shrink-0 overflow-hidden rounded-[6px] border border-white/[0.06] shadow-[0_4px_16px_rgba(0,0,0,0.45)]"
       style={{ background: theme.gradient }}
-      title={`${item.username} ganó ${item.targetSkin}`}
+      title={`${item.username} won ${item.targetSkin}`}
     >
       <span
         aria-hidden

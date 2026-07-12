@@ -12,8 +12,9 @@ import { SkinImage } from '../skins/SkinImage';
 import { Confetti } from '../effects/Confetti';
 import { BloxRoyalCard } from './BloxRoyalCard';
 import { RoyalCrownBadge } from './RoyalCrownBadge';
+import { BattleRarityDiamond } from '../casebattles/BattleRarityDiamond';
 
-type ReelSize = 'default' | 'large' | 'multi-2' | 'multi-3' | 'multi-4' | 'multi-5';
+type ReelSize = 'default' | 'large' | 'multi-2' | 'multi-3' | 'multi-4' | 'multi-5' | 'battle' | 'battle-4' | 'battle-6';
 
 export type { ReelSize };
 
@@ -135,6 +136,48 @@ const REEL_DIMS: Record<ReelSize, ReelDimensions> = {
     viewportHeight: 460,
     columnWidth: 232,
   },
+  battle: {
+    itemWidth: 260,
+    itemHeight: 200,
+    dividerWidth: 20,
+    imageHeight: 128,
+    weaponText: 'text-[8px]',
+    skinText: 'text-[9px]',
+    markerText: 'text-[8px]',
+    containerPadding: 'p-0',
+    titleText: 'text-sm',
+    statusText: 'text-xs',
+    compactPins: true,
+    viewportHeight: 380,
+  },
+  'battle-4': {
+    itemWidth: 220,
+    itemHeight: 172,
+    dividerWidth: 16,
+    imageHeight: 108,
+    weaponText: 'text-[8px]',
+    skinText: 'text-[9px]',
+    markerText: 'text-[8px]',
+    containerPadding: 'p-0',
+    titleText: 'text-sm',
+    statusText: 'text-xs',
+    compactPins: true,
+    viewportHeight: 330,
+  },
+  'battle-6': {
+    itemWidth: 120,
+    itemHeight: 92,
+    dividerWidth: 6,
+    imageHeight: 54,
+    weaponText: 'text-[7px]',
+    skinText: 'text-[7px]',
+    markerText: 'text-[7px]',
+    containerPadding: 'p-0',
+    titleText: 'text-[10px]',
+    statusText: 'text-[9px]',
+    compactPins: true,
+    viewportHeight: 165,
+  },
 };
 
 const ROLL_MS = 4800;
@@ -142,6 +185,7 @@ const INTRO_MS = 500;
 const TURBO_ROLL_MS = ROLL_MS / 2;
 const TURBO_INTRO_MS = INTRO_MS / 2;
 const ROYAL_HOLD_MS = 1200;
+const BATTLE_REVEAL_HOLD_MS = 1500;
 
 type Phase = 'intro' | 'rolling' | 'royal-hold' | 'reveal';
 
@@ -277,26 +321,33 @@ function ReelPinVertical({ side, royal, compact }: { side: 'left' | 'right'; roy
   );
 }
 
-function ReelSelectorVertical({ royal, compact }: { royal?: boolean; compact?: boolean }) {
+function ReelSelectorVertical({
+  royal,
+  compact,
+  transparent,
+}: {
+  royal?: boolean;
+  compact?: boolean;
+  transparent?: boolean;
+}) {
   const edgeFade = compact ? 'h-10 sm:h-12' : 'h-14 sm:h-16';
   const pinOffset = compact ? '-left-3' : '-left-5';
   const pinRight = compact ? '-right-3' : '-right-5';
+  const fadeFrom = transparent ? '#0f0d18' : royal ? '#120d08' : '#0a0812';
 
   return (
     <>
       <div
-        className={`pointer-events-none absolute inset-x-0 top-0 z-30 ${edgeFade} ${
-          royal
-            ? 'bg-gradient-to-b from-[#120d08] via-[#120d08]/96 to-transparent'
-            : 'bg-gradient-to-b from-[#0a0812] via-[#0a0812]/96 to-transparent'
-        }`}
+        className={`pointer-events-none absolute inset-x-0 top-0 z-30 ${edgeFade}`}
+        style={{
+          background: `linear-gradient(to bottom, ${fadeFrom} 0%, ${fadeFrom}f2 45%, transparent 100%)`,
+        }}
       />
       <div
-        className={`pointer-events-none absolute inset-x-0 bottom-0 z-30 ${edgeFade} ${
-          royal
-            ? 'bg-gradient-to-t from-[#120d08] via-[#120d08]/96 to-transparent'
-            : 'bg-gradient-to-t from-[#0a0812] via-[#0a0812]/96 to-transparent'
-        }`}
+        className={`pointer-events-none absolute inset-x-0 bottom-0 z-30 ${edgeFade}`}
+        style={{
+          background: `linear-gradient(to top, ${fadeFrom} 0%, ${fadeFrom}f2 45%, transparent 100%)`,
+        }}
       />
 
       <div className={`pointer-events-none absolute top-1/2 z-50 -translate-y-1/2 ${pinOffset}`}>
@@ -317,11 +368,21 @@ function ReelSelectorVertical({ royal, compact }: { royal?: boolean; compact?: b
   );
 }
 
-function ReelDivider({ royal, dividerWidth, vertical }: { royal?: boolean; dividerWidth: number; vertical?: boolean }) {
+function ReelDivider({
+  royal,
+  dividerWidth,
+  vertical,
+  transparent,
+}: {
+  royal?: boolean;
+  dividerWidth: number;
+  vertical?: boolean;
+  transparent?: boolean;
+}) {
   if (vertical) {
     return (
       <div
-        className={`w-full shrink-0 ${royal ? 'bg-[#2a2010]' : 'bg-black'}`}
+        className={`w-full shrink-0 ${transparent ? 'bg-transparent' : royal ? 'bg-[#2a2010]' : 'bg-black'}`}
         style={{ height: dividerWidth }}
         aria-hidden="true"
       />
@@ -348,6 +409,9 @@ function ReelCard({
   dims,
   vertical,
   revealSkin,
+  battleStyle,
+  battleLandHighlight,
+  showLeadGlow,
 }: {
   item: FreeCaseReelResult['reel'][number];
   highlight?: boolean;
@@ -359,6 +423,9 @@ function ReelCard({
   dims: ReelDimensions;
   vertical?: boolean;
   revealSkin?: Skin | null;
+  battleStyle?: boolean;
+  battleLandHighlight?: boolean;
+  showLeadGlow?: boolean;
 }) {
   const itemStride = vertical
     ? dims.itemHeight + dims.dividerWidth
@@ -389,6 +456,49 @@ function ReelCard({
     : vertical
       ? reelCardDepthVertical(index, offset, viewportSize, itemStride, itemCenter)
       : reelCardDepth(index, offset, viewportSize, itemStride, itemCenter);
+
+  if (battleStyle) {
+    const landed = Boolean(battleLandHighlight);
+    return (
+      <motion.div
+        className={`relative shrink-0 overflow-visible ${vertical ? 'w-full' : ''} ${highlight ? 'z-10' : ''}`}
+        style={{
+          width: vertical ? '100%' : dims.itemWidth,
+          height: dims.itemHeight,
+          background: 'transparent',
+          transform: depth && !highlight ? `scale(${depth.scale})` : undefined,
+          filter: depth && !highlight ? `brightness(${depth.brightness})` : undefined,
+        }}
+      >
+        <div className="relative flex h-full w-full flex-col items-center justify-center overflow-visible pt-1">
+          <div className="relative flex w-full flex-col items-center justify-center">
+            <div className="relative flex h-[52%] w-full items-center justify-center">
+              <BattleRarityDiamond
+                skin={displayItem.skin}
+                size="reel"
+                leadDrop={showLeadGlow}
+                className="z-0"
+              />
+              <SkinImage
+                src={displayItem.skin.image}
+                alt={displayItem.skin.name}
+                className="relative z-10 h-[88%] w-[92%] object-contain"
+                zoom={0.78}
+              />
+            </div>
+            {landed && (
+              <CoinPrice
+                value={displayItem.skin.price}
+                iconClassName={dims.viewportHeight && dims.viewportHeight <= 220 ? 'h-2 w-2' : 'h-3 w-3'}
+                textClassName={`font-display font-black text-lime-300 ${dims.viewportHeight && dims.viewportHeight <= 220 ? 'text-[9px]' : 'text-xs'}`}
+                className="relative z-20 -mt-0.5 justify-center"
+              />
+            )}
+          </div>
+        </div>
+      </motion.div>
+    );
+  }
 
   return (
     <motion.div
@@ -484,6 +594,7 @@ interface Props {
   compact?: boolean;
   showHeader?: boolean;
   showRevealActions?: boolean;
+  roundBestDrop?: boolean;
   onReveal: () => void;
   onSell: () => void;
   onUpgrade: () => void;
@@ -503,13 +614,15 @@ export function FreeCaseReelOpener({
   compact = false,
   showHeader,
   showRevealActions,
+  roundBestDrop = false,
   onReveal,
   onSell,
   onUpgrade,
 }: Props) {
   const dims = REEL_DIMS[size];
   const isVertical = orientation === 'vertical';
-  const isCompact = compact || size.startsWith('multi-');
+  const isCompact = compact || size.startsWith('multi-') || size.startsWith('battle');
+  const isBattleStyle = size.startsWith('battle');
   const headerVisible = showHeader ?? !isCompact;
   const revealActionsVisible = showRevealActions ?? !isCompact;
   const itemStride = isVertical
@@ -534,6 +647,7 @@ export function FreeCaseReelOpener({
   const rollSessionRef = useRef(0);
   const rollTweenRef = useRef<gsap.core.Tween | null>(null);
   const royalHoldTimerRef = useRef<number | null>(null);
+  const revealHoldTimerRef = useRef<number | null>(null);
   const introTimerRef = useRef<number | null>(null);
   const baseResultRef = useRef<FreeCaseReelResult | null>(null);
   const frozenTargetRef = useRef(0);
@@ -558,9 +672,17 @@ export function FreeCaseReelOpener({
     }
   };
 
+  const clearRevealHoldTimer = () => {
+    if (revealHoldTimerRef.current) {
+      window.clearTimeout(revealHoldTimerRef.current);
+      revealHoldTimerRef.current = null;
+    }
+  };
+
   const clearTimers = () => {
     clearIntroTimer();
     clearRoyalHoldTimer();
+    clearRevealHoldTimer();
   };
 
   useEffect(() => {
@@ -570,7 +692,7 @@ export function FreeCaseReelOpener({
       rollTweenRef.current = null;
       clearTimers();
       letRoyalRollFinishRef.current = false;
-      if (soundOnRef.current) sfx.wheelLand();
+      if (soundOnRef.current) sfx.caseWheelLand();
       if (stripRef.current) gsap.set(stripRef.current, { x: 0, y: 0 });
       revealedRef.current = false;
       setPhase('intro');
@@ -624,7 +746,15 @@ export function FreeCaseReelOpener({
     setPhase('reveal');
     if (!revealedRef.current) {
       revealedRef.current = true;
-      onRevealRef.current();
+      clearRevealHoldTimer();
+      if (isBattleStyle) {
+        revealHoldTimerRef.current = window.setTimeout(() => {
+          revealHoldTimerRef.current = null;
+          onRevealRef.current();
+        }, BATTLE_REVEAL_HOLD_MS);
+      } else {
+        onRevealRef.current();
+      }
     }
     if (soundOnRef.current) {
       if (royalFinish) {
@@ -683,7 +813,7 @@ export function FreeCaseReelOpener({
       setPhase('rolling');
       if (soundOnRef.current) {
         if (isRoyalSpinPass) sfx.royalRollStart(useTurbo);
-        else sfx.upgradeStart(useTurbo);
+        else sfx.caseRollStart(useTurbo);
       }
 
       rollTweenRef.current?.kill();
@@ -695,7 +825,7 @@ export function FreeCaseReelOpener({
           setOffset(scrollTarget);
           setPhase('royal-hold');
           if (soundOnRef.current) {
-            sfx.wheelLand();
+            sfx.caseWheelLand();
             sfx.royalLand();
           }
           clearRoyalHoldTimer();
@@ -727,7 +857,7 @@ export function FreeCaseReelOpener({
       clearIntroTimer();
       rollTweenRef.current?.kill();
       rollTweenRef.current = null;
-      if (soundOnRef.current && !letRoyalRollFinishRef.current) sfx.wheelLand();
+      if (soundOnRef.current && !letRoyalRollFinishRef.current) sfx.caseWheelLand();
     };
   }, [active, activeReel, royalPass, rollKey, caseSlug, scrollAxis]);
 
@@ -739,23 +869,32 @@ export function FreeCaseReelOpener({
   const viewportStyle = isVertical
     ? {
         height: dims.viewportHeight ?? viewportSize,
-        width: embedded && dims.columnWidth ? dims.columnWidth : undefined,
+        width:
+          embedded && dims.columnWidth && !isBattleStyle
+            ? dims.columnWidth
+            : isBattleStyle
+              ? '100%'
+              : undefined,
       }
     : undefined;
   const columnStyle =
-    embedded && isVertical && dims.columnWidth ? { width: dims.columnWidth } : undefined;
+    embedded && isVertical && dims.columnWidth && !isBattleStyle
+      ? { width: dims.columnWidth }
+      : isBattleStyle
+        ? { width: '100%' }
+        : undefined;
   const statusText =
     phase === 'reveal'
-      ? '¡Skin obtenida!'
+      ? 'Skin obtained!'
       : phase === 'royal-hold'
-        ? '¡BloxRoyal!'
+        ? 'BloxRoyal!'
         : phase === 'rolling'
           ? royalPass
-            ? 'BloxRoyal girando…'
+            ? 'BloxRoyal spinning…'
             : 'Girando…'
           : royalPass
             ? 'Activando BloxRoyal…'
-            : 'Abriendo caja…';
+            : 'Opening case…';
 
   const highlightIndex =
     phase === 'reveal'
@@ -818,12 +957,16 @@ export function FreeCaseReelOpener({
           <div
             ref={viewportRef}
             className={`relative overflow-hidden ${embedded ? '' : 'rounded-lg'} ${
-              showRoyalChrome ? 'bg-[#0a0806]' : 'bg-[#080610]'
+              isBattleStyle ? 'bg-transparent' : showRoyalChrome ? 'bg-[#0a0806]' : 'bg-[#080610]'
             }`}
             style={viewportStyle}
           >
             {isVertical ? (
-              <ReelSelectorVertical royal={showRoyalChrome} compact={dims.compactPins} />
+              <ReelSelectorVertical
+                royal={showRoyalChrome}
+                compact={dims.compactPins}
+                transparent={isBattleStyle}
+              />
             ) : (
               <ReelSelector royal={showRoyalChrome} compact={dims.compactPins} />
             )}
@@ -848,6 +991,17 @@ export function FreeCaseReelOpener({
                     highlight={index === highlightIndex}
                     dims={dims}
                     vertical={isVertical}
+                    battleStyle={isBattleStyle}
+                    battleLandHighlight={
+                      isBattleStyle && phase === 'reveal' && index === highlightIndex
+                    }
+                    showLeadGlow={
+                      isBattleStyle &&
+                      roundBestDrop &&
+                      index === highlightIndex &&
+                      phase !== 'rolling' &&
+                      phase !== 'intro'
+                    }
                     revealSkin={
                       phase === 'reveal' && index === highlightIndex && item.isRoyal
                         ? rewardSkin
@@ -859,6 +1013,7 @@ export function FreeCaseReelOpener({
                       royal={showRoyalChrome}
                       dividerWidth={dims.dividerWidth}
                       vertical={isVertical}
+                      transparent={isBattleStyle}
                     />
                   )}
                 </div>
@@ -923,13 +1078,13 @@ export function FreeCaseReelOpener({
               >
                 {phase === 'intro'
                   ? royalPass
-                    ? 'Preparando BloxRoyal…'
-                    : 'Preparando ruleta…'
+                    ? 'Preparing BloxRoyal…'
+                    : 'Preparing reel…'
                   : phase === 'royal-hold'
-                    ? '¡Has activado BloxRoyal!'
+                    ? "You've activated BloxRoyal!"
                     : royalPass
-                      ? 'Solo caen las skins más raras…'
-                      : 'La ruleta está girando…'}
+                      ? 'Only the rarest skins drop…'
+                      : 'The reel is spinning…'}
               </motion.p>
               )
             )}

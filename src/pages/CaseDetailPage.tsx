@@ -9,7 +9,6 @@ import { getFreeCaseLoot, getJokerCasePrice, toEqualChanceLoot } from '../lib/fr
 import { useAuth } from '../context/AuthContext';
 import { pickFreeCaseReward } from '../lib/freeCaseOpen';
 import { createGrantedCatalogCaseSkin } from '../lib/caseOpen';
-import { appendSkinsToInventory } from '../lib/inventoryStorage';
 import type { Skin } from '../data/skins';
 import { CoinPrice } from '../components/ui/CoinPrice';
 import { CaseOpenPreview } from '../components/freecases/CaseOpenPreview';
@@ -18,14 +17,14 @@ import {
   type CaseOpenQuantity,
 } from '../components/freecases/CaseOpenQuantitySelector';
 import { FreeCaseLootSection } from '../components/freecases/FreeCaseLootSection';
-import { buildCasePreviewSkins } from '../lib/casePreviewStrip';
+import { buildCasePreviewSkins, splitPreviewSides } from '../lib/casePreviewStrip';
 import { FreeCaseReelOpener } from '../components/freecases/FreeCaseReelOpener';
 import {
   MultiCaseReelBoard,
   type CaseOpenSession,
 } from '../components/freecases/MultiCaseReelBoard';
 import { buildFreeCaseReel } from '../lib/freeCaseReel';
-import { requestSellSkin, requestSyncPlayerState, requestUpgradeWithSkin } from '../lib/uiActions';
+import { requestGrantSkinsToInventory, requestSellSkin, requestUpgradeWithSkin } from '../lib/uiActions';
 
 interface Props {
   slug: string;
@@ -81,8 +80,10 @@ export function CaseDetailPage({ slug, balance, onPurchase }: Props) {
     [loot, jokerMode],
   );
   const previewSkins = useMemo(() => buildCasePreviewSkins(slug, loot), [slug, loot]);
-  const previewLeft = previewSkins.slice(0, 3);
-  const previewRight = previewSkins.slice(3, 6);
+  const { left: previewLeft, right: previewRight } = useMemo(
+    () => splitPreviewSides(previewSkins),
+    [previewSkins],
+  );
 
   useEffect(() => {
     if (!catalogCase) navigateApp('main');
@@ -130,12 +131,7 @@ export function CaseDetailPage({ slug, balance, onPurchase }: Props) {
       revealed: false,
     }));
 
-    void appendSkinsToInventory(
-      user.userId,
-      sessions.map(session => session.grantedSkin!),
-    ).then(() => {
-      requestSyncPlayerState();
-    });
+    requestGrantSkinsToInventory(sessions.map(session => session.grantedSkin!));
 
     setRollTurbo(turbo);
     setOpeningSlug(slug);
@@ -159,7 +155,6 @@ export function CaseDetailPage({ slug, balance, onPurchase }: Props) {
   const handleSellReward = () => {
     if (!singleSession?.grantedSkin) return;
     requestSellSkin(singleSession.grantedSkin);
-    requestSyncPlayerState();
     closeReel();
   };
 
@@ -173,7 +168,6 @@ export function CaseDetailPage({ slug, balance, onPurchase }: Props) {
     for (const session of openSessions) {
       if (session.grantedSkin && !session.sold) requestSellSkin(session.grantedSkin);
     }
-    requestSyncPlayerState();
     closeReel();
   };
 
@@ -204,7 +198,7 @@ export function CaseDetailPage({ slug, balance, onPurchase }: Props) {
 
       <section className="relative mx-auto max-w-6xl lg:max-w-7xl">
         <div className="mb-4 flex items-center gap-3">
-          <IconButton label="Volver a cases" onClick={() => navigateApp('main')}>
+          <IconButton label="Back to cases" onClick={() => navigateApp('main')}>
             <svg viewBox="0 0 20 20" className="h-4 w-4" fill="currentColor" aria-hidden="true">
               <path d="M11.78 3.22a.75.75 0 0 1 0 1.06L7.06 9l4.72 4.72a.75.75 0 1 1-1.06 1.06l-5.25-5.25a.75.75 0 0 1 0-1.06l5.25-5.25a.75.75 0 0 1 1.06 0z" />
             </svg>
@@ -264,7 +258,7 @@ export function CaseDetailPage({ slug, balance, onPurchase }: Props) {
                 transition={{ duration: 0.3 }}
                 className="flex min-h-[22rem] items-center justify-center sm:min-h-[26rem]"
               >
-                {previewSkins.length >= 6 ? (
+                {loot.length > 0 ? (
                   <CaseOpenPreview
                     tier={tier}
                     title={caseLabel}
@@ -304,19 +298,19 @@ export function CaseDetailPage({ slug, balance, onPurchase }: Props) {
                   <span>
                     {opening
                       ? isMultiOpen
-                        ? `Abriendo ${openSessions.length} cajas…`
-                        : 'Abriendo…'
+                        ? `Opening ${openSessions.length} cases…`
+                        : 'Opening…'
                       : jokerMode
                         ? openQuantity > 1
-                          ? `Abrir ${openQuantity} cajas · joker`
-                          : 'Abrir caja · joker'
+                          ? `Open ${openQuantity} cases · joker`
+                          : 'Open case · joker'
                         : turbo
                         ? openQuantity > 1
-                          ? `Abrir ${openQuantity} cajas · rápido`
-                          : 'Abrir caja · rápido'
+                          ? `Open ${openQuantity} cases · fast`
+                          : 'Open case · fast'
                         : openQuantity > 1
-                          ? `Abrir ${openQuantity} cajas`
-                          : 'Abrir caja'}
+                          ? `Open ${openQuantity} cases`
+                          : 'Open case'}
                   </span>
                   {!opening && (
                     <span className="inline-flex items-center rounded-md bg-white/15 px-2 py-0.5">
@@ -334,13 +328,13 @@ export function CaseDetailPage({ slug, balance, onPurchase }: Props) {
                   onClick={openLogin}
                   className="w-full rounded-xl bg-gradient-to-r from-[#9333ea] to-[#b56bff] px-8 py-3 font-display text-sm font-black uppercase tracking-[0.12em] text-white shadow-[0_0_24px_rgba(176,108,255,0.25)] transition hover:brightness-110 sm:text-base lg:py-3.5"
                 >
-                  Inicia sesión para abrir
+                  Sign in to open
                 </button>
               )}
 
               {user && !canAfford && !opening && (
                 <p className="text-center text-xs font-semibold text-red-300/80">
-                  Saldo insuficiente · necesitas{' '}
+                  Insufficient balance · necesitas{' '}
                   <CoinPrice
                     value={totalCost}
                     iconClassName="inline h-3 w-3"
@@ -351,14 +345,14 @@ export function CaseDetailPage({ slug, balance, onPurchase }: Props) {
               )}
 
               <p className="text-center text-[10px] uppercase tracking-[0.14em] text-white/30 sm:text-[11px]">
-                {loot.length} skins en esta caja
+                {loot.length} skins in this case
               </p>
             </div>
 
             <div className="flex shrink-0 items-center justify-end gap-2 lg:w-[15.5rem]">
               <button
                 type="button"
-                aria-label={jokerMode ? 'Desactivar modo joker' : 'Activar modo joker'}
+                aria-label={jokerMode ? 'Disable joker mode' : 'Enable joker mode'}
                 disabled={opening}
                 onClick={() => setJokerMode(v => !v)}
                 className={`flex h-10 w-10 items-center justify-center rounded-lg border transition sm:h-11 sm:w-11 ${
@@ -384,7 +378,7 @@ export function CaseDetailPage({ slug, balance, onPurchase }: Props) {
               </button>
 
               <IconButton
-                label={turbo ? 'Desactivar apertura rápida' : 'Activar apertura rápida'}
+                label={turbo ? 'Disable fast opening' : 'Activate fast opening'}
                 active={turbo}
                 disabled={opening}
                 onClick={() => setTurbo(v => !v)}
@@ -405,7 +399,7 @@ export function CaseDetailPage({ slug, balance, onPurchase }: Props) {
               </IconButton>
 
               <IconButton
-                label={soundOn ? 'Silenciar sonidos' : 'Activar sonidos'}
+                label={soundOn ? 'Mute sounds' : 'Enable sounds'}
                 disabled={opening}
                 onClick={() => setSoundOn(v => !v)}
               >

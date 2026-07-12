@@ -10,17 +10,15 @@ import { getFreeCaseLoot } from '../lib/freeCaseLoot';
 import { useFreeCaseCooldown } from '../hooks/useFreeCaseCooldown';
 import { usePlayerLevel } from '../hooks/usePlayerLevel';
 import { useAuth } from '../context/AuthContext';
-import { recordFreeCaseOpen } from '../lib/freeCaseCooldown';
-import { createGrantedFreeCaseSkin, pickFreeCaseReward } from '../lib/freeCaseOpen';
-import { loadInventory, saveInventory } from '../lib/inventoryStorage';
+import { tryOpenFreeCase } from '../lib/freeCaseOpen';
 import type { Skin } from '../data/skins';
 import { FreeCasePortada } from '../components/freecases/FreeCaseCover';
 import { FreeCaseLootSection } from '../components/freecases/FreeCaseLootSection';
 import { FreeCaseReelOpener } from '../components/freecases/FreeCaseReelOpener';
 import { buildFreeCaseReel, type FreeCaseReelResult } from '../lib/freeCaseReel';
-import { isFreeCaseUnlockedForPlayer } from '../lib/devFreeCaseBypass';
+import { canPlayerOpenFreeCase } from '../lib/freeCaseUnlock';
 import { caseHasRoyalLoot } from '../lib/freeCaseRoyal';
-import { requestSellSkin, requestSyncPlayerState, requestUpgradeWithSkin } from '../lib/uiActions';
+import { requestGrantSkinsToInventory, requestSellSkin, requestUpgradeWithSkin } from '../lib/uiActions';
 
 interface Props {
   slug: string;
@@ -59,7 +57,8 @@ function IconButton({
 export function FreeCaseDetailPage({ slug }: Props) {
   const tier = getFreeCaseBySlug(slug);
   const { user, openLogin } = useAuth();
-  const { level: playerLevel } = usePlayerLevel();
+  const playerLevelState = usePlayerLevel();
+  const playerLevel = playerLevelState.level;
   const { ready, timer } = useFreeCaseCooldown(slug);
   const [turbo, setTurbo] = useState(false);
   const [rollTurbo, setRollTurbo] = useState(false);
@@ -92,41 +91,39 @@ export function FreeCaseDetailPage({ slug }: Props) {
 
   if (!tier) return null;
 
-  const unlocked = isFreeCaseUnlockedForPlayer(tier.level, playerLevel, slug);
+  const unlocked = user
+    ? canPlayerOpenFreeCase(user.userId, slug)
+    : false;
   const tierIndex = FREE_CASE_TIERS.findIndex(t => t.level === tier.level);
 
   const handleOpenCase = () => {
-    if (!user || !unlocked || !ready || opening) return;
+    if (!user || opening) return;
+    if (!canPlayerOpenFreeCase(user.userId, slug) || !ready) return;
 
-    const rewardBase = pickFreeCaseReward(slug);
-    if (!rewardBase) return;
+    const opened = tryOpenFreeCase(user.userId, slug);
+    if (!opened) return;
 
-    openedAtRef.current = Date.now();
-    grantedRef.current = false;
-    setGrantedSkin(null);
+    const { granted, openedAt } = opened;
+    openedAtRef.current = openedAt;
+
+    grantedRef.current = true;
+    setGrantedSkin(granted);
+    setLastReward(granted);
+    requestGrantSkinsToInventory([granted]);
+
     setRollTurbo(turbo);
     setOpeningSlug(slug);
-    setReelResult(buildFreeCaseReel(slug, rewardBase));
+    setReelResult(buildFreeCaseReel(slug, granted));
     setOpening(true);
   };
 
   const handleReelReveal = () => {
-    if (!user || !reelResult || grantedRef.current || openingSlug !== slug) return;
-
-    grantedRef.current = true;
-    const granted = createGrantedFreeCaseSkin(reelResult.rewardSkin, openedAtRef.current);
-    const inventory = loadInventory(user.userId);
-    saveInventory([...inventory, granted], user.userId);
-    recordFreeCaseOpen(user.userId, slug);
-    setGrantedSkin(granted);
-    setLastReward(granted);
-    requestSyncPlayerState();
+    // Skin is granted immediately on open; reel is visual only.
   };
 
   const handleSellReward = () => {
     if (!grantedSkin) return;
     requestSellSkin(grantedSkin);
-    requestSyncPlayerState();
     closeReel();
   };
 
@@ -180,7 +177,7 @@ export function FreeCaseDetailPage({ slug }: Props) {
 
           <div className="flex items-center gap-2">
             <IconButton
-              label={turbo ? 'Desactivar apertura rápida' : 'Activar apertura rápida'}
+              label={turbo ? 'Disable fast opening' : 'Activate fast opening'}
               active={turbo}
               disabled={opening}
               onClick={() => setTurbo(v => !v)}
@@ -217,7 +214,7 @@ export function FreeCaseDetailPage({ slug }: Props) {
           </div>
         </div>
 
-        <div className="relative mx-auto min-h-[18rem] max-w-5xl sm:min-h-[20rem] lg:max-w-6xl">
+        <div className="relative mx-auto min-h-[22rem] max-w-6xl sm:min-h-[26rem] lg:max-w-7xl">
           {showReel ? (
             <FreeCaseReelOpener
               key={`${openingSlug}-${openedAtRef.current}`}
@@ -228,12 +225,13 @@ export function FreeCaseDetailPage({ slug }: Props) {
               caseLabel={rankLabelForTier(tier)}
               turbo={rollTurbo}
               soundOn={soundOn}
+              size="large"
               onReveal={handleReelReveal}
               onSell={handleSellReward}
               onUpgrade={handleUpgradeReward}
             />
           ) : (
-            <div className="flex min-h-[18rem] items-center justify-center sm:min-h-[20rem]">
+            <div className="flex min-h-[22rem] items-center justify-center sm:min-h-[26rem]">
               <FreeCasePortada
                 tier={tier}
                 large
@@ -256,7 +254,7 @@ export function FreeCaseDetailPage({ slug }: Props) {
                     disabled={opening}
                     className="rounded-xl bg-gradient-to-r from-[#9333ea] to-[#b56bff] px-8 py-3 font-display text-sm font-black uppercase tracking-[0.12em] text-white shadow-[0_0_24px_rgba(176,108,255,0.25)] transition hover:brightness-110 disabled:opacity-60"
                   >
-                    {opening ? 'Abriendo…' : turbo ? 'Abrir caja · rápido' : 'Abrir caja gratis'}
+                    {opening ? 'Opening…' : turbo ? 'Open case · fast' : 'Open free case'}
                   </button>
                 ) : (
                   <button
@@ -264,7 +262,7 @@ export function FreeCaseDetailPage({ slug }: Props) {
                     onClick={openLogin}
                     className="rounded-xl bg-gradient-to-r from-[#9333ea] to-[#b56bff] px-8 py-3 font-display text-sm font-black uppercase tracking-[0.12em] text-white shadow-[0_0_24px_rgba(176,108,255,0.25)] transition hover:brightness-110"
                   >
-                    Inicia sesión para probar
+                    Sign in to try
                   </button>
                 )
               ) : (
@@ -279,12 +277,12 @@ export function FreeCaseDetailPage({ slug }: Props) {
               )}
               <p className="text-center text-[10px] uppercase tracking-[0.14em] text-white/30">
                 {ready
-                  ? 'Puedes abrir esta caja ahora · cooldown de 24h tras abrirla'
-                  : `Próxima apertura en · ${turbo ? 'Modo rápido' : 'Modo normal'}`}
+                  ? 'You can open this case now · 24h cooldown after opening'
+                  : `Next opening in · ${turbo ? 'Fast mode' : 'Normal mode'}`}
               </p>
               {lastReward && !opening && (
                 <p className="text-center text-xs text-win">
-                  Última recompensa: {lastReward.name}
+                  Last reward: {lastReward.name}
                 </p>
               )}
             </div>

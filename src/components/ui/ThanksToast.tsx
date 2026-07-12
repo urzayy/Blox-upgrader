@@ -14,8 +14,8 @@ export function ThanksToast({
   show,
   onDismiss,
   durationMs = 5000,
-  title = 'Gracias por jugar',
-  subtitle = 'Tu withdraw se ha completado',
+  title = 'Thanks for playing',
+  subtitle = 'Your withdrawal has been completed',
   variant = 'success',
 }: Props) {
   const onDismissRef = useRef(onDismiss);

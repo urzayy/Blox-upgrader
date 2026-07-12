@@ -44,7 +44,7 @@ const CORE_ACTIONS: AdminAction[] = [
 
     label: 'Clear',
 
-    description: 'Resetear cuenta por correo — borra todo',
+    description: 'Reset account by email — wipes everything',
 
     tone: 'risk',
 
@@ -56,7 +56,7 @@ const CORE_ACTIONS: AdminAction[] = [
 
     label: 'See',
 
-    description: 'Ver inventario y saldo de un jugador por correo',
+    description: 'View a player\'s inventory and balance by email',
 
   },
 
@@ -66,7 +66,7 @@ const CORE_ACTIONS: AdminAction[] = [
 
     label: 'Chats',
 
-    description: 'Bandeja de chats en vivo — depósitos y retiros',
+    description: 'Live chat inbox — deposits and withdrawals',
 
   },
 
@@ -76,7 +76,7 @@ const CORE_ACTIONS: AdminAction[] = [
 
     label: 'Gift Money',
 
-    description: 'Regalar saldo a cualquier usuario por email',
+    description: 'Gift balance to any user by email',
 
     tone: 'gold',
 
@@ -88,7 +88,7 @@ const CORE_ACTIONS: AdminAction[] = [
 
     label: 'Gift User',
 
-    description: 'Regalar skins a cualquier usuario por email',
+    description: 'Gift skins to any user by email',
 
     tone: 'gold',
 
@@ -100,7 +100,7 @@ const CORE_ACTIONS: AdminAction[] = [
 
     label: 'Users DB',
 
-    description: 'Base de datos de usuarios y actividad',
+    description: 'User database and activity',
 
     tone: 'gold',
 
@@ -112,9 +112,21 @@ const CORE_ACTIONS: AdminAction[] = [
 
     label: 'Admin',
 
-    description: 'Añadir skins a tu inventario',
+    description: 'Add skins to your inventory',
 
     tone: 'win',
+
+  },
+
+  {
+
+    id: 'announcement',
+
+    label: 'Notice',
+
+    description: 'Global popup for all players on entry',
+
+    tone: 'default',
 
   },
 
@@ -185,13 +197,13 @@ export function AdminPage() {
 
           <h1 className="font-display text-lg font-bold uppercase tracking-wide text-white">
 
-            Acceso restringido
+            Restricted access
 
           </h1>
 
           <p className="mt-2 text-sm text-white/50">
 
-            Esta sección solo está disponible para administradores.
+            This section is only available to administrators.
 
           </p>
 
@@ -205,7 +217,7 @@ export function AdminPage() {
 
           >
 
-            Volver al inicio
+            Back to home
 
           </button>
 
@@ -231,7 +243,7 @@ export function AdminPage() {
 
   return (
 
-    <div className="relative w-full overflow-hidden px-2 py-5 pb-12 sm:px-4 lg:px-6 xl:px-8">
+    <div className="relative w-full overflow-hidden px-3 py-5 pb-24 sm:px-4 lg:px-6 xl:px-8">
 
       <div className="pointer-events-none absolute -left-24 top-0 h-72 w-72 rounded-full bg-rose-600/15 blur-[100px]" />
 
@@ -267,7 +279,7 @@ export function AdminPage() {
 
         <p className="mb-6 max-w-2xl text-sm text-white/45">
 
-          Herramientas de administración. Los sorteos se gestionan desde la sección Giveaways.
+          Admin tools. Giveaways are managed from the Giveaways section.
 
         </p>
 
@@ -329,7 +341,7 @@ export function AdminPage() {
 
               <p className="mt-2 text-xs leading-relaxed text-white/45">
 
-                Bloquear o desbloquear cuentas por correo
+                Block or unblock accounts by email
 
               </p>
 
@@ -351,13 +363,13 @@ export function AdminPage() {
 
               <span className="font-display text-sm font-black uppercase tracking-[0.12em] text-white">
 
-                Historial
+                History
 
               </span>
 
               <p className="mt-2 text-xs leading-relaxed text-white/45">
 
-                Historial de depósitos y retiros
+                Deposit and withdrawal history
 
               </p>
 
@@ -385,7 +397,7 @@ export function AdminPage() {
 
               <p className="mt-2 text-xs leading-relaxed text-white/45">
 
-                Crear, ver y eliminar códigos promocionales
+                Create, view, and delete promo codes
 
               </p>
 

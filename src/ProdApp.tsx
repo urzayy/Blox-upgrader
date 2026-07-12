@@ -64,9 +64,18 @@ import { qualifiesForLossConsolationCase } from './lib/devLossConsolation';
 import { DEV_MOBILE_LAYOUT } from './lib/devMobileLayout';
 import { buildLossConsolationCase, type LossConsolationResult } from './lib/lossConsolationCase';
 import { LossConsolationCaseModal } from './components/upgrade/LossConsolationCaseModal';
+import { PlayerAnnouncementModal } from './components/announcements/PlayerAnnouncementModal';
+import { usePlayerAnnouncement } from './hooks/usePlayerAnnouncement';
+import { clearXpForUserId } from './lib/xpStorage';
+import { clearFreeCaseCooldowns } from './lib/freeCaseCooldown';
 
 export default function ProdApp() {
   const { user, logout: authLogout, openLogin } = useAuth();
+  const {
+    announcement: playerAnnouncement,
+    open: playerAnnouncementOpen,
+    dismiss: dismissPlayerAnnouncement,
+  } = usePlayerAnnouncement({ userId: user?.userId });
   const { log, logUser } = useActivityLog();
   const userId = user?.userId ?? null;
 
@@ -146,6 +155,8 @@ export default function ProdApp() {
   const wipeLocalPlayerProgress = useCallback((targetUserId: string) => {
     clearInventoryForUserId(targetUserId);
     clearBalanceForUserId(targetUserId);
+    clearXpForUserId(targetUserId);
+    clearFreeCaseCooldowns(targetUserId);
     clearPendingUpgrade(targetUserId);
     clearPendingLossConsolation(targetUserId);
     inventoryRef.current = [];
@@ -449,12 +460,12 @@ export default function ProdApp() {
     try {
       const ticketId = await openOrCreateHelpTicket(user, getProfileLabel(user) ?? user.email);
       if (!openSupportChatRef.current) {
-        setLiveHelpError('No se pudo abrir el chat. Recarga la página.');
+        setLiveHelpError('Could not open chat. Reload the page.');
         return;
       }
       openSupportChatRef.current(ticketId);
     } catch {
-      setLiveHelpError('No se pudo conectar con soporte. Inténtalo de nuevo.');
+      setLiveHelpError('Could not connect to support. Please try again.');
       log('HELP.request_failed');
     } finally {
       setLiveHelpLoading(false);
@@ -968,6 +979,12 @@ export default function ProdApp() {
 
         <LoginModal />
 
+        <PlayerAnnouncementModal
+          open={playerAnnouncementOpen}
+          announcement={playerAnnouncement}
+          onClose={dismissPlayerAnnouncement}
+        />
+
         <ThanksToast
           show={thanksToastVisible}
           onDismiss={dismissThanksToast}
@@ -976,7 +993,7 @@ export default function ProdApp() {
 
         <ThanksToast
           show={!!liveHelpError}
-          title="Error de ayuda"
+          title="Help error"
           subtitle={liveHelpError}
           variant="error"
           onDismiss={() => setLiveHelpError('')}

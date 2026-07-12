@@ -23,6 +23,17 @@
 }
 
 @layer utilities {
+  .mobile-page-pad {
+    @apply max-lg:pb-28 max-lg:px-3;
+  }
+
+  .mobile-safe-bottom {
+    padding-bottom: max(1.25rem, env(safe-area-inset-bottom, 0px));
+  }
+
+  .touch-target {
+    @apply min-h-[44px] min-w-[44px];
+  }
   @keyframes profileSparkleRise {
     0% {
       transform: translateY(0) translateX(0);

@@ -17,7 +17,7 @@ interface Props {
 type Tab = 'deposits' | 'withdrawals';
 
 function formatWhen(timestamp: number): string {
-  return new Date(timestamp).toLocaleString('es-ES', {
+  return new Date(timestamp).toLocaleString('en-US', {
     year: 'numeric',
     month: '2-digit',
     day: '2-digit',
@@ -78,7 +78,7 @@ export function ProfilePaymentHistoryModal({ open, onClose, userId }: Props) {
         >
           <button
             type="button"
-            aria-label="Cerrar historial"
+            aria-label="Close history"
             className="absolute inset-0 bg-black/80 backdrop-blur-sm"
             onClick={onClose}
           />
@@ -133,12 +133,12 @@ export function ProfilePaymentHistoryModal({ open, onClose, userId }: Props) {
                 <tbody>
                   {loading ? (
                     <tr>
-                      <td colSpan={5} className="px-5 py-16 text-center text-white/40">Cargando…</td>
+                      <td colSpan={5} className="px-5 py-16 text-center text-white/40">Loading…</td>
                     </tr>
                   ) : pageItems.length === 0 ? (
                     <tr>
                       <td colSpan={5} className="px-5 py-16 text-center text-white/40">
-                        No hay {tab === 'deposits' ? 'depósitos' : 'retiros'} completados.
+                        No completed {tab === 'deposits' ? 'deposits' : 'withdrawals'}.
                       </td>
                     </tr>
                   ) : (

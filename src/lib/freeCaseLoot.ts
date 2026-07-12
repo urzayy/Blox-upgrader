@@ -200,15 +200,34 @@ function resolveLootTable(slug: string): FreeCaseLootTable {
   return autoLootForTier(tier);
 }
 
+export function sortLootItemsByPriceDesc(
+  loot: FreeCaseLootItem[],
+  catalogOrder?: Map<string, number>,
+): FreeCaseLootItem[] {
+  return [...loot].sort((a, b) => {
+    const byPrice = b.skin.price - a.skin.price;
+    const priceGap = Math.abs(a.skin.price - b.skin.price);
+    const maxPrice = Math.max(a.skin.price, b.skin.price, 1);
+    if (byPrice !== 0 && priceGap / maxPrice > 0.02) return byPrice;
+    if (catalogOrder) {
+      return (catalogOrder.get(a.skin.id) ?? 0) - (catalogOrder.get(b.skin.id) ?? 0);
+    }
+    if (byPrice !== 0) return byPrice;
+    return a.skin.name.localeCompare(b.skin.name, 'es');
+  });
+}
+
 function resolveLootItems(table: FreeCaseLootTable): FreeCaseLootItem[] {
-  return table.entries
+  const catalogOrder = new Map(table.entries.map((entry, index) => [entry.skinId, index]));
+  const loot = table.entries
     .map(entry => {
       const skin = findSkinById(entry.skinId);
       if (!skin) return null;
       return { skin, chance: entry.chance };
     })
-    .filter((item): item is FreeCaseLootItem => Boolean(item))
-    .sort((a, b) => a.chance - b.chance);
+    .filter((item): item is FreeCaseLootItem => Boolean(item));
+
+  return sortLootItemsByPriceDesc(loot, catalogOrder);
 }
 
 export function getFreeCaseLoot(slug: string): {
@@ -235,7 +254,37 @@ export function pickWeightedFreeCaseSkin(slug: string): Skin | null {
 export const JOKER_CASE_PRICE = 355;
 
 const CASE_JOKER_PRICE_OVERRIDES: Record<string, number> = {
-  'inferno-rush': 895,
+  'edge-protocol': 5,
+  'striker-knife': 25,
+  'sport-palm': 90,
+  'blade-roulette': 203,
+  'operator-wrap': 750,
+  'chrome-factory': 700,
+  'violet-storm': 2900,
+  'ember-core': 1150,
+  'toxic-alley': 2500,
+  'midnight-run': 5250,
+  'gold-reserve': 100,
+  'ruby-raid': 325,
+  'sapphire-code': 600,
+  'phantom-grid': 800,
+  'riot-zone': 4000,
+  'cutlass-box': 275,
+  'kings-gambit': 450,
+  'apex-cache': 1000,
+  'driver-lane': 2000,
+  'hand-wraps-box': 2000,
+  'sharpened': 450,
+  'mystery-hex': 1050,
+  'night-market': 1025,
+  'covert-reactor': 2750,
+  'overdrive': 4125,
+  'classified-hub': 4300,
+  'inferno-rush': 750,
+  'neon-district': 400,
+  'arctic-ops': 600,
+  'shadow-vault': 675,
+  'street-cache': 1150,
 };
 
 export function getJokerCasePrice(slug: string): number {

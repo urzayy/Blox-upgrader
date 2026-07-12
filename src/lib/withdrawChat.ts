@@ -285,7 +285,7 @@ export function formatWithdrawSummary(ticket: WithdrawTicket): string {
   if (getTicketType(ticket) === 'deposit') {
     if (isRobuxDeposit(ticket)) {
       const credit = getDepositCreditAmount(ticket);
-      return `Robux deposit · ${ticket.robuxAmount!.toLocaleString('en-US')} R$ → ${formatUSD(credit)} saldo`;
+      return `Robux deposit · ${ticket.robuxAmount!.toLocaleString('en-US')} R$ → ${formatUSD(credit)} balance`;
     }
     const count = ticket.skins.length;
     const names = ticket.skins.map(s => s.name).slice(0, 2).join(' · ');

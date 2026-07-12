@@ -33,7 +33,7 @@ export function GiveawayWinModal({ open, skin, period, onClose }: Props) {
         >
           <button
             type="button"
-            aria-label="Cerrar"
+            aria-label="Close"
             className="absolute inset-0 bg-black/85 backdrop-blur-sm"
             onClick={onClose}
           />
@@ -48,10 +48,10 @@ export function GiveawayWinModal({ open, skin, period, onClose }: Props) {
           >
             <div className="border-b border-amber-400/20 bg-gradient-to-r from-amber-500/15 to-violet-500/10 px-5 py-4 text-center">
               <p className="font-display text-[10px] font-bold uppercase tracking-[0.2em] text-amber-300/80">
-                ¡Felicidades!
+                Congratulations!
               </p>
               <h2 className="mt-1 font-display text-xl font-black uppercase tracking-wide text-white">
-                Has ganado el sorteo
+                You won the giveaway
               </h2>
               {period && (
                 <p className="mt-1 text-xs uppercase tracking-wide text-white/45">
@@ -78,14 +78,14 @@ export function GiveawayWinModal({ open, skin, period, onClose }: Props) {
                 />
               </div>
               <p className="mt-4 text-center text-xs leading-relaxed text-white/50">
-                El premio se ha añadido a tu inventario automáticamente.
+                The prize has been added to your inventory automatically.
               </p>
               <button
                 type="button"
                 onClick={onClose}
                 className="mt-5 w-full rounded-xl bg-gradient-to-r from-amber-500 to-amber-400 px-4 py-3 font-display text-xs font-black uppercase tracking-[0.12em] text-[#101010] transition hover:brightness-110"
               >
-                ¡Genial!
+                Great!
               </button>
             </div>
           </motion.div>

@@ -25,7 +25,7 @@ export function LastGiveawayWinners() {
       <div className="flex gap-3 sm:gap-4">
         <div className="flex shrink-0 items-center justify-center px-1 sm:px-2">
           <p className="font-display text-[10px] font-black uppercase tracking-[0.2em] text-white/35 [writing-mode:vertical-rl] rotate-180">
-            Últimos ganadores
+            Latest winners
           </p>
         </div>
 

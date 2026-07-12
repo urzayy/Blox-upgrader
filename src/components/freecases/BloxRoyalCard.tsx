@@ -16,7 +16,7 @@ export function BloxRoyalCard({ width, height, highlight, fullWidth }: Props) {
       style={{
         width: fullWidth ? '100%' : width,
         height,
-        background: 'linear-gradient(180deg, #0c1a30 0%, #152842 45%, #0a1424 100%)',
+        background: 'linear-gradient(180deg, #1a1408 0%, #120e08 46%, #0a0806 100%)',
         boxShadow: highlight
           ? 'inset 0 0 0 2px #d4a853, 0 0 36px rgba(212,168,83,0.55), 0 0 80px rgba(212,168,83,0.2)'
           : 'inset 0 0 0 1px rgba(212,168,83,0.35)',

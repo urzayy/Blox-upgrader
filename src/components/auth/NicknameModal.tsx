@@ -24,7 +24,7 @@ export function NicknameModal({ open, onClose }: Props) {
     setError('');
     const result = setNickname(value);
     if (result.ok) onClose();
-    else setError(result.error ?? 'No se pudo guardar el apodo.');
+    else setError(result.error ?? 'Could not save nickname.');
   };
 
   return (
@@ -38,7 +38,7 @@ export function NicknameModal({ open, onClose }: Props) {
         >
           <button
             type="button"
-            aria-label="Cerrar"
+            aria-label="Close"
             className="absolute inset-0 bg-black/70 backdrop-blur-sm"
             onClick={onClose}
           />
@@ -53,10 +53,10 @@ export function NicknameModal({ open, onClose }: Props) {
             exit={{ scale: 0.95, y: 8, opacity: 0 }}
           >
             <h2 id="nickname-title" className="font-display text-lg font-bold text-white">
-              Tu apodo
+              Your nickname
             </h2>
             <p className="mt-1 text-sm text-white/45">
-              Se mostrará en lugar de tu correo. Déjalo vacío para volver a mostrar el email.
+              It will be shown instead of your email. Leave it empty to show your email again.
             </p>
             <p className="mt-1 text-[11px] text-white/30">{user.email}</p>
 
@@ -65,7 +65,7 @@ export function NicknameModal({ open, onClose }: Props) {
                 type="text"
                 value={value}
                 onChange={e => setValue(e.target.value)}
-                placeholder="Ej. ShadowViper"
+                placeholder="e.g. ShadowViper"
                 maxLength={20}
                 className="input-filter w-full text-sm"
                 autoFocus
@@ -83,13 +83,13 @@ export function NicknameModal({ open, onClose }: Props) {
                   onClick={onClose}
                   className="flex-1 rounded-xl border border-white/10 py-2.5 text-sm font-semibold text-white/60 transition hover:text-white"
                 >
-                  Cancelar
+                  Cancel
                 </button>
                 <button
                   type="submit"
                   className="flex-1 rounded-xl bg-gold py-2.5 font-display text-sm font-black uppercase tracking-wide text-black"
                 >
-                  Guardar
+                  Save
                 </button>
               </div>
             </form>

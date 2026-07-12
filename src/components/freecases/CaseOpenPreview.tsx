@@ -33,7 +33,11 @@ function StageCenterCase({
         <img
           src={tier.image}
           alt=""
-          className="h-[16.5rem] w-full object-cover object-center sm:h-[18.5rem] lg:h-[20rem]"
+          className="h-[16.5rem] w-full object-contain object-center px-2 sm:h-[18.5rem] lg:h-[20rem]"
+          style={{
+            transform: tier.imageScale ? `scale(${tier.imageScale})` : undefined,
+            transformOrigin: 'center center',
+          }}
           draggable={false}
         />
         <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-[#0a0c12]/95 via-[#0a0c12]/20 to-transparent" />
@@ -54,7 +58,7 @@ function StageCenterCase({
               </div>
               {jokerMode && (
                 <p className="font-display text-[9px] font-black uppercase tracking-[0.14em] text-[#b56bff] drop-shadow-[0_0_10px_rgba(181,107,255,0.45)] sm:text-[10px]">
-                  MODO JOKER ACTIVADO
+                  JOKER MODE ENABLED
                 </p>
               )}
             </div>
@@ -92,7 +96,7 @@ function StageCenterCase({
             </div>
             {jokerMode && (
               <p className="font-display text-[9px] font-black uppercase tracking-[0.14em] text-[#b56bff] drop-shadow-[0_0_10px_rgba(181,107,255,0.45)] sm:text-[10px]">
-                MODO JOKER ACTIVADO
+                JOKER MODE ENABLED
               </p>
             )}
           </div>

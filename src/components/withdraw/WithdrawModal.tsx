@@ -91,7 +91,7 @@ export function WithdrawModal({
       onClose();
       return;
     }
-    setError('No se pudo crear la solicitud de retiro. Inténtalo de nuevo.');
+    setError('Could not create withdrawal request. Please try again.');
   };
 
   return (
@@ -105,7 +105,7 @@ export function WithdrawModal({
         >
           <button
             type="button"
-            aria-label="Cerrar"
+            aria-label="Close"
             className="absolute inset-0 bg-black/80 backdrop-blur-sm"
             onClick={onClose}
           />
@@ -126,8 +126,8 @@ export function WithdrawModal({
                   Withdraw
                 </h2>
                 <p className="text-[11px] text-white/45">
-                  Selecciona las skins de tu inventario que quieres retirar. Mínimo{' '}
-                  {MIN_WITHDRAW_TOTAL.toLocaleString('en-US')} monedas en total.
+                  Select the skins from your inventory you want to withdraw. Minimum{' '}
+                  {MIN_WITHDRAW_TOTAL.toLocaleString('en-US')} coins total.
                 </p>
               </div>
               <button
@@ -135,7 +135,7 @@ export function WithdrawModal({
                 onClick={onClose}
                 className="rounded-lg border border-white/10 px-3 py-1.5 text-xs text-white/50 transition hover:border-white/25 hover:text-white"
               >
-                Cerrar
+                Close
               </button>
             </div>
 
@@ -144,7 +144,7 @@ export function WithdrawModal({
                 type="text"
                 value={search}
                 onChange={e => setSearch(e.target.value)}
-                placeholder="Buscar en tu inventario..."
+                placeholder="Search your inventory..."
                 className="input-filter w-full text-sm"
                 autoFocus
               />
@@ -153,10 +153,10 @@ export function WithdrawModal({
             <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-3">
               {inventory.length === 0 ? (
                 <p className="py-16 text-center text-sm text-white/40">
-                  Tu inventario está vacío. No hay skins para retirar.
+                  Your inventory is empty. No skins to withdraw.
                 </p>
               ) : filtered.length === 0 ? (
-                <p className="py-16 text-center text-sm text-white/40">No hay skins con ese filtro.</p>
+                <p className="py-16 text-center text-sm text-white/40">No skins match that filter.</p>
               ) : (
                 <div className="grid grid-cols-[repeat(auto-fill,minmax(96px,1fr))] content-start items-start gap-2 sm:grid-cols-[repeat(auto-fill,minmax(108px,1fr))] md:grid-cols-[repeat(auto-fill,minmax(118px,1fr))]">
                   {filtered.map(skin => (
@@ -183,7 +183,7 @@ export function WithdrawModal({
                 {selectedSkins.length > 0 ? (
                   <>
                     <span>
-                      {selectedSkins.length} seleccionada{selectedSkins.length === 1 ? '' : 's'} ·
+                      {selectedSkins.length} selected{selectedSkins.length === 1 ? '' : 's'} ·
                     </span>
                     <CoinPrice
                       value={selectedTotal}
@@ -192,11 +192,11 @@ export function WithdrawModal({
                     />
                   </>
                 ) : (
-                  `Pulsa las skins que quieras retirar (mín. ${MIN_WITHDRAW_TOTAL} monedas)`
+                  `Tap the skins you want to withdraw (min. ${MIN_WITHDRAW_TOTAL} coins)`
                 )}
                 {selectedSkins.length > 0 && selectedTotal < MIN_WITHDRAW_TOTAL && (
                   <span className="text-risk">
-                    {' '}· Faltan {(MIN_WITHDRAW_TOTAL - selectedTotal).toLocaleString('en-US')} monedas
+                    {' '}· Need {(MIN_WITHDRAW_TOTAL - selectedTotal).toLocaleString('en-US')} coins
                   </span>
                 )}
               </div>
@@ -210,7 +210,7 @@ export function WithdrawModal({
                   aria-hidden="true"
                   className="pointer-events-none absolute inset-0 bg-gradient-to-r from-white/10 via-white/20 to-white/10 opacity-90"
                 />
-                <span className="relative z-10">{submitting ? 'Enviando…' : 'Withdraw selected'}</span>
+                <span className="relative z-10">{submitting ? 'Sending…' : 'Withdraw selected'}</span>
               </button>
             </div>
           </motion.div>
@@ -238,7 +238,7 @@ function WithdrawSkinTile({
       type="button"
       disabled={locked}
       onClick={onToggle}
-      title={locked ? `${skin.name} — ya en retiro` : skin.name}
+      title={locked ? `${skin.name} — already in withdrawal` : skin.name}
       className={`group relative w-full self-start overflow-hidden rounded-lg border bg-[#141820] text-left transition ${
         locked
           ? 'cursor-not-allowed border-white/10 opacity-90'
@@ -264,7 +264,7 @@ function WithdrawSkinTile({
         </div>
       )}
 
-      {locked && <SkinLockOverlay compact label="En retiro" />}
+      {locked && <SkinLockOverlay compact label="In withdrawal" />}
 
       <div className="relative aspect-square w-full p-1">
         <SkinImage src={skin.image} alt={skin.name} zoom={1.22} />

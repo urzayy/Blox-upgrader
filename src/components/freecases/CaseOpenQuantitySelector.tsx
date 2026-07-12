@@ -13,7 +13,7 @@ export function CaseOpenQuantitySelector({ value, onChange, disabled }: Props) {
     <div
       className="flex shrink-0 items-center gap-1 rounded-lg border border-white/[0.08] bg-[#0c0a14]/95 p-1.5 sm:gap-1.5 sm:p-2"
       role="group"
-      aria-label="Cantidad de cajas a abrir"
+      aria-label="Number of cases to open"
     >
       {QUANTITIES.map(quantity => {
         const active = value === quantity;

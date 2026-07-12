@@ -54,11 +54,11 @@ export function AdminGiftPanel({ open, adminEmail, onClose, onGiftSent }: Props)
 
     const email = normalizeGrantEmail(targetEmail);
     if (!isValidGrantEmail(email)) {
-      setStatus({ type: 'err', text: 'Introduce un correo electrónico válido.' });
+      setStatus({ type: 'err', text: 'Enter a valid email address.' });
       return;
     }
     if (!validQuantity) {
-      setStatus({ type: 'err', text: `Introduce una cantidad entre 1 y ${MAX_GIFT_QUANTITY}.` });
+      setStatus({ type: 'err', text: `Enter a quantity between 1 and ${MAX_GIFT_QUANTITY}.` });
       return;
     }
 
@@ -69,13 +69,13 @@ export function AdminGiftPanel({ open, adminEmail, onClose, onGiftSent }: Props)
       await createInventoryGrant(email, adminEmail, selectedSkin, parsedQuantity);
       setStatus({
         type: 'ok',
-        text: `${parsedQuantity}× ${selectedSkin.name} enviado${parsedQuantity === 1 ? '' : 's'} a ${email}.`,
+        text: `${parsedQuantity}× ${selectedSkin.name} sent${parsedQuantity === 1 ? '' : 's'} to ${email}.`,
       });
       onGiftSent?.(email, selectedSkin, parsedQuantity);
       setSelectedSkin(null);
       setQuantity('1');
     } catch {
-      setStatus({ type: 'err', text: 'No se pudo enviar el regalo. ¿Está el servidor activo?' });
+      setStatus({ type: 'err', text: 'Could not send gift. Is the server running?' });
     } finally {
       sendInFlightRef.current = false;
       setSending(false);
@@ -93,7 +93,7 @@ export function AdminGiftPanel({ open, adminEmail, onClose, onGiftSent }: Props)
         >
           <button
             type="button"
-            aria-label="Cerrar"
+            aria-label="Close"
             className="absolute inset-0 bg-black/80 backdrop-blur-sm"
             onClick={onClose}
           />
@@ -114,7 +114,7 @@ export function AdminGiftPanel({ open, adminEmail, onClose, onGiftSent }: Props)
                   Gift Items
                 </h2>
                 <p className="text-[11px] text-white/45">
-                  Elige una skin, indica la cantidad y confirma el envío
+                  Choose a skin, set quantity, and confirm send
                 </p>
               </div>
               <button
@@ -122,19 +122,19 @@ export function AdminGiftPanel({ open, adminEmail, onClose, onGiftSent }: Props)
                 onClick={onClose}
                 className="rounded-lg border border-white/10 px-3 py-1.5 text-xs text-white/50 transition hover:border-white/25 hover:text-white"
               >
-                Cerrar
+                Close
               </button>
             </div>
 
             <div className="shrink-0 space-y-2 border-b border-white/5 px-4 py-3">
               <label className="block text-[10px] font-semibold uppercase tracking-wide text-white/45">
-                Correo del usuario
+                User email
               </label>
               <input
                 type="email"
                 value={targetEmail}
                 onChange={e => setTargetEmail(e.target.value)}
-                placeholder="usuario@ejemplo.com"
+                placeholder="user@example.com"
                 className="input-filter w-full text-sm"
                 autoFocus
               />
@@ -142,7 +142,7 @@ export function AdminGiftPanel({ open, adminEmail, onClose, onGiftSent }: Props)
                 type="text"
                 value={search}
                 onChange={e => setSearch(e.target.value)}
-                placeholder="Buscar skin por nombre o arma..."
+                placeholder="Search skin by name or weapon type..."
                 className="input-filter w-full text-sm"
               />
               {status && (
@@ -159,7 +159,7 @@ export function AdminGiftPanel({ open, adminEmail, onClose, onGiftSent }: Props)
 
             <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-3">
               {filtered.length === 0 ? (
-                <p className="py-16 text-center text-sm text-white/40">No hay skins con ese filtro.</p>
+                <p className="py-16 text-center text-sm text-white/40">No skins match that filter.</p>
               ) : (
                 <div className="grid grid-cols-[repeat(auto-fill,minmax(96px,1fr))] content-start items-start gap-2 sm:grid-cols-[repeat(auto-fill,minmax(108px,1fr))] md:grid-cols-[repeat(auto-fill,minmax(118px,1fr))]">
                   {filtered.map(skin => (
@@ -183,7 +183,7 @@ export function AdminGiftPanel({ open, adminEmail, onClose, onGiftSent }: Props)
                 <div className="flex flex-wrap items-end justify-between gap-3">
                   <div className="min-w-0 flex-1">
                     <p className="text-[10px] font-semibold uppercase tracking-wide text-white/45">
-                      Skin seleccionada
+                      Selected skin
                     </p>
                     <p className="truncate font-display text-sm font-bold text-gold">{selectedSkin.name}</p>
                     <CoinPrice
@@ -197,7 +197,7 @@ export function AdminGiftPanel({ open, adminEmail, onClose, onGiftSent }: Props)
                   <div className="flex flex-wrap items-end gap-2">
                     <label className="block">
                       <span className="mb-1 block text-[10px] font-semibold uppercase tracking-wide text-white/45">
-                        Cantidad
+                        Quantity
                       </span>
                       <input
                         type="number"
@@ -216,7 +216,7 @@ export function AdminGiftPanel({ open, adminEmail, onClose, onGiftSent }: Props)
                       onClick={() => { void handleSendGift(); }}
                       className="rounded-lg border border-gold/45 bg-gold/15 px-4 py-2 font-display text-[11px] font-bold uppercase tracking-wide text-gold transition hover:bg-gold/25 disabled:cursor-not-allowed disabled:opacity-35"
                     >
-                      {sending ? 'Enviando…' : `Enviar ${validQuantity ? parsedQuantity : ''}`}
+                      {sending ? 'Sending…' : `Send ${validQuantity ? parsedQuantity : ''}`}
                     </button>
                     <button
                       type="button"
@@ -227,13 +227,13 @@ export function AdminGiftPanel({ open, adminEmail, onClose, onGiftSent }: Props)
                       }}
                       className="rounded-lg border border-white/10 px-3 py-2 text-[11px] text-white/50 transition hover:border-white/25 hover:text-white disabled:opacity-40"
                     >
-                      Cancelar
+                      Cancel
                     </button>
                   </div>
                 </div>
               ) : (
                 <p className="text-center text-[10px] text-gold/70">
-                  Pulsa una skin para elegir cantidad y enviar el regalo
+                  Tap a skin to choose quantity and send the gift
                 </p>
               )}
             </div>
@@ -262,7 +262,7 @@ function GiftSkinTile({
       type="button"
       disabled={disabled}
       onClick={onSelect}
-      title={`Seleccionar ${skin.name}`}
+      title={`Select ${skin.name}`}
       className={`group relative w-full self-start overflow-hidden rounded-lg border bg-[#141820] text-left transition disabled:opacity-40 ${
         selected
           ? 'border-gold/60 ring-1 ring-gold/50 shadow-[0_0_18px_rgba(176,108,255,0.2)]'
@@ -295,7 +295,7 @@ function GiftSkinTile({
           {skin.name}
         </p>
         <p className="mt-0.5 truncate text-[8px] capitalize text-gold/70">
-          {selected ? 'Seleccionada' : 'Elegir →'}
+          {selected ? 'Selected' : 'Choose →'}
         </p>
       </div>
     </button>

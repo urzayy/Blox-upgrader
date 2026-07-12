@@ -20,7 +20,7 @@ export function AdminWithdrawInbox({ open, onClose, onOpenTicket }: Props) {
         setItems(await loadAdminInbox());
         setError('');
       } catch {
-        setError('No se pudieron cargar las solicitudes de withdraw.');
+        setError('Could not load withdrawal requests.');
       }
     };
     void load();
@@ -39,7 +39,7 @@ export function AdminWithdrawInbox({ open, onClose, onOpenTicket }: Props) {
         >
           <button
             type="button"
-            aria-label="Cerrar"
+            aria-label="Close"
             className="absolute inset-0 bg-black/80 backdrop-blur-sm"
             onClick={onClose}
           />
@@ -60,7 +60,7 @@ export function AdminWithdrawInbox({ open, onClose, onOpenTicket }: Props) {
                   Live Chats Inbox
                 </h2>
                 <p className="text-[11px] text-white/45">
-                  Chats abiertos de deposit y withdraw
+                  Open deposit and withdraw chats
                 </p>
               </div>
               <button
@@ -68,7 +68,7 @@ export function AdminWithdrawInbox({ open, onClose, onOpenTicket }: Props) {
                 onClick={onClose}
                 className="rounded-lg border border-white/10 px-3 py-1.5 text-xs text-white/50 transition hover:border-white/25 hover:text-white"
               >
-                Cerrar
+                Close
               </button>
             </div>
 
@@ -79,7 +79,7 @@ export function AdminWithdrawInbox({ open, onClose, onOpenTicket }: Props) {
                 </p>
               )}
               {items.length === 0 ? (
-                <p className="py-16 text-center text-sm text-white/40">No hay chats abiertos.</p>
+                <p className="py-16 text-center text-sm text-white/40">No open chats.</p>
               ) : (
                 <div className="space-y-2">
                   {items.map((item) => {
@@ -117,7 +117,7 @@ export function AdminWithdrawInbox({ open, onClose, onOpenTicket }: Props) {
                           </span>
                           {attentionCount > 0 && (
                             <span className="rounded-full border border-gold/40 bg-gold px-2 py-0.5 text-[9px] font-black text-deep">
-                              {attentionCount} nuevo{attentionCount === 1 ? '' : 's'}
+                              {attentionCount} new
                             </span>
                           )}
                         </div>
@@ -155,7 +155,7 @@ export function AdminWithdrawInbox({ open, onClose, onOpenTicket }: Props) {
                           />
                         )}
                         <p className="mt-1 text-[9px] text-white/30">
-                          {new Date(ticket.updatedAt).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}
+                          {new Date(ticket.updatedAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
                         </p>
                       </div>
                     </button>

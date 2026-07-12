@@ -39,11 +39,11 @@ export function AdminGiftMoneyPanel({ open, adminEmail, onClose, onGiftSent }: P
 
     const email = normalizeGrantEmail(targetEmail);
     if (!isValidGrantEmail(email)) {
-      setStatus({ type: 'err', text: 'Introduce un correo electrónico válido.' });
+      setStatus({ type: 'err', text: 'Enter a valid email address.' });
       return;
     }
     if (!validAmount) {
-      setStatus({ type: 'err', text: 'Introduce una cantidad entera mayor que 0.' });
+      setStatus({ type: 'err', text: 'Enter a whole number greater than 0.' });
       return;
     }
 
@@ -54,12 +54,12 @@ export function AdminGiftMoneyPanel({ open, adminEmail, onClose, onGiftSent }: P
       await createBalanceGrant(email, adminEmail, parsedAmount);
       setStatus({
         type: 'ok',
-        text: `${parsedAmount.toLocaleString('es-ES')} SALDO enviado a ${email}.`,
+        text: `${parsedAmount.toLocaleString('en-US')} BALANCE sent to ${email}.`,
       });
       onGiftSent?.(email, parsedAmount);
       setAmount('');
     } catch {
-      setStatus({ type: 'err', text: 'No se pudo enviar el regalo. ¿Está el servidor activo?' });
+      setStatus({ type: 'err', text: 'Could not send gift. Is the server running?' });
     } finally {
       sendInFlightRef.current = false;
       setSending(false);
@@ -77,7 +77,7 @@ export function AdminGiftMoneyPanel({ open, adminEmail, onClose, onGiftSent }: P
         >
           <button
             type="button"
-            aria-label="Cerrar"
+            aria-label="Close"
             className="absolute inset-0 bg-black/80 backdrop-blur-sm"
             onClick={onClose}
           />
@@ -98,7 +98,7 @@ export function AdminGiftMoneyPanel({ open, adminEmail, onClose, onGiftSent }: P
                   Gift Money
                 </h2>
                 <p className="text-[11px] text-white/45">
-                  Regala SALDO al correo del usuario
+                  Gift BALANCE to user email
                 </p>
               </div>
               <button
@@ -106,25 +106,25 @@ export function AdminGiftMoneyPanel({ open, adminEmail, onClose, onGiftSent }: P
                 onClick={onClose}
                 className="rounded-lg border border-white/10 px-3 py-1.5 text-xs text-white/50 transition hover:border-white/25 hover:text-white"
               >
-                Cerrar
+                Close
               </button>
             </div>
 
             <div className="space-y-3 px-4 py-4">
               <label className="block text-[10px] font-semibold uppercase tracking-wide text-white/45">
-                Correo del usuario
+                User email
               </label>
               <input
                 type="email"
                 value={targetEmail}
                 onChange={e => setTargetEmail(e.target.value)}
-                placeholder="usuario@email.com"
+                placeholder="user@email.com"
                 className="input-filter w-full text-sm"
                 autoFocus
               />
 
               <label className="block text-[10px] font-semibold uppercase tracking-wide text-white/45">
-                Cantidad de SALDO
+                BALANCE amount
               </label>
               <input
                 type="number"
@@ -132,13 +132,13 @@ export function AdminGiftMoneyPanel({ open, adminEmail, onClose, onGiftSent }: P
                 step={1}
                 value={amount}
                 onChange={e => setAmount(e.target.value)}
-                placeholder="Ej: 5000"
+                placeholder="e.g. 5000"
                 className="input-filter w-full text-sm"
               />
 
               {validAmount && (
                 <div className="flex items-center gap-2 text-[11px] text-white/50">
-                  <span>Total a regalar:</span>
+                  <span>Total to gift:</span>
                   <CoinPrice
                     value={parsedAmount}
                     iconClassName="h-3.5 w-3.5"
@@ -165,7 +165,7 @@ export function AdminGiftMoneyPanel({ open, adminEmail, onClose, onGiftSent }: P
                 onClick={onClose}
                 className="flex-1 rounded-lg border border-white/10 px-3 py-2 text-xs text-white/50 transition hover:border-white/25 hover:text-white"
               >
-                Cancelar
+                Cancel
               </button>
               <button
                 type="button"
@@ -173,7 +173,7 @@ export function AdminGiftMoneyPanel({ open, adminEmail, onClose, onGiftSent }: P
                 onClick={() => { void handleSendGift(); }}
                 className="flex-1 rounded-lg border border-gold/40 bg-gold/15 px-3 py-2 font-display text-[11px] font-bold uppercase tracking-wide text-gold transition hover:bg-gold/25 disabled:opacity-35"
               >
-                {sending ? 'Enviando…' : 'Enviar SALDO'}
+                {sending ? 'Sending…' : 'Send BALANCE'}
               </button>
             </div>
           </motion.div>

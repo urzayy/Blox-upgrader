@@ -62,10 +62,10 @@ export async function adminOpenGiveaway(payload: {
       body: JSON.stringify(payload),
     });
     const data = await res.json().catch(() => ({})) as { error?: string };
-    if (!res.ok) return { ok: false, error: data.error ?? 'No se pudo abrir el sorteo.' };
+    if (!res.ok) return { ok: false, error: data.error ?? 'Could not open giveaway.' };
     return { ok: true };
   } catch {
-    return { ok: false, error: 'Error de red.' };
+    return { ok: false, error: 'Network error.' };
   }
 }
 
@@ -84,7 +84,7 @@ export async function adminCloseGiveaway(payload: {
       error?: string;
       winner?: { nickname?: string; email?: string };
     };
-    if (!res.ok) return { ok: false, error: data.error ?? 'No se pudo cerrar el sorteo.' };
+    if (!res.ok) return { ok: false, error: data.error ?? 'Could not close giveaway.' };
     return {
       ok: true,
       winner: data.winner
@@ -92,7 +92,7 @@ export async function adminCloseGiveaway(payload: {
         : undefined,
     };
   } catch {
-    return { ok: false, error: 'Error de red.' };
+    return { ok: false, error: 'Network error.' };
   }
 }
 
@@ -177,10 +177,10 @@ export async function joinGiveaway(payload: {
       body: JSON.stringify(payload),
     });
     const data = await res.json().catch(() => ({})) as { error?: string; alreadyJoined?: boolean };
-    if (!res.ok) return { ok: false, error: data.error ?? 'No se pudo unir al sorteo.' };
+    if (!res.ok) return { ok: false, error: data.error ?? 'Could not join giveaway.' };
     return { ok: true, alreadyJoined: data.alreadyJoined };
   } catch {
-    return { ok: false, error: 'Error de red.' };
+    return { ok: false, error: 'Network error.' };
   }
 }
 

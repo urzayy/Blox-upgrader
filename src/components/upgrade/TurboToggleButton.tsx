@@ -9,9 +9,9 @@ export function TurboToggleButton({ active, onClick, className = '' }: Props) {
     <button
       type="button"
       onClick={onClick}
-      title={active ? 'Turbo activado' : 'Turbo desactivado'}
+      title={active ? 'Turbo enabled' : 'Turbo disabled'}
       aria-pressed={active}
-      aria-label={active ? 'Desactivar turbo' : 'Activar turbo'}
+      aria-label={active ? 'Disable turbo' : 'Enable turbo'}
       className={`flex h-9 w-9 items-center justify-center rounded-lg border transition ${
         active
           ? 'border-[#a855f7] bg-violet-500/15 shadow-[0_0_18px_rgba(168,85,247,0.45)]'

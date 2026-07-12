@@ -185,6 +185,7 @@ export interface DbStatus {
   dataDir: string;
   logsDir: string;
   userCount: number;
+  totalAccountRows?: number;
   registeredEmailCount: number;
   registeredEmails: string[];
   siteUrl: string;

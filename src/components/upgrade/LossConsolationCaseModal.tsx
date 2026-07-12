@@ -156,7 +156,7 @@ export function LossConsolationCaseModal({
 
     const introTimer = window.setTimeout(() => {
       setPhase('rolling');
-      sfx.upgradeStart(turbo);
+      sfx.caseRollStart(turbo);
     }, 900);
 
     const rollTimer = window.setTimeout(() => {

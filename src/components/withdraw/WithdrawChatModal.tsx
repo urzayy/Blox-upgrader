@@ -60,7 +60,7 @@ export function WithdrawChatModal({
         onTicketCompleted(next.ticket);
       }
     } catch {
-      setError('No se pudo cargar el chat. Comprueba tu conexión e inténtalo de nuevo.');
+      setError('Could not load chat. Check your connection and try again.');
     }
   }, [ticketId, isAdmin, onTicketCompleted]);
 
@@ -93,7 +93,7 @@ export function WithdrawChatModal({
       setDraft('');
       setError('');
     } catch {
-      setError('No se pudo enviar el mensaje.');
+      setError('Could not send message.');
     } finally {
       setSending(false);
     }
@@ -107,7 +107,7 @@ export function WithdrawChatModal({
       setBundle(next);
       setError('');
     } catch {
-      setError('No se pudo actualizar la solicitud.');
+      setError('Could not update request.');
     } finally {
       setSending(false);
     }
@@ -131,7 +131,7 @@ export function WithdrawChatModal({
         >
           <button
             type="button"
-            aria-label="Cerrar chat"
+            aria-label="Close chat"
             className="absolute inset-0 bg-black/85 backdrop-blur-sm"
             onClick={onClose}
           />
@@ -166,7 +166,7 @@ export function WithdrawChatModal({
                 <p className="mt-1 text-[11px] text-white/45">
                   {isAdmin
                     ? `Chat with ${ticket?.userLabel ?? 'user'} · Admins: urzay1v1 · ecruzcastillo2009`
-                    : 'Chat en vivo con los administradores. Sigue sus instrucciones aquí.'}
+                    : 'Live chat with administrators. Follow their instructions here.'}
                 </p>
                 {ticket && !isHelp && isRobuxDeposit(ticket) && (
                   <p className="mt-1 flex flex-wrap items-center gap-1 text-[10px] text-white/35">
@@ -177,7 +177,7 @@ export function WithdrawChatModal({
                       iconClassName="inline h-3 w-3 align-[-2px]"
                       textClassName="inline font-display text-[10px] font-bold text-gold"
                     />
-                    <span>saldo</span>
+                    <span>balance</span>
                     {ticket.bonusCode && (
                       <span className="text-win">(+{ticket.bonusPercent}% {ticket.bonusCode})</span>
                     )}
@@ -200,7 +200,7 @@ export function WithdrawChatModal({
                 )}
                 {ticket && isHelp && (
                   <p className="mt-1 text-[10px] text-white/35">
-                    Chat de ayuda en vivo
+                    Live help chat
                   </p>
                 )}
               </div>
@@ -209,7 +209,7 @@ export function WithdrawChatModal({
                 onClick={onClose}
                 className="shrink-0 rounded-lg border border-white/10 px-3 py-1.5 text-xs text-white/50 transition hover:border-white/25 hover:text-white"
               >
-                Cerrar
+                Close
               </button>
             </div>
 
@@ -343,7 +343,7 @@ function ChatBubble({
         </p>
         <p className="whitespace-pre-wrap text-[12px] leading-relaxed text-white/90">{message.text}</p>
         <p className="mt-1 text-[9px] text-white/25">
-          {new Date(message.createdAt).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}
+          {new Date(message.createdAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
         </p>
       </div>
     </div>

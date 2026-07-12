@@ -30,7 +30,7 @@ export function LiveHelpControl({ onConfirm, loading }: Props) {
           <>
             <button
               type="button"
-              aria-label="Cerrar menú de ayuda"
+              aria-label="Close help menu"
               className="fixed inset-0 z-[115]"
               onClick={() => setOpen(false)}
             />
@@ -48,12 +48,12 @@ export function LiveHelpControl({ onConfirm, loading }: Props) {
                 id="live-help-confirm-title"
                 className="font-display text-xs font-bold uppercase tracking-wide text-win"
               >
-                ¿Necesitas ayuda?
+                Need help?
               </h3>
               <p className="mt-2 text-[11px] leading-relaxed text-white/55">
-                Abre el chat solo si tienes una duda real o un problema concreto.
-                Así los admins pueden atender a todos con rapidez. Gracias por no
-                hacer perder el tiempo al equipo.
+                Only open chat if you have a real question or a specific issue.
+                This helps admins assist everyone quickly. Please don't
+                waste the team's time.
               </p>
               <div className="mt-3 flex gap-2">
                 <button
@@ -62,7 +62,7 @@ export function LiveHelpControl({ onConfirm, loading }: Props) {
                   onClick={handleConfirm}
                   className="flex-1 rounded-lg border border-win/40 bg-win/15 px-3 py-2 font-display text-[10px] font-bold uppercase tracking-wide text-win transition hover:bg-win/25 disabled:cursor-wait disabled:opacity-50"
                 >
-                  Sí
+                  Yes
                 </button>
                 <button
                   type="button"

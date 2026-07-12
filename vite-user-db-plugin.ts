@@ -408,14 +408,19 @@ export function userDbPlugin(dbDir: string): Plugin {
             }
             const storage = await userStore.checkConnection();
             const users = await userStore.listUsers();
+            const emails = await userStore.listRegisteredEmails();
+            const totalAccountRows = typeof userStore.countAccounts === 'function'
+              ? await userStore.countAccounts()
+              : users.length;
             sendJson(res, 200, {
               storage,
               backend: userStore.type ?? 'file',
               dataDir: userStore.type === 'supabase' ? process.env.SUPABASE_URL : path.dirname(dbDir),
               logsDir: path.resolve(path.dirname(dbDir), 'user-logs'),
               userCount: users.length,
-              registeredEmailCount: (await userStore.listRegisteredEmails()).length,
-              registeredEmails: await userStore.listRegisteredEmails(),
+              totalAccountRows,
+              registeredEmailCount: emails.length,
+              registeredEmails: emails,
               siteUrl: 'http://localhost:5173',
             });
             return;

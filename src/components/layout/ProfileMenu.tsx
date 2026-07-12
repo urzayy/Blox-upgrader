@@ -25,7 +25,7 @@ export function ProfileMenu() {
       type="button"
       onClick={() => navigateApp('profile')}
       title={`Perfil — ${displayName}`}
-      aria-label={`Abrir perfil de ${displayName}`}
+      aria-label={`Open profile for ${displayName}`}
       aria-current={active ? 'page' : undefined}
       className={`flex shrink-0 items-center justify-center overflow-hidden rounded-full border transition ${buttonSize} ${
         DEV_CLEAN_HEADER_LAYOUT

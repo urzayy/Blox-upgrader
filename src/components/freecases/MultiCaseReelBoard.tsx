@@ -65,14 +65,14 @@ export function MultiCaseReelBoard({
         </p>
         <h2 className="mt-1 font-display text-lg font-black uppercase tracking-[0.1em] text-white sm:text-xl">
           {allRevealed
-            ? `¡${sessions.length} skins obtenidas!`
-            : `Abriendo ${sessions.length} cajas…`}
+            ? `${sessions.length} skins obtained!`
+            : `Opening ${sessions.length} cases…`}
         </h2>
         {!allRevealed && (
           <p className="mt-1 font-display text-[10px] font-bold uppercase tracking-[0.12em] text-white/40 sm:text-[11px]">
             {revealedCount > 0
-              ? `Espera · ${revealedCount}/${sessions.length} listas`
-              : 'Espera a que terminen todas las ruletas'}
+              ? `Wait · ${revealedCount}/${sessions.length} ready`
+              : 'Wait for all reels to finish'}
           </p>
         )}
       </div>

@@ -15,7 +15,7 @@ function logKey(userId: string): string {
 }
 
 function formatTimestamp(date = new Date()): string {
-  return date.toLocaleString('es-ES', { hour12: false });
+  return date.toLocaleString('en-US', { hour12: false });
 }
 
 function formatDetails(details?: Record<string, string | number | boolean | null | undefined>): string {

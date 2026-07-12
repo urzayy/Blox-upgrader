@@ -1,15 +1,6 @@
-import { lazy, Suspense } from 'react';
-import ProdApp from './ProdApp';
+import DevApp from './DevApp';
 
-const DevApp = lazy(() => import('./DevApp'));
-
+/** Full site (cases, battles, daily cases, mobile nav) — same build as localhost. */
 export default function App() {
-  if (import.meta.env.DEV) {
-    return (
-      <Suspense fallback={null}>
-        <DevApp />
-      </Suspense>
-    );
-  }
-  return <ProdApp />;
+  return <DevApp />;
 }

@@ -1,4 +1,4 @@
-export type AppRoute = 'main' | 'upgrade' | 'profile' | 'free-cases' | 'giveaways' | 'admin';
+export type AppRoute = 'main' | 'upgrade' | 'profile' | 'free-cases' | 'giveaways' | 'admin' | 'case-battles';
 
 export function routeFromPathname(pathname = window.location.pathname): AppRoute {
   const normalized = pathname.replace(/\/+$/, '') || '/';
@@ -6,6 +6,7 @@ export function routeFromPathname(pathname = window.location.pathname): AppRoute
   if (normalized === '/upgrade') return 'upgrade';
   if (normalized === '/free-cases' || normalized.startsWith('/free-cases/')) return 'free-cases';
   if (normalized === '/giveaways' || normalized.startsWith('/giveaways/')) return 'giveaways';
+  if (normalized === '/case-battles' || normalized.startsWith('/case-battles/')) return 'case-battles';
   if (normalized === '/admin') return 'admin';
   return 'main';
 }
@@ -21,6 +22,7 @@ export function pathForRoute(route: AppRoute): string {
   if (route === 'upgrade') return '/upgrade';
   if (route === 'free-cases') return '/free-cases';
   if (route === 'giveaways') return '/giveaways';
+  if (route === 'case-battles') return '/case-battles';
   if (route === 'admin') return '/admin';
   return '/';
 }
@@ -67,4 +69,36 @@ export function navigateGiveaway(period: string): void {
     window.history.pushState({ route: 'giveaways' }, '', nextPath);
     window.dispatchEvent(new PopStateEvent('popstate'));
   }
+}
+
+export function battleIdFromPathname(pathname = window.location.pathname): string | null {
+  const normalized = pathname.replace(/\/+$/, '') || '/';
+  if (normalized === '/case-battles/create') return null;
+  const match = normalized.match(/^\/case-battles\/([^/]+)$/);
+  return match ? match[1].toLowerCase() : null;
+}
+
+export function navigateCaseBattle(battleId: string): void {
+  const nextPath = `/case-battles/${battleId.toLowerCase()}`;
+  if (window.location.pathname !== nextPath) {
+    window.history.pushState({ route: 'case-battles' }, '', nextPath);
+    window.dispatchEvent(new PopStateEvent('popstate'));
+  }
+}
+
+export function navigateCaseBattles(): void {
+  navigateApp('case-battles');
+}
+
+export function navigateCreateCaseBattle(): void {
+  const nextPath = '/case-battles/create';
+  if (window.location.pathname !== nextPath) {
+    window.history.pushState({ route: 'case-battles' }, '', nextPath);
+    window.dispatchEvent(new PopStateEvent('popstate'));
+  }
+}
+
+export function isCreateCaseBattlePath(pathname = window.location.pathname): boolean {
+  const normalized = pathname.replace(/\/+$/, '') || '/';
+  return normalized === '/case-battles/create';
 }

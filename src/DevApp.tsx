@@ -66,27 +66,38 @@ import { DEV_CLEAN_HEADER_LAYOUT } from './lib/devCleanHeaderLayout';
 import { DEV_FEED_CLIENT_POLL_MS } from './lib/devLiveFeed';
 import { buildLossConsolationCase, type LossConsolationResult } from './lib/lossConsolationCase';
 import { LossConsolationCaseModal } from './components/upgrade/LossConsolationCaseModal';
-import { useAppRoute, useCaseSlug, useFreeCaseSlug, useGiveawayPeriod } from './hooks/useAppRoute';
+import { useAppRoute, useBattleId, useCaseSlug, useFreeCaseSlug, useGiveawayPeriod, useIsCreateCaseBattle } from './hooks/useAppRoute';
 import { recordGiveawayDeposit, ackGiveawayWin, fetchPendingGiveawayWins, type GiveawayPendingWin } from './lib/giveawayApi';
 import { resolveAvatarId } from './lib/profileAvatars';
 import { navigateApp } from './lib/appRoute';
 import { XP_PER_WAGERED_COIN } from './lib/playerLevel';
 import { clearXpForUserId, addWagerXp } from './lib/xpStorage';
 import { clearFreeCaseCooldowns } from './lib/freeCaseCooldown';
-import { registerSellSkinHandler, registerSyncPlayerHandler, registerUpgradeWithSkinHandler } from './lib/uiActions';
+import { registerBattleEntryHandlers, registerGrantBalanceHandler, registerGrantSkinsHandler, registerSellSkinHandler, registerSyncPlayerHandler, registerUpgradeWithSkinHandler } from './lib/uiActions';
+import { bootstrapCaseBattleEngine } from './lib/caseBattleEngine';
 import { archiveInventorySkins } from './lib/inventoryArchiveStorage';
 import { ProfilePage } from './pages/ProfilePage';
 import { MainPage } from './pages/MainPage';
+import { CaseBattlesPage } from './pages/CaseBattlesPage';
+import { CaseBattleDetailPage } from './pages/CaseBattleDetailPage';
+import { CreateCaseBattlePage } from './pages/CreateCaseBattlePage';
 import { CaseDetailPage } from './pages/CaseDetailPage';
 import { FreeCasesPage } from './pages/FreeCasesPage';
 import { FreeCaseDetailPage } from './pages/FreeCaseDetailPage';
 import { GiveawaysPage } from './pages/GiveawaysPage';
 import { GiveawayDetailPage } from './pages/GiveawayDetailPage';
 import { GiveawayWinModal } from './components/giveaways/GiveawayWinModal';
+import { PlayerAnnouncementModal } from './components/announcements/PlayerAnnouncementModal';
+import { usePlayerAnnouncement } from './hooks/usePlayerAnnouncement';
 import { AdminPage } from './pages/AdminPage';
 
 export default function DevApp() {
   const { user, logout: authLogout, openLogin } = useAuth();
+  const {
+    announcement: playerAnnouncement,
+    open: playerAnnouncementOpen,
+    dismiss: dismissPlayerAnnouncement,
+  } = usePlayerAnnouncement({ userId: user?.userId });
   const { log, logUser } = useActivityLog();
   const userId = user?.userId ?? null;
 
@@ -168,18 +179,25 @@ export default function DevApp() {
   const freeCaseSlug = useFreeCaseSlug();
   const caseSlug = useCaseSlug();
   const giveawayPeriod = useGiveawayPeriod();
+  const battleId = useBattleId();
+  const isCreateCaseBattle = useIsCreateCaseBattle();
   const isMainPage = route === 'main';
   const isUpgradePage = route === 'upgrade';
   const isProfilePage = route === 'profile';
   const isFreeCasesPage = route === 'free-cases';
   const isGiveawaysPage = route === 'giveaways';
+  const isCaseBattlesPage = route === 'case-battles';
   const isAdminPage = route === 'admin';
-  const isScrollablePage = isMainPage || isProfilePage || isUpgradePage || isFreeCasesPage || isGiveawaysPage || isAdminPage;
+  const isScrollablePage = isMainPage || isProfilePage || isUpgradePage || isFreeCasesPage || isGiveawaysPage || isCaseBattlesPage || isAdminPage;
   const canUpgrade = probability > 0;
 
   useEffect(() => {
     preloadRollSound();
   }, []);
+
+  useEffect(() => {
+    return bootstrapCaseBattleEngine(user?.userId);
+  }, [user?.userId]);
 
   useEffect(() => {
     if (!import.meta.env.DEV || !user || !isProfilePage) return;
@@ -422,6 +440,55 @@ export default function DevApp() {
     return true;
   }, [isSkinLocked, log, userId, pushPlayerStateSync]);
 
+  const handleGrantBalance = useCallback((amount: number): boolean => {
+    if (!userId || amount <= 0) return false;
+
+    const nextBalance = balanceRef.current + amount;
+    balanceRef.current = nextBalance;
+    saveBalance(nextBalance, userId);
+    setBalance(nextBalance);
+    log('BATTLE.balance_reward', { amount: formatUSD(amount) });
+    void pushPlayerStateSync(inventoryRef.current, nextBalance);
+    return true;
+  }, [log, pushPlayerStateSync, userId]);
+
+  const handleGrantSkinsToInventory = useCallback((skins: Skin[]) => {
+    if (!userId || !skins.length) return;
+
+    const nextInventory = [...loadInventory(userId), ...skins];
+    saveInventory(nextInventory, userId);
+    inventoryRef.current = nextInventory;
+    if (playerStateHydrated) touchLocalPlayerStateUpdatedAt(userId);
+    setInventory(nextInventory);
+    setLocalPlayerStateRevision(rev => rev + 1);
+    void pushPlayerStateSync(nextInventory, balanceRef.current);
+  }, [userId, playerStateHydrated, pushPlayerStateSync]);
+
+  const handleChargeBattleEntry = useCallback((amount: number): boolean => {
+    if (!userId) return false;
+    if (amount <= 0) return false;
+    if (balanceRef.current < amount) return false;
+
+    const nextBalance = balanceRef.current - amount;
+    balanceRef.current = nextBalance;
+    saveBalance(nextBalance, userId);
+    setBalance(nextBalance);
+    log('BATTLE.entry_charge', { amount: formatUSD(amount) });
+    void pushPlayerStateSync(inventoryRef.current, nextBalance);
+    return true;
+  }, [userId, log, pushPlayerStateSync]);
+
+  const handleRefundBattleEntry = useCallback((amount: number): void => {
+    if (!userId || amount <= 0) return;
+
+    const nextBalance = balanceRef.current + amount;
+    balanceRef.current = nextBalance;
+    saveBalance(nextBalance, userId);
+    setBalance(nextBalance);
+    log('BATTLE.entry_refund', { amount: formatUSD(amount) });
+    void pushPlayerStateSync(inventoryRef.current, nextBalance);
+  }, [userId, log, pushPlayerStateSync]);
+
   useEffect(() => {
     registerUpgradeWithSkinHandler(skin => {
       if (isSkinLocked(skin.id)) return;
@@ -434,13 +501,28 @@ export default function DevApp() {
       sfx.select();
     });
     registerSellSkinHandler(handleSellSkin);
+    registerGrantSkinsHandler(handleGrantSkinsToInventory);
+    registerGrantBalanceHandler(handleGrantBalance);
+    registerBattleEntryHandlers(handleChargeBattleEntry, handleRefundBattleEntry);
     registerSyncPlayerHandler(refreshLocalPlayerState);
     return () => {
       registerUpgradeWithSkinHandler(null);
       registerSellSkinHandler(null);
+      registerGrantSkinsHandler(null);
+      registerGrantBalanceHandler(null);
+      registerBattleEntryHandlers(null, null);
       registerSyncPlayerHandler(null);
     };
-  }, [handleSellSkin, isSkinLocked, log, refreshLocalPlayerState]);
+  }, [
+    handleChargeBattleEntry,
+    handleGrantBalance,
+    handleGrantSkinsToInventory,
+    handleRefundBattleEntry,
+    handleSellSkin,
+    isSkinLocked,
+    log,
+    refreshLocalPlayerState,
+  ]);
 
   const handleShopPurchase = useCallback((items: ShopPurchaseItem[]): boolean => {
     if (!user) return false;
@@ -654,12 +736,12 @@ export default function DevApp() {
     try {
       const ticketId = await openOrCreateHelpTicket(user, getProfileLabel(user) ?? user.email);
       if (!openSupportChatRef.current) {
-        setLiveHelpError('No se pudo abrir el chat. Recarga la página.');
+        setLiveHelpError('Could not open chat. Reload the page.');
         return;
       }
       openSupportChatRef.current(ticketId);
     } catch {
-      setLiveHelpError('No se pudo conectar con soporte. Inténtalo de nuevo.');
+      setLiveHelpError('Could not connect to support. Please try again.');
       log('HELP.request_failed');
     } finally {
       setLiveHelpLoading(false);
@@ -1321,7 +1403,9 @@ export default function DevApp() {
 
   return (
     <LayoutGroup>
-      <div className={`relative flex flex-col ${
+      <div
+        data-scroll-root
+        className={`relative flex flex-col ${
         isScrollablePage
           ? 'h-[100dvh] max-h-[100dvh] overflow-y-auto overscroll-y-contain'
           : DEV_MOBILE_LAYOUT
@@ -1347,9 +1431,15 @@ export default function DevApp() {
           onClose={() => { void dismissGiveawayWin(); }}
         />
 
+        <PlayerAnnouncementModal
+          open={playerAnnouncementOpen}
+          announcement={playerAnnouncement}
+          onClose={dismissPlayerAnnouncement}
+        />
+
         <ThanksToast
           show={!!liveHelpError}
-          title="Error de ayuda"
+          title="Help error"
           subtitle={liveHelpError}
           variant="error"
           onDismiss={() => setLiveHelpError('')}
@@ -1368,7 +1458,7 @@ export default function DevApp() {
         )}
 
         {DEV_CLEAN_HEADER_LAYOUT && (
-          <LiveFeed items={feed} variant="top" className="w-full" />
+          <LiveFeed items={feed} variant="top" className="hidden w-full lg:block" />
         )}
 
         <Header
@@ -1388,7 +1478,7 @@ export default function DevApp() {
           onAccountCleared={handleAccountCleared}
         />
 
-        <div className={`mx-auto flex w-full max-w-[1920px] flex-col gap-2 px-2 pb-2 lg:px-4 ${
+        <div className={`mx-auto flex w-full max-w-[1920px] flex-col gap-2 px-2 pb-2 max-lg:pb-28 lg:px-4 ${
           !isScrollablePage && DEV_MOBILE_LAYOUT ? 'min-h-0 flex-1 overflow-x-hidden lg:overflow-hidden' : ''
         }`}
         >
@@ -1418,6 +1508,14 @@ export default function DevApp() {
                 <GiveawayDetailPage period={giveawayPeriod} />
               ) : (
                 <GiveawaysPage />
+              )
+            ) : isCaseBattlesPage ? (
+              isCreateCaseBattle ? (
+                <CreateCaseBattlePage balance={balance} />
+              ) : battleId ? (
+                <CaseBattleDetailPage battleId={battleId} balance={balance} />
+              ) : (
+                <CaseBattlesPage balance={balance} />
               )
             ) : isAdminPage ? (
               <AdminPage />

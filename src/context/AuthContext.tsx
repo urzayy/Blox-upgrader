@@ -103,13 +103,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const setNickname = useCallback((nickname: string) => {
-    if (!user) return { ok: false, error: 'No has iniciado sesión.' };
+    if (!user) return { ok: false, error: 'You are not signed in.' };
     const result = saveNickname(user.userId, nickname);
     if (result.ok && result.session) {
       appendUserLog(
         { userId: result.session.userId, email: result.session.email },
         'PROFILE.nickname',
-        { nickname: nickname.trim() || '(vacío — muestra email)' },
+        { nickname: nickname.trim() || '(empty — shows email)' },
       );
       setUser(result.session);
     }

@@ -26,9 +26,9 @@ export async function banUserByEmail(
   });
   const data = await res.json().catch(() => ({})) as { ban?: AccountBanRecord; message?: string; error?: string };
   if (!res.ok) {
-    throw new Error(data.message ?? data.error ?? 'No se pudo banear al usuario.');
+    throw new Error(data.message ?? data.error ?? 'Could not ban user.');
   }
-  if (!data.ban) throw new Error('No se pudo banear al usuario.');
+  if (!data.ban) throw new Error('Could not ban user.');
   return data.ban;
 }
 
@@ -46,7 +46,7 @@ export async function unbanUserByEmail(
   });
   const data = await res.json().catch(() => ({})) as { email?: string; unbanned?: boolean; message?: string; error?: string };
   if (!res.ok) {
-    throw new Error(data.message ?? data.error ?? 'No se pudo desbanear al usuario.');
+    throw new Error(data.message ?? data.error ?? 'Could not unban user.');
   }
   return { email: data.email ?? targetEmail, unbanned: data.unbanned ?? true };
 }
@@ -55,7 +55,7 @@ export async function fetchActiveBans(adminEmail: string): Promise<AccountBanRec
   const res = await fetch(`/api/admin/bans?adminEmail=${encodeURIComponent(adminEmail)}`);
   if (!res.ok) {
     const data = await res.json().catch(() => ({})) as { message?: string; error?: string };
-    throw new Error(data.message ?? data.error ?? 'No se pudo cargar los baneos.');
+    throw new Error(data.message ?? data.error ?? 'Could not load bans.');
   }
   const data = await res.json() as { bans: AccountBanRecord[] };
   return data.bans ?? [];
