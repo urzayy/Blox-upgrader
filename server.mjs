@@ -17,6 +17,7 @@ import { resolveDepositBonus, resolveRobuxDepositBonus, initPromoCodeStore } fro
 import { createPromoCodeStore } from './server/lib/promoCodeStore.mjs';
 import { createAnnouncementStore } from './server/lib/announcementStore.mjs';
 import { createProfilePhotoStore } from './server/lib/profilePhotoStore.mjs';
+import { createGiveawayStore } from './server/lib/giveawayStore.mjs';
 
 dotenv.config();
 
@@ -36,6 +37,7 @@ const STATE_DIR = process.env.STATE_DIR || path.join(DATA_DIR, 'site-state');
 const PROMO_CODES_DIR = process.env.PROMO_CODES_DIR || path.join(DATA_DIR, 'promo-codes');
 const ANNOUNCEMENTS_DIR = process.env.ANNOUNCEMENTS_DIR || path.join(DATA_DIR, 'announcements');
 const PROFILE_PHOTOS_DIR = process.env.PROFILE_PHOTOS_DIR || path.join(DATA_DIR, 'profile-photos');
+const GIVEAWAYS_DIR = process.env.GIVEAWAYS_DIR || path.join(DATA_DIR, 'giveaways');
 const STATE_FILE = path.join(STATE_DIR, 'state.json');
 
 const PORT = Number(process.env.PORT) || 4173;
@@ -44,7 +46,7 @@ const BASE_TOTAL_UPGRADES = 13_200;
 const MIN_DEPOSIT_TOTAL = 100;
 const MIN_WITHDRAW_TOTAL = 20;
 
-for (const dir of [LOGS_DIR, USER_DB_DIR, path.join(USER_DB_DIR, 'events'), PLAYER_STATE_DIR, ACCOUNT_RESETS_DIR, ACCOUNT_BANS_DIR, CHATS_DIR, GRANTS_DIR, BALANCE_GRANTS_DIR, STATE_DIR, PROMO_CODES_DIR, ANNOUNCEMENTS_DIR, PROFILE_PHOTOS_DIR]) {
+for (const dir of [LOGS_DIR, USER_DB_DIR, path.join(USER_DB_DIR, 'events'), PLAYER_STATE_DIR, ACCOUNT_RESETS_DIR, ACCOUNT_BANS_DIR, CHATS_DIR, GRANTS_DIR, BALANCE_GRANTS_DIR, STATE_DIR, PROMO_CODES_DIR, ANNOUNCEMENTS_DIR, PROFILE_PHOTOS_DIR, GIVEAWAYS_DIR]) {
   if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
 }
 
@@ -56,6 +58,7 @@ const playerStateStore = createPlayerStateStore({ playerStateDir: PLAYER_STATE_D
 const resetMarkerStore = createAccountResetMarkerStore(ACCOUNT_RESETS_DIR);
 const banStore = createAccountBanStore(ACCOUNT_BANS_DIR);
 const profilePhotoStore = createProfilePhotoStore(PROFILE_PHOTOS_DIR);
+const giveawayStore = createGiveawayStore(GIVEAWAYS_DIR, GRANTS_DIR);
 let storageStatus = { ok: false, path: userStore.type === 'supabase' ? 'supabase' : USER_DB_DIR };
 
 async function refreshStorageStatus() {
@@ -452,6 +455,117 @@ app.post('/api/profile-photo', (req, res) => {
     return;
   }
   sendJson(res, 200, { ok: true, photo: result.photo });
+});
+
+app.get('/api/giveaways', (_req, res) => {
+  sendJson(res, 200, giveawayStore.getAll());
+});
+
+app.get('/api/giveaways/winners', (req, res) => {
+  const limit = Number(req.query.limit ?? 24);
+  sendJson(res, 200, giveawayStore.listWinners(Number.isFinite(limit) ? limit : 24));
+});
+
+app.get('/api/giveaways/pending-win', (req, res) => {
+  const userId = String(req.query.userId ?? '').trim();
+  if (!userId) {
+    sendJson(res, 400, { error: 'userId required' });
+    return;
+  }
+  sendJson(res, 200, giveawayStore.listPendingWins(userId));
+});
+
+app.post('/api/giveaways/pending-win/ack', (req, res) => {
+  const userId = String(req.body?.userId ?? '').trim();
+  const pendingId = String(req.body?.pendingId ?? '').trim();
+  if (!userId || !pendingId) {
+    sendJson(res, 400, { error: 'invalid_ack' });
+    return;
+  }
+  const result = giveawayStore.ackPendingWin(userId, pendingId);
+  if (result.error) {
+    sendJson(res, 400, { error: result.error });
+    return;
+  }
+  sendJson(res, 200, result);
+});
+
+app.get('/api/giveaways/:period', (req, res) => {
+  const period = req.params.period;
+  if (!['daily', 'weekly', 'monthly'].includes(period)) {
+    sendJson(res, 404, { error: 'not found' });
+    return;
+  }
+  const userId = req.query.userId ? String(req.query.userId) : null;
+  const detail = giveawayStore.getDetail(period, userId);
+  if (detail.error) {
+    sendJson(res, 400, { error: detail.error });
+    return;
+  }
+  sendJson(res, 200, detail);
+});
+
+app.post('/api/giveaways/join', (req, res) => {
+  const { period, userId, email, nickname, avatarId } = req.body ?? {};
+  const result = giveawayStore.joinGiveaway(period, { userId, email, nickname, avatarId });
+  if (result.error) {
+    sendJson(res, 400, { error: result.error });
+    return;
+  }
+  sendJson(res, 200, result);
+});
+
+app.post('/api/giveaways/deposit-record', (req, res) => {
+  const { userId, amount, email, nickname, avatarId } = req.body ?? {};
+  const normalizedUserId = String(userId ?? '').trim();
+  const normalizedAmount = Number(amount);
+  if (!normalizedUserId || !Number.isFinite(normalizedAmount) || normalizedAmount <= 0) {
+    sendJson(res, 400, { error: 'invalid_payload' });
+    return;
+  }
+  const updates = giveawayStore.recordUserDeposit(normalizedUserId, normalizedAmount, {
+    email,
+    nickname,
+    avatarId,
+  });
+  sendJson(res, 200, { ok: true, updates });
+});
+
+app.post('/api/admin/giveaways/open', (req, res) => {
+  const { adminEmail, period, skin, depositRequirement } = req.body ?? {};
+  if (!userStore.isAdminEmail(String(adminEmail ?? '').trim())) {
+    sendJson(res, 403, { error: 'forbidden' });
+    return;
+  }
+  const result = giveawayStore.openGiveaway({
+    period,
+    skin,
+    depositRequirement,
+    openedBy: adminEmail,
+  });
+  if (result.error) {
+    sendJson(res, 400, { error: result.error });
+    return;
+  }
+  sendJson(res, 200, result);
+});
+
+app.post('/api/admin/giveaways/close', (req, res) => {
+  const { adminEmail, period, pickWinner } = req.body ?? {};
+  if (!userStore.isAdminEmail(String(adminEmail ?? '').trim())) {
+    sendJson(res, 403, { error: 'forbidden' });
+    return;
+  }
+  const result = giveawayStore.closeGiveaway({
+    period,
+    pickWinner: Boolean(pickWinner),
+    grantedBy: adminEmail,
+  });
+  if (result.error) {
+    sendJson(res, 400, { error: result.error });
+    return;
+  }
+  sendJson(res, 200, result);
 });
 
 app.get('/api/account-ban-status', (req, res) => {

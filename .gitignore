@@ -22,6 +22,8 @@ player-state/*.json
 !player-state/README.md
 profile-photos/*.json
 !profile-photos/README.md
+giveaways/*.json
+!giveaways/README.md
 user-db/.storage-probe
 !user-db/README.md
 src/lib/feedBot.mjs

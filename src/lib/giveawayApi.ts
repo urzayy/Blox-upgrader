@@ -62,7 +62,12 @@ export async function adminOpenGiveaway(payload: {
       body: JSON.stringify(payload),
     });
     const data = await res.json().catch(() => ({})) as { error?: string };
-    if (!res.ok) return { ok: false, error: data.error ?? 'Could not open giveaway.' };
+    if (!res.ok) {
+      const error = data.error === 'not found'
+        ? 'Giveaway API unavailable. Try again in a moment.'
+        : (data.error ?? 'Could not open giveaway.');
+      return { ok: false, error };
+    }
     return { ok: true };
   } catch {
     return { ok: false, error: 'Network error.' };
