@@ -7,12 +7,21 @@ import {
   navigateNavItem,
   type NavItem,
 } from '../../lib/navItems';
+import { AdminChatsNavButton } from './AdminChatsNavButton';
 
 interface Props {
   compact?: boolean;
+  adminInboxOpen?: boolean;
+  adminChatAttentionCount?: number;
+  onOpenAdminInbox?: () => void;
 }
 
-export function HeaderNavMenu({ compact = false }: Props) {
+export function HeaderNavMenu({
+  compact = false,
+  adminInboxOpen = false,
+  adminChatAttentionCount = 0,
+  onOpenAdminInbox,
+}: Props) {
   const route = useAppRoute();
   const { isAdmin } = useAuth();
   const items = isAdmin
@@ -68,6 +77,14 @@ export function HeaderNavMenu({ compact = false }: Props) {
           </button>
         );
       })}
+      {isAdmin && onOpenAdminInbox && (
+        <AdminChatsNavButton
+          compact={compact}
+          active={adminInboxOpen}
+          attentionCount={adminChatAttentionCount}
+          onOpen={onOpenAdminInbox}
+        />
+      )}
     </nav>
   );
 }

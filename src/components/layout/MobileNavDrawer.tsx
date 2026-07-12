@@ -4,6 +4,8 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { useAuth } from '../../context/AuthContext';
 import { useAppRoute } from '../../hooks/useAppRoute';
 import { getNavItems, isNavItemActive, navigateNavItem, type NavItem } from '../../lib/navItems';
+import { requestOpenAdminPanel } from '../../lib/uiActions';
+import { useAdminChatNotifications } from '../../lib/adminChatNotifications';
 
 function HamburgerIcon() {
   return (
@@ -11,6 +13,20 @@ function HamburgerIcon() {
       <path d="M4 7h16" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
       <path d="M4 12h16" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
       <path d="M4 17h16" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function AdminChatsIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" aria-hidden="true">
+      <path
+        d="M8 10h8M8 14h5M12 3c-4.97 0-9 3.58-9 8 0 1.57.52 3.03 1.42 4.24L3 21l5.05-1.62A8.94 8.94 0 0 0 12 19c4.97 0 9-3.58 9-8s-4.03-8-9-8Z"
+        fill="#22D3EE"
+        stroke="#67E8F9"
+        strokeWidth="0.6"
+        strokeLinejoin="round"
+      />
     </svg>
   );
 }
@@ -24,10 +40,19 @@ function MobileNavDrawerPanel({ open, onClose }: DrawerProps) {
   const route = useAppRoute();
   const { isAdmin, user } = useAuth();
   const items = getNavItems({ isAdmin, isLoggedIn: Boolean(user) });
+  const { attentionCount: adminChatAttentionCount } = useAdminChatNotifications({
+    enabled: isAdmin,
+    activeTicketId: null,
+  });
 
   const handleSelect = useCallback((item: NavItem) => {
     if (!item.available) return;
     navigateNavItem(item);
+    onClose();
+  }, [onClose]);
+
+  const handleOpenAdminChats = useCallback(() => {
+    requestOpenAdminPanel('inbox');
     onClose();
   }, [onClose]);
 
@@ -138,6 +163,30 @@ function MobileNavDrawerPanel({ open, onClose }: DrawerProps) {
                           <span className="h-2 w-2 shrink-0 rounded-full bg-gold shadow-[0_0_8px_rgba(176,108,255,0.8)]" />
                         )}
                       </button>
+                      {isAdmin && item.id === 'admin' && (
+                        <button
+                          type="button"
+                          onClick={handleOpenAdminChats}
+                          className="group relative mt-1.5 flex min-h-[52px] w-full items-center gap-3 rounded-xl border border-transparent bg-transparent px-3 py-3 text-left transition hover:border-cyan-500/25 hover:bg-cyan-500/[0.08]"
+                        >
+                          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-white/8 bg-white/[0.03] group-hover:border-cyan-500/25">
+                            <AdminChatsIcon />
+                          </span>
+                          <span className="min-w-0 flex-1">
+                            <span className="block font-display text-sm font-bold uppercase tracking-wide text-white/75 group-hover:text-cyan-100">
+                              Chats
+                            </span>
+                            <span className="mt-0.5 block truncate text-[11px] text-white/35 group-hover:text-white/50">
+                              Live chat inbox — deposits and withdrawals
+                            </span>
+                          </span>
+                          {adminChatAttentionCount > 0 && (
+                            <span className="flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-gold px-1 text-[10px] font-black text-deep">
+                              {adminChatAttentionCount > 9 ? '9+' : adminChatAttentionCount}
+                            </span>
+                          )}
+                        </button>
+                      )}
                     </li>
                   );
                 })}

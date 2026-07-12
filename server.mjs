@@ -16,6 +16,7 @@ import { createAccountBanStore } from './server/lib/accountBanStore.mjs';
 import { resolveDepositBonus, resolveRobuxDepositBonus, initPromoCodeStore } from './server/lib/depositBonus.mjs';
 import { createPromoCodeStore } from './server/lib/promoCodeStore.mjs';
 import { createAnnouncementStore } from './server/lib/announcementStore.mjs';
+import { createProfilePhotoStore } from './server/lib/profilePhotoStore.mjs';
 
 dotenv.config();
 
@@ -34,6 +35,7 @@ const BALANCE_GRANTS_DIR = process.env.BALANCE_GRANTS_DIR || path.join(DATA_DIR,
 const STATE_DIR = process.env.STATE_DIR || path.join(DATA_DIR, 'site-state');
 const PROMO_CODES_DIR = process.env.PROMO_CODES_DIR || path.join(DATA_DIR, 'promo-codes');
 const ANNOUNCEMENTS_DIR = process.env.ANNOUNCEMENTS_DIR || path.join(DATA_DIR, 'announcements');
+const PROFILE_PHOTOS_DIR = process.env.PROFILE_PHOTOS_DIR || path.join(DATA_DIR, 'profile-photos');
 const STATE_FILE = path.join(STATE_DIR, 'state.json');
 
 const PORT = Number(process.env.PORT) || 4173;
@@ -42,7 +44,7 @@ const BASE_TOTAL_UPGRADES = 13_200;
 const MIN_DEPOSIT_TOTAL = 100;
 const MIN_WITHDRAW_TOTAL = 20;
 
-for (const dir of [LOGS_DIR, USER_DB_DIR, path.join(USER_DB_DIR, 'events'), PLAYER_STATE_DIR, ACCOUNT_RESETS_DIR, ACCOUNT_BANS_DIR, CHATS_DIR, GRANTS_DIR, BALANCE_GRANTS_DIR, STATE_DIR, PROMO_CODES_DIR, ANNOUNCEMENTS_DIR]) {
+for (const dir of [LOGS_DIR, USER_DB_DIR, path.join(USER_DB_DIR, 'events'), PLAYER_STATE_DIR, ACCOUNT_RESETS_DIR, ACCOUNT_BANS_DIR, CHATS_DIR, GRANTS_DIR, BALANCE_GRANTS_DIR, STATE_DIR, PROMO_CODES_DIR, ANNOUNCEMENTS_DIR, PROFILE_PHOTOS_DIR]) {
   if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
 }
 
@@ -53,6 +55,7 @@ const announcementStore = createAnnouncementStore(ANNOUNCEMENTS_DIR);
 const playerStateStore = createPlayerStateStore({ playerStateDir: PLAYER_STATE_DIR });
 const resetMarkerStore = createAccountResetMarkerStore(ACCOUNT_RESETS_DIR);
 const banStore = createAccountBanStore(ACCOUNT_BANS_DIR);
+const profilePhotoStore = createProfilePhotoStore(PROFILE_PHOTOS_DIR);
 let storageStatus = { ok: false, path: userStore.type === 'supabase' ? 'supabase' : USER_DB_DIR };
 
 async function refreshStorageStatus() {
@@ -425,6 +428,30 @@ app.get('/api/player-state/reset-pending', (req, res) => {
     return;
   }
   sendJson(res, 200, { resetAt: resetMarkerStore.getResetAt(email) });
+});
+
+app.get('/api/profile-photo', (req, res) => {
+  const userId = String(req.query.userId ?? '').trim();
+  if (!userId) {
+    sendJson(res, 400, { error: 'userId required' });
+    return;
+  }
+  sendJson(res, 200, { photo: profilePhotoStore.getPhoto(userId) });
+});
+
+app.post('/api/profile-photo', (req, res) => {
+  const { userId, email, dataUrl } = req.body ?? {};
+  const result = profilePhotoStore.savePhoto({ userId, email, dataUrl });
+  if (!result.ok) {
+    const message = result.error === 'too_large'
+      ? 'Image is too large.'
+      : result.error === 'invalid_format'
+        ? 'JPG or PNG only.'
+        : 'Could not save photo.';
+    sendJson(res, 400, { ok: false, error: result.error, message });
+    return;
+  }
+  sendJson(res, 200, { ok: true, photo: result.photo });
 });
 
 app.get('/api/account-ban-status', (req, res) => {

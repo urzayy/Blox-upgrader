@@ -96,6 +96,7 @@ export function Header({
   const activeAdminTicketId = isAdmin && supportChatOpen ? supportChatTicketId : null;
   const {
     toasts: adminChatToasts,
+    attentionCount: adminChatAttentionCount,
     dismissToast: dismissAdminChatToast,
   } = useAdminChatNotifications({
     enabled: isAdmin,
@@ -292,7 +293,7 @@ export function Header({
           onOpenTicket={openSupportChat}
         />
       )}
-      {user && (
+      {user && !isAdmin && (
         <LiveChatsFloatingButton
           open={liveChatsOpen}
           openCount={openLiveChatCount}
@@ -436,7 +437,14 @@ export function Header({
         )}
         </div>
 
-        <HeaderNavMenu />
+        <HeaderNavMenu
+          adminInboxOpen={adminInboxOpen || supportChatOpen}
+          adminChatAttentionCount={adminChatAttentionCount}
+          onOpenAdminInbox={isAdmin ? () => {
+            log('CLICK.open_withdraw_inbox');
+            setAdminInboxOpen(true);
+          } : undefined}
+        />
       </div>
 
       <div className={`flex min-w-0 items-center justify-self-center overflow-x-auto ${
@@ -458,38 +466,40 @@ export function Header({
         {user ? (
           <>
             <div className={`flex items-center ${DEV_CLEAN_HEADER_LAYOUT ? 'gap-1 -translate-x-1' : 'gap-1.5 -translate-x-0.5'}`}>
-              <button
-                type="button"
-                onClick={() => {
-                  log('CLICK.open_live_chats');
-                  setLiveChatsOpen(true);
-                }}
-                className={`relative hidden rounded-md border font-display font-bold uppercase transition lg:inline-flex ${
-                  DEV_CLEAN_HEADER_LAYOUT
-                    ? 'px-4 py-2.5 text-xs tracking-[0.1em]'
-                    : 'px-3 py-1.5 text-[10px] tracking-[0.12em] backdrop-blur-xl'
-                } ${
-                  openLiveChatCount > 0 ? (DEV_CLEAN_HEADER_LAYOUT ? 'pr-6' : 'pr-7') : ''
-                } ${
-                  liveChatsOpen
-                    ? DEV_CLEAN_HEADER_LAYOUT
-                      ? cleanHeaderChip(true)
-                      : 'border-win/40 bg-win/15 text-win shadow-[0_0_20px_rgba(0,230,118,0.2)]'
-                    : DEV_CLEAN_HEADER_LAYOUT
-                      ? cleanHeaderChip(false)
-                      : 'border-win/25 bg-win/10 text-win hover:border-win/40 hover:bg-win/15'
-                }`}
-              >
-                Live Chats
-                {openLiveChatCount > 0 && (
-                  <span className={`absolute right-1 top-1 flex items-center justify-center rounded-full bg-gold font-black leading-none text-deep shadow-[0_0_6px_rgba(176,108,255,0.5)] ${
-                    DEV_CLEAN_HEADER_LAYOUT ? 'h-3.5 min-w-3.5 px-0.5 text-[8px]' : 'h-4 min-w-4 px-1 text-[9px]'
+              {!isAdmin && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    log('CLICK.open_live_chats');
+                    setLiveChatsOpen(true);
+                  }}
+                  className={`relative hidden rounded-md border font-display font-bold uppercase transition lg:inline-flex ${
+                    DEV_CLEAN_HEADER_LAYOUT
+                      ? 'px-4 py-2.5 text-xs tracking-[0.1em]'
+                      : 'px-3 py-1.5 text-[10px] tracking-[0.12em] backdrop-blur-xl'
+                  } ${
+                    openLiveChatCount > 0 ? (DEV_CLEAN_HEADER_LAYOUT ? 'pr-6' : 'pr-7') : ''
+                  } ${
+                    liveChatsOpen
+                      ? DEV_CLEAN_HEADER_LAYOUT
+                        ? cleanHeaderChip(true)
+                        : 'border-win/40 bg-win/15 text-win shadow-[0_0_20px_rgba(0,230,118,0.2)]'
+                      : DEV_CLEAN_HEADER_LAYOUT
+                        ? cleanHeaderChip(false)
+                        : 'border-win/25 bg-win/10 text-win hover:border-win/40 hover:bg-win/15'
                   }`}
-                  >
-                    {openLiveChatCount}
-                  </span>
-                )}
-              </button>
+                >
+                  Live Chats
+                  {openLiveChatCount > 0 && (
+                    <span className={`absolute right-1 top-1 flex items-center justify-center rounded-full bg-gold font-black leading-none text-deep shadow-[0_0_6px_rgba(176,108,255,0.5)] ${
+                      DEV_CLEAN_HEADER_LAYOUT ? 'h-3.5 min-w-3.5 px-0.5 text-[8px]' : 'h-4 min-w-4 px-1 text-[9px]'
+                    }`}
+                    >
+                      {openLiveChatCount}
+                    </span>
+                  )}
+                </button>
+              )}
               {DEV_CLEAN_HEADER_LAYOUT && (
                 <Stat label="BALANCE" value={balance} slim cleanChip />
               )}
