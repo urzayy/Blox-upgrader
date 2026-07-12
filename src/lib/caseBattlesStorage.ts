@@ -1,5 +1,11 @@
 import type { CaseBattle } from './caseBattles';
 import { isBattleFinished } from './caseBattleRuntime';
+import {
+  fetchCaseBattleFromServer,
+  fetchLiveBattlesFromServer,
+  removeCaseBattleOnServer,
+  upsertCaseBattleOnServer,
+} from './caseBattlesApi';
 
 const LEGACY_BATTLES_KEY = 'blox-upgrader/case-battles-v1';
 const BATTLES_KEY = 'blox-upgrader/case-battles-v2';
@@ -8,6 +14,9 @@ export const BATTLES_UPDATED_EVENT = 'case-battles-updated';
 export function notifyBattlesUpdated(): void {
   window.dispatchEvent(new CustomEvent(BATTLES_UPDATED_EVENT));
 }
+
+let serverBattleCache: CaseBattle[] | null = null;
+let serverSyncStop: (() => void) | null = null;
 
 function dropLegacyBattles(): void {
   try {
@@ -57,10 +66,10 @@ function shouldPersistBattle(battle: CaseBattle): boolean {
 
   const createdAt = battleCreatedAt(battle.id);
   if (
-    createdAt &&
-    battle.status === 'waiting' &&
-    battle.players.length < battle.maxPlayers &&
-    Date.now() - createdAt > 2 * 60 * 60 * 1000
+    createdAt
+    && battle.status === 'waiting'
+    && battle.players.length < battle.maxPlayers
+    && Date.now() - createdAt > 2 * 60 * 60 * 1000
   ) {
     return false;
   }
@@ -72,37 +81,96 @@ export function pruneStoredBattles(battles: CaseBattle[]): CaseBattle[] {
   return battles.filter(shouldPersistBattle);
 }
 
-export function clearAllLiveBattles(): void {
-  saveLiveBattles([]);
+function writeLocalBattles(battles: CaseBattle[]): void {
+  const pruned = pruneStoredBattles(battles);
+  try {
+    localStorage.setItem(BATTLES_KEY, JSON.stringify(pruned));
+  } catch {
+    // ignore
+  }
+  serverBattleCache = pruned;
 }
 
-export function loadLiveBattles(): CaseBattle[] {
-  dropLegacyBattles();
+function mergeBattleIntoCache(battle: CaseBattle): void {
+  const current = serverBattleCache ?? loadLocalBattlesOnly();
+  const normalized = battle.id.toLowerCase();
+  const index = current.findIndex(entry => entry.id.toLowerCase() === normalized);
+  const next = index === -1
+    ? [battle, ...current]
+    : current.map((entry, i) => (i === index ? battle : entry));
+  writeLocalBattles(next);
+  notifyBattlesUpdated();
+}
 
+function loadLocalBattlesOnly(): CaseBattle[] {
+  dropLegacyBattles();
   try {
     const raw = localStorage.getItem(BATTLES_KEY);
     if (!raw) return [];
     const parsed = JSON.parse(raw) as CaseBattle[];
     if (!Array.isArray(parsed)) return [];
-
-    const pruned = pruneStoredBattles(parsed);
-    if (pruned.length !== parsed.length) {
-      saveLiveBattles(pruned);
-    }
-    return pruned;
+    return pruneStoredBattles(parsed);
   } catch {
     return [];
   }
 }
 
-export function saveLiveBattles(battles: CaseBattle[]): void {
-  localStorage.setItem(BATTLES_KEY, JSON.stringify(battles));
+export async function refreshBattlesFromServer(): Promise<CaseBattle[]> {
+  const remote = await fetchLiveBattlesFromServer();
+  if (remote) {
+    writeLocalBattles(remote);
+    notifyBattlesUpdated();
+    return remote;
+  }
+  return serverBattleCache ?? loadLocalBattlesOnly();
+}
+
+export async function hydrateBattleFromServer(battleId: string): Promise<CaseBattle | null> {
+  const remote = await fetchCaseBattleFromServer(battleId);
+  if (!remote) return null;
+  mergeBattleIntoCache(remote);
+  return remote;
+}
+
+export function startCaseBattlesServerSync(pollMs = 1500): () => void {
+  if (serverSyncStop) {
+    serverSyncStop();
+    serverSyncStop = null;
+  }
+
+  const sync = () => {
+    void refreshBattlesFromServer();
+  };
+
+  sync();
+  const intervalId = window.setInterval(sync, pollMs);
+  serverSyncStop = () => window.clearInterval(intervalId);
+  return serverSyncStop;
+}
+
+export function clearAllLiveBattles(): void {
+  writeLocalBattles([]);
   notifyBattlesUpdated();
 }
 
+export function loadLiveBattles(): CaseBattle[] {
+  if (serverBattleCache) return serverBattleCache;
+  const local = loadLocalBattlesOnly();
+  serverBattleCache = local;
+  return local;
+}
+
+export function saveLiveBattles(battles: CaseBattle[]): void {
+  writeLocalBattles(battles);
+  notifyBattlesUpdated();
+  for (const battle of battles) {
+    void upsertCaseBattleOnServer(battle);
+  }
+}
+
 export function addLiveBattle(battle: CaseBattle): void {
-  const battles = loadLiveBattles();
-  saveLiveBattles([battle, ...battles]);
+  mergeBattleIntoCache(battle);
+  void upsertCaseBattleOnServer(battle);
 }
 
 export function updateLiveBattle(
@@ -116,8 +184,8 @@ export function updateLiveBattle(
   if (index === -1) return null;
 
   const nextBattle = updater(battles[index]);
-  battles[index] = nextBattle;
-  saveLiveBattles(battles);
+  mergeBattleIntoCache(nextBattle);
+  void upsertCaseBattleOnServer(nextBattle);
   return nextBattle;
 }
 
@@ -127,7 +195,9 @@ export function removeLiveBattle(battleId: string): boolean {
     battle => battle.id.toLowerCase() !== battleId.toLowerCase(),
   );
   if (nextBattles.length === battles.length) return false;
-  saveLiveBattles(nextBattles);
+  writeLocalBattles(nextBattles);
+  notifyBattlesUpdated();
+  void removeCaseBattleOnServer(battleId);
   return true;
 }
 

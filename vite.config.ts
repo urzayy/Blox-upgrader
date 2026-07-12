@@ -9,6 +9,7 @@ import { siteStatePlugin } from './vite-site-state-plugin';
 import { userDbPlugin } from './vite-user-db-plugin';
 import { promoCodesPlugin } from './vite-promo-codes-plugin';
 import { giveawaysPlugin } from './vite-giveaways-plugin';
+import { caseBattlesPlugin } from './vite-case-battles-plugin';
 import { announcementPlugin } from './vite-announcement-plugin';
 import { presencePlugin } from './vite-presence-plugin';
 
@@ -20,6 +21,7 @@ const balanceGrantsDir = path.resolve(__dirname, 'balance-grants');
 const siteStateDir = path.resolve(__dirname, 'site-state');
 const promoCodesDir = path.resolve(__dirname, 'promo-codes');
 const giveawaysDir = path.resolve(__dirname, 'giveaways');
+const caseBattlesDir = path.resolve(__dirname, 'case-battles');
 const announcementsDir = path.resolve(__dirname, 'announcements');
 
 export default defineConfig({
@@ -29,6 +31,7 @@ export default defineConfig({
     userDbPlugin(userDbDir),
     promoCodesPlugin(promoCodesDir, userDbDir),
     giveawaysPlugin(giveawaysDir, userDbDir, inventoryGrantsDir),
+    caseBattlesPlugin(caseBattlesDir),
     announcementPlugin(announcementsDir, userDbDir),
     withdrawChatPlugin(withdrawChatsDir),
     inventoryGrantsPlugin(inventoryGrantsDir),

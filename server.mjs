@@ -18,6 +18,7 @@ import { createPromoCodeStore } from './server/lib/promoCodeStore.mjs';
 import { createAnnouncementStore } from './server/lib/announcementStore.mjs';
 import { createProfilePhotoStore } from './server/lib/profilePhotoStore.mjs';
 import { createGiveawayStore } from './server/lib/giveawayStore.mjs';
+import { createCaseBattleStore } from './server/lib/caseBattleStore.mjs';
 
 dotenv.config();
 
@@ -38,6 +39,7 @@ const PROMO_CODES_DIR = process.env.PROMO_CODES_DIR || path.join(DATA_DIR, 'prom
 const ANNOUNCEMENTS_DIR = process.env.ANNOUNCEMENTS_DIR || path.join(DATA_DIR, 'announcements');
 const PROFILE_PHOTOS_DIR = process.env.PROFILE_PHOTOS_DIR || path.join(DATA_DIR, 'profile-photos');
 const GIVEAWAYS_DIR = process.env.GIVEAWAYS_DIR || path.join(DATA_DIR, 'giveaways');
+const CASE_BATTLES_DIR = process.env.CASE_BATTLES_DIR || path.join(DATA_DIR, 'case-battles');
 const STATE_FILE = path.join(STATE_DIR, 'state.json');
 
 const PORT = Number(process.env.PORT) || 4173;
@@ -46,7 +48,7 @@ const BASE_TOTAL_UPGRADES = 13_200;
 const MIN_DEPOSIT_TOTAL = 100;
 const MIN_WITHDRAW_TOTAL = 20;
 
-for (const dir of [LOGS_DIR, USER_DB_DIR, path.join(USER_DB_DIR, 'events'), PLAYER_STATE_DIR, ACCOUNT_RESETS_DIR, ACCOUNT_BANS_DIR, CHATS_DIR, GRANTS_DIR, BALANCE_GRANTS_DIR, STATE_DIR, PROMO_CODES_DIR, ANNOUNCEMENTS_DIR, PROFILE_PHOTOS_DIR, GIVEAWAYS_DIR]) {
+for (const dir of [LOGS_DIR, USER_DB_DIR, path.join(USER_DB_DIR, 'events'), PLAYER_STATE_DIR, ACCOUNT_RESETS_DIR, ACCOUNT_BANS_DIR, CHATS_DIR, GRANTS_DIR, BALANCE_GRANTS_DIR, STATE_DIR, PROMO_CODES_DIR, ANNOUNCEMENTS_DIR, PROFILE_PHOTOS_DIR, GIVEAWAYS_DIR, CASE_BATTLES_DIR]) {
   if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
 }
 
@@ -59,6 +61,7 @@ const resetMarkerStore = createAccountResetMarkerStore(ACCOUNT_RESETS_DIR);
 const banStore = createAccountBanStore(ACCOUNT_BANS_DIR);
 const profilePhotoStore = createProfilePhotoStore(PROFILE_PHOTOS_DIR);
 const giveawayStore = createGiveawayStore(GIVEAWAYS_DIR, GRANTS_DIR);
+const caseBattleStore = createCaseBattleStore(CASE_BATTLES_DIR);
 let storageStatus = { ok: false, path: userStore.type === 'supabase' ? 'supabase' : USER_DB_DIR };
 
 async function refreshStorageStatus() {
@@ -563,6 +566,42 @@ app.post('/api/admin/giveaways/close', (req, res) => {
   });
   if (result.error) {
     sendJson(res, 400, { error: result.error });
+    return;
+  }
+  sendJson(res, 200, result);
+});
+
+app.get('/api/case-battles', (_req, res) => {
+  sendJson(res, 200, { battles: caseBattleStore.listLive() });
+});
+
+app.get('/api/case-battles/:battleId', (req, res) => {
+  const battle = caseBattleStore.getById(req.params.battleId);
+  if (!battle) {
+    sendJson(res, 404, { error: 'not_found' });
+    return;
+  }
+  sendJson(res, 200, { battle });
+});
+
+app.put('/api/case-battles/:battleId', (req, res) => {
+  const battle = req.body?.battle;
+  if (!battle?.id || String(battle.id).toLowerCase() !== String(req.params.battleId).toLowerCase()) {
+    sendJson(res, 400, { error: 'invalid_battle' });
+    return;
+  }
+  const result = caseBattleStore.upsert(battle);
+  if (result.error) {
+    sendJson(res, 400, { error: result.error });
+    return;
+  }
+  sendJson(res, 200, result);
+});
+
+app.delete('/api/case-battles/:battleId', (req, res) => {
+  const result = caseBattleStore.remove(req.params.battleId);
+  if (result.error) {
+    sendJson(res, 404, { error: result.error });
     return;
   }
   sendJson(res, 200, result);

@@ -10,9 +10,9 @@ import {
   loadLiveBattles,
   removeLiveBattle,
   updateLiveBattle,
-  clearAllLiveBattles,
   notifyBattlesUpdated,
   BATTLE_FINISH_GRACE_MS,
+  startCaseBattlesServerSync,
 } from './caseBattlesStorage';
 import { buildFreeCaseReel } from './freeCaseReel';
 import { createGrantedFreeCaseSkin, pickFreeCaseReward } from './freeCaseOpen';
@@ -102,6 +102,8 @@ function tickBattles(): void {
   const battles = loadLiveBattles();
 
   for (const battle of battles) {
+    if (!userId || battle.createdByUserId !== userId) continue;
+
     if (canStartBattle(battle)) {
       updateLiveBattle(battle.id, startBattle);
       continue;
@@ -173,16 +175,11 @@ export function stopCaseBattleEngine(): void {
 }
 
 export function bootstrapCaseBattleEngine(userId: string | undefined): () => void {
-  const bootstrapFlag = 'blox-upgrader/case-battles-bootstrap-v1';
+  const stopSync = startCaseBattlesServerSync(1500);
+  const stopEngine = startCaseBattleEngine(userId);
 
-  try {
-    if (!sessionStorage.getItem(bootstrapFlag)) {
-      clearAllLiveBattles();
-      sessionStorage.setItem(bootstrapFlag, '1');
-    }
-  } catch {
-    clearAllLiveBattles();
-  }
-
-  return startCaseBattleEngine(userId);
+  return () => {
+    stopSync();
+    stopEngine();
+  };
 }
