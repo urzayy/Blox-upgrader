@@ -379,6 +379,16 @@ export function CaseBattleDetailPage({ battleId, balance }: Props) {
     if (isOpeningRound) return;
 
     trySettleBattleEconomy(battle, user.userId);
+
+    const retryId = window.setInterval(() => {
+      if (isUserBattleEconomySettled(battle, user.userId)) {
+        window.clearInterval(retryId);
+        return;
+      }
+      trySettleBattleEconomy(battle, user.userId);
+    }, 1000);
+
+    return () => window.clearInterval(retryId);
   }, [battle, isOpeningRound, user]);
 
 

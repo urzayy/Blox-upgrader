@@ -19,6 +19,13 @@ function isBattleFinished(battle) {
   );
 }
 
+function areAllHumansSettled(battle) {
+  const humans = (battle.players ?? []).filter(player => !player.isBot).map(player => player.id);
+  if (humans.length === 0) return true;
+  const settled = new Set(battle.settledUserIds ?? []);
+  return humans.every(id => settled.has(id));
+}
+
 function shouldPersistBattle(battle) {
   if (!battle?.id || !battle.createdByUserId) return false;
   if (!Array.isArray(battle.players) || battle.players.length === 0) return false;
@@ -29,7 +36,7 @@ function shouldPersistBattle(battle) {
     if (finishedAt && Date.now() - finishedAt < BATTLE_FINISH_GRACE_MS) {
       return true;
     }
-    return !battle.economySettled;
+    return !areAllHumansSettled(battle);
   }
 
   const createdAt = battleCreatedAt(battle.id);

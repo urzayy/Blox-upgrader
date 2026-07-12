@@ -52,6 +52,13 @@ function battleCreatedAt(id: string): number | null {
 
 export const BATTLE_FINISH_GRACE_MS = 5000;
 
+function areAllHumansSettled(battle: CaseBattle): boolean {
+  const humans = battle.players.filter(player => !player.isBot).map(player => player.id);
+  if (humans.length === 0) return true;
+  const settled = new Set(battle.settledUserIds ?? []);
+  return humans.every(id => settled.has(id));
+}
+
 function shouldPersistBattle(battle: CaseBattle): boolean {
   if (!battle?.id || !battle.createdByUserId) return false;
   if (!Array.isArray(battle.players) || battle.players.length === 0) return false;
@@ -61,7 +68,7 @@ function shouldPersistBattle(battle: CaseBattle): boolean {
     if (finishedAt && Date.now() - finishedAt < BATTLE_FINISH_GRACE_MS) {
       return true;
     }
-    return !battle.economySettled;
+    return !areAllHumansSettled(battle);
   }
 
   const createdAt = battleCreatedAt(battle.id);

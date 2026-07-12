@@ -102,6 +102,17 @@ function tickBattles(): void {
   const battles = loadLiveBattles();
 
   for (const battle of battles) {
+    if (battle.status === 'finished') {
+      if (userId && isBattleParticipant(battle, userId)) {
+        const fresh = getCaseBattleById(battle.id) ?? battle;
+        trySettleBattleEconomy(fresh, userId);
+      }
+      if (userId && battle.createdByUserId === userId) {
+        scheduleFinishedBattleRemoval(battle);
+      }
+      continue;
+    }
+
     if (!userId || battle.createdByUserId !== userId) continue;
 
     if (canStartBattle(battle)) {
@@ -138,14 +149,6 @@ function tickBattles(): void {
         return { ...applied, pendingRound: undefined };
       });
       continue;
-    }
-
-    if (battle.status === 'finished') {
-      if (userId && isBattleParticipant(battle, userId)) {
-        const fresh = getCaseBattleById(battle.id) ?? battle;
-        trySettleBattleEconomy(fresh, userId);
-      }
-      scheduleFinishedBattleRemoval(battle);
     }
   }
 }

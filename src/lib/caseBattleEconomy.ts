@@ -3,9 +3,19 @@ import { resolveBattleOutcomes } from './caseBattleOutcome';
 import { updateLiveBattle } from './caseBattlesStorage';
 import { requestGrantBalance, requestSyncPlayerState } from './uiActions';
 
+function humanPlayerIds(battle: CaseBattle): string[] {
+  return battle.players.filter(player => !player.isBot).map(player => player.id);
+}
+
+export function areAllHumanPlayersSettled(battle: CaseBattle): boolean {
+  const humans = humanPlayerIds(battle);
+  if (humans.length === 0) return true;
+  const settled = new Set(battle.settledUserIds ?? []);
+  return humans.every(id => settled.has(id));
+}
+
 export function isUserBattleEconomySettled(battle: CaseBattle, userId: string): boolean {
-  if (battle.settledUserIds?.includes(userId)) return true;
-  return Boolean(battle.economySettled);
+  return battle.settledUserIds?.includes(userId) ?? false;
 }
 
 export function getBattleRewardBalanceForUser(battle: CaseBattle, userId: string): number {
@@ -28,21 +38,31 @@ function markUserBattleSettled(battleId: string, userId: string): boolean {
     const settled = new Set(current.settledUserIds ?? []);
     if (settled.has(userId)) return current;
     settled.add(userId);
+    const settledUserIds = [...settled];
     return {
       ...current,
-      settledUserIds: [...settled],
-      economySettled: true,
+      settledUserIds,
+      economySettled: areAllHumanPlayersSettled({ ...current, settledUserIds }),
     };
   });
 
   return Boolean(saved);
 }
 
+function pickSettlementBattle(battle: CaseBattle): CaseBattle {
+  const cached = getCaseBattleById(battle.id);
+  if (!cached) return battle;
+
+  const cachedPot = cached.players.reduce((sum, player) => sum + (player.totalValue ?? 0), 0);
+  const battlePot = battle.players.reduce((sum, player) => sum + (player.totalValue ?? 0), 0);
+  return battlePot >= cachedPot ? battle : cached;
+}
+
 export function trySettleBattleEconomy(battle: CaseBattle, userId: string): boolean {
   if (battle.status !== 'finished') return false;
   if (!isBattleParticipant(battle, userId)) return false;
 
-  const freshBattle = getCaseBattleById(battle.id) ?? battle;
+  const freshBattle = pickSettlementBattle(battle);
   if (isUserBattleEconomySettled(freshBattle, userId)) return false;
 
   const winnings = getBattleRewardBalanceForUser(freshBattle, userId);
