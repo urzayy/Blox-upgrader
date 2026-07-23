@@ -12,6 +12,8 @@ import { LogoutDoorButton } from './LogoutDoorButton';
 
 import { MobileNavMenuButton } from './MobileNavDrawer';
 
+import { DiscordLinkButton } from '../ui/DiscordLinkButton';
+
 import type { Skin } from '../../data/skins';
 
 
@@ -180,7 +182,7 @@ export function MobileHeaderBar({
 
           </div>
 
-
+          <DiscordLinkButton />
 
           <button
 

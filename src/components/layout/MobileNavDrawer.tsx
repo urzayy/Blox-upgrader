@@ -6,6 +6,7 @@ import { useAppRoute } from '../../hooks/useAppRoute';
 import { getNavItems, isNavItemActive, navigateNavItem, type NavItem } from '../../lib/navItems';
 import { requestOpenAdminPanel } from '../../lib/uiActions';
 import { useAdminChatNotifications } from '../../lib/adminChatNotifications';
+import { DiscordLinkButton } from '../ui/DiscordLinkButton';
 
 function HamburgerIcon() {
   return (
@@ -191,6 +192,10 @@ function MobileNavDrawerPanel({ open, onClose }: DrawerProps) {
                   );
                 })}
               </ul>
+
+              <div className="mt-2 border-t border-white/8 pt-2">
+                <DiscordLinkButton variant="menu" />
+              </div>
             </nav>
 
             <div className="border-t border-white/8 px-4 py-3">

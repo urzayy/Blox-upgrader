@@ -32,6 +32,7 @@ import { MobileHeaderBar } from './MobileHeaderBar';
 import { HeaderNavMenu } from './HeaderNavMenu';
 import { ProfileMenu } from './ProfileMenu';
 import { LogoutDoorButton } from './LogoutDoorButton';
+import { DiscordLinkButton } from '../ui/DiscordLinkButton';
 import type { Skin } from '../../data/skins';
 
 interface Props {
@@ -501,7 +502,10 @@ export function Header({
                 </button>
               )}
               {DEV_CLEAN_HEADER_LAYOUT && (
-                <Stat label="BALANCE" value={balance} slim cleanChip />
+                <>
+                  <Stat label="BALANCE" value={balance} slim cleanChip />
+                  <DiscordLinkButton />
+                </>
               )}
             <button
               type="button"
