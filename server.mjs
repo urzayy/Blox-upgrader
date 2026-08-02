@@ -21,6 +21,7 @@ import { createProfilePhotoStore } from './server/lib/profilePhotoStore.mjs';
 import { createGiveawayStore } from './server/lib/giveawayStore.mjs';
 import { recordGiveawayDepositFromTicket } from './server/lib/giveawayDepositHook.mjs';
 import { createCaseBattleStore } from './server/lib/caseBattleStore.mjs';
+import { createWithdrawChatStore } from './server/lib/withdrawChatStore.mjs';
 
 dotenv.config();
 
@@ -65,6 +66,7 @@ const banStore = createAccountBanStore(ACCOUNT_BANS_DIR);
 const profilePhotoStore = createProfilePhotoStore(PROFILE_PHOTOS_DIR);
 const giveawayStore = createGiveawayStore(GIVEAWAYS_DIR, GRANTS_DIR);
 const caseBattleStore = createCaseBattleStore(CASE_BATTLES_DIR);
+const withdrawChatStore = createWithdrawChatStore({ chatsDir: CHATS_DIR });
 let storageStatus = { ok: false, path: userStore.type === 'supabase' ? 'supabase' : USER_DB_DIR };
 
 async function refreshStorageStatus() {
@@ -195,7 +197,7 @@ function ticketPath(id) {
   return path.join(CHATS_DIR, `${id}.json`);
 }
 
-function loadBundle(id) {
+function loadBundleSync(id) {
   const file = ticketPath(id);
   if (!fs.existsSync(file)) return null;
   try {
@@ -205,11 +207,11 @@ function loadBundle(id) {
   }
 }
 
-function saveBundle(bundle) {
+function saveBundleSync(bundle) {
   fs.writeFileSync(ticketPath(bundle.ticket.id), JSON.stringify(bundle, null, 2), 'utf8');
 }
 
-function listTickets(filter) {
+function listTicketsSync(filter) {
   const files = fs.readdirSync(CHATS_DIR).filter(f => f.endsWith('.json'));
   const tickets = [];
   for (const file of files) {
@@ -226,14 +228,10 @@ function listTickets(filter) {
   return tickets.sort((a, b) => b.updatedAt - a.updatedAt);
 }
 
-function countUnreadUserMessages(messages, lastReadAt) {
-  return messages.filter(message => message.senderRole === 'user' && message.createdAt > lastReadAt).length;
-}
-
-function buildAdminInbox(lastReadByTicket = {}) {
-  const tickets = listTickets({ openOnly: true });
+function buildAdminInboxSync(lastReadByTicket = {}) {
+  const tickets = listTicketsSync({ openOnly: true });
   return tickets.map(ticket => {
-    const bundle = loadBundle(ticket.id);
+    const bundle = loadBundleSync(ticket.id);
     const messages = bundle?.messages ?? [];
     const userMessages = messages.filter(message => message.senderRole === 'user');
     const lastUserMessage = userMessages.length
@@ -245,7 +243,7 @@ function buildAdminInbox(lastReadByTicket = {}) {
     const storedRead = lastReadByTicket[ticket.id];
     const unreadCount = storedRead === undefined
       ? Math.max(1, userMessages.length)
-      : countUnreadUserMessages(messages, storedRead);
+      : messages.filter(message => message.senderRole === 'user' && message.createdAt > storedRead).length;
     return {
       ticket,
       unreadCount,
@@ -255,6 +253,8 @@ function buildAdminInbox(lastReadByTicket = {}) {
     };
   });
 }
+
+// Legacy sync helpers kept for account reset; runtime routes use chatStore.
 
 function grantsPath(email) {
   return path.join(GRANTS_DIR, `${sanitizeEmail(email)}.json`);
@@ -1193,103 +1193,129 @@ app.post('/api/balance-grants', (req, res) => {
   sendJson(res, 200, { grant });
 });
 
-app.get('/api/withdraw/tickets', (req, res) => {
+app.get('/api/withdraw/tickets', async (req, res) => {
   const userId = req.query.userId;
   const admin = req.query.admin === '1';
   const all = req.query.all === '1';
-  const tickets = admin
-    ? listTickets(all ? undefined : { openOnly: true })
-    : listTickets(userId ? { userId } : undefined);
-  sendJson(res, 200, { tickets });
+  try {
+    const tickets = admin
+      ? await withdrawChatStore.listTickets(all ? undefined : { openOnly: true })
+      : await withdrawChatStore.listTickets(userId ? { userId } : undefined);
+    sendJson(res, 200, { tickets });
+  } catch (error) {
+    console.error('[withdraw-chat] list tickets failed:', error);
+    sendJson(res, 500, { error: 'failed to list tickets' });
+  }
 });
 
-app.post('/api/withdraw/admin-inbox', (req, res) => {
+app.post('/api/withdraw/admin-inbox', async (req, res) => {
   const lastReadByTicket = req.body?.lastReadByTicket ?? {};
-  sendJson(res, 200, { items: buildAdminInbox(lastReadByTicket) });
+  try {
+    const items = await withdrawChatStore.buildAdminInbox(lastReadByTicket);
+    sendJson(res, 200, { items });
+  } catch (error) {
+    console.error('[withdraw-chat] admin inbox failed:', error);
+    sendJson(res, 500, { error: 'failed to load inbox' });
+  }
 });
 
-app.get('/api/withdraw/tickets/:ticketId', (req, res) => {
-  const bundle = loadBundle(req.params.ticketId);
-  if (!bundle) {
-    sendJson(res, 404, { error: 'not found' });
-    return;
+app.get('/api/withdraw/tickets/:ticketId', async (req, res) => {
+  try {
+    const bundle = await withdrawChatStore.loadBundle(req.params.ticketId);
+    if (!bundle) {
+      sendJson(res, 404, { error: 'not found' });
+      return;
+    }
+    sendJson(res, 200, bundle);
+  } catch (error) {
+    console.error('[withdraw-chat] load ticket failed:', error);
+    sendJson(res, 500, { error: 'failed to load ticket' });
   }
-  sendJson(res, 200, bundle);
 });
 
-app.post('/api/withdraw/tickets/:ticketId/messages', (req, res) => {
-  const bundle = loadBundle(req.params.ticketId);
-  if (!bundle) {
-    sendJson(res, 404, { error: 'not found' });
-    return;
+app.post('/api/withdraw/tickets/:ticketId/messages', async (req, res) => {
+  try {
+    const bundle = await withdrawChatStore.loadBundle(req.params.ticketId);
+    if (!bundle) {
+      sendJson(res, 404, { error: 'not found' });
+      return;
+    }
+    const body = req.body ?? {};
+    if (!body.text?.trim()) {
+      sendJson(res, 400, { error: 'empty message' });
+      return;
+    }
+    const now = Date.now();
+    bundle.messages.push({
+      id: `msg_${now}_${Math.random().toString(36).slice(2, 7)}`,
+      ticketId: req.params.ticketId,
+      senderId: body.senderId,
+      senderEmail: body.senderEmail,
+      senderRole: body.senderRole,
+      senderLabel: body.senderLabel || (body.senderRole === 'admin' ? 'Admin' : 'User'),
+      text: body.text.trim(),
+      createdAt: now,
+    });
+    bundle.ticket.updatedAt = now;
+    await withdrawChatStore.saveBundle(bundle);
+    sendJson(res, 200, bundle);
+  } catch (error) {
+    console.error('[withdraw-chat] send message failed:', error);
+    sendJson(res, 500, { error: 'failed to send message' });
   }
-  const body = req.body ?? {};
-  if (!body.text?.trim()) {
-    sendJson(res, 400, { error: 'empty message' });
-    return;
-  }
-  const now = Date.now();
-  bundle.messages.push({
-    id: `msg_${now}_${Math.random().toString(36).slice(2, 7)}`,
-    ticketId: req.params.ticketId,
-    senderId: body.senderId,
-    senderEmail: body.senderEmail,
-    senderRole: body.senderRole,
-    senderLabel: body.senderLabel || (body.senderRole === 'admin' ? 'Admin' : 'User'),
-    text: body.text.trim(),
-    createdAt: now,
-  });
-  bundle.ticket.updatedAt = now;
-  saveBundle(bundle);
-  sendJson(res, 200, bundle);
 });
 
-app.patch('/api/withdraw/tickets/:ticketId', (req, res) => {
-  const bundle = loadBundle(req.params.ticketId);
-  if (!bundle) {
-    sendJson(res, 404, { error: 'not found' });
-    return;
-  }
-  const status = req.body?.status;
-  if (!['open', 'completed', 'cancelled'].includes(status)) {
-    sendJson(res, 400, { error: 'invalid status' });
-    return;
-  }
-  const now = Date.now();
-  bundle.ticket.status = status;
-  bundle.ticket.updatedAt = now;
-  const ticketType = bundle.ticket.type ?? 'withdraw';
-  const statusText = status === 'completed'
-    ? ticketType === 'deposit'
-      ? 'Deposit completed. The amount has been added to your SALDO.'
-      : ticketType === 'help'
-        ? 'Support chat closed. Thanks for contacting us.'
-        : 'Withdrawal completed. The selected skins have been removed from your inventory.'
-    : status === 'cancelled'
+app.patch('/api/withdraw/tickets/:ticketId', async (req, res) => {
+  try {
+    const bundle = await withdrawChatStore.loadBundle(req.params.ticketId);
+    if (!bundle) {
+      sendJson(res, 404, { error: 'not found' });
+      return;
+    }
+    const status = req.body?.status;
+    if (!['open', 'completed', 'cancelled'].includes(status)) {
+      sendJson(res, 400, { error: 'invalid status' });
+      return;
+    }
+    const now = Date.now();
+    bundle.ticket.status = status;
+    bundle.ticket.updatedAt = now;
+    const ticketType = bundle.ticket.type ?? 'withdraw';
+    const statusText = status === 'completed'
       ? ticketType === 'deposit'
-        ? 'Deposit request cancelled.'
+        ? 'Deposit completed. The amount has been added to your SALDO.'
         : ticketType === 'help'
-          ? 'Support chat cancelled.'
-          : 'Withdrawal request cancelled. Your skins remain in your inventory.'
-      : 'Request reopened.';
-  bundle.messages.push({
-    id: `msg_${now}_sys`,
-    ticketId: req.params.ticketId,
-    senderId: 'system',
-    senderEmail: 'system@blox-upgrader',
-    senderRole: 'system',
-    senderLabel: 'System',
-    text: statusText,
-    createdAt: now,
-  });
-  saveBundle(bundle);
-  if (status === 'completed' && ticketType === 'deposit') {
-    recordGiveawayDepositFromTicket(giveawayStore, bundle.ticket);
+          ? 'Support chat closed. Thanks for contacting us.'
+          : 'Withdrawal completed. The selected skins have been removed from your inventory.'
+      : status === 'cancelled'
+        ? ticketType === 'deposit'
+          ? 'Deposit request cancelled.'
+          : ticketType === 'help'
+            ? 'Support chat cancelled.'
+            : 'Withdrawal request cancelled. Your skins remain in your inventory.'
+        : 'Request reopened.';
+    bundle.messages.push({
+      id: `msg_${now}_sys`,
+      ticketId: req.params.ticketId,
+      senderId: 'system',
+      senderEmail: 'system@blox-upgrader',
+      senderRole: 'system',
+      senderLabel: 'System',
+      text: statusText,
+      createdAt: now,
+    });
+    await withdrawChatStore.saveBundle(bundle);
+    if (status === 'completed' && ticketType === 'deposit') {
+      recordGiveawayDepositFromTicket(giveawayStore, bundle.ticket);
+    }
+    sendJson(res, 200, bundle);
+  } catch (error) {
+    console.error('[withdraw-chat] update ticket failed:', error);
+    sendJson(res, 500, { error: 'failed to update ticket' });
   }
-  sendJson(res, 200, bundle);
 });
 
-app.post('/api/withdraw/tickets', (req, res) => {
+app.post('/api/withdraw/tickets', async (req, res) => {
   const body = req.body ?? {};
   if (!body.userId) {
     sendJson(res, 400, { error: 'invalid ticket' });
@@ -1345,7 +1371,7 @@ app.post('/api/withdraw/tickets', (req, res) => {
           createdAt: now,
         }],
       };
-      saveBundle(bundle);
+      await withdrawChatStore.saveBundle(bundle);
       sendJson(res, 200, bundle);
       return;
     }
@@ -1406,7 +1432,7 @@ app.post('/api/withdraw/tickets', (req, res) => {
         createdAt: now,
       }],
     };
-    saveBundle(bundle);
+    await withdrawChatStore.saveBundle(bundle);
     sendJson(res, 200, bundle);
     return;
   }
@@ -1438,7 +1464,7 @@ app.post('/api/withdraw/tickets', (req, res) => {
         createdAt: now,
       }],
     };
-    saveBundle(bundle);
+    await withdrawChatStore.saveBundle(bundle);
     sendJson(res, 200, bundle);
     return;
   }
@@ -1480,7 +1506,7 @@ app.post('/api/withdraw/tickets', (req, res) => {
       createdAt: now,
     }],
   };
-  saveBundle(bundle);
+  await withdrawChatStore.saveBundle(bundle);
   sendJson(res, 200, bundle);
 });
 

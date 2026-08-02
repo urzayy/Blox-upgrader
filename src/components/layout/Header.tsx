@@ -19,7 +19,7 @@ import { RobuxDepositModal } from '../deposit/RobuxDepositModal';
 import type { AppliedDepositBonus } from '../../lib/depositBonusCode';
 import { LiveChatsInbox } from '../support/LiveChatsInbox';
 import { LiveChatsFloatingButton } from '../support/LiveChatsFloatingButton';
-import { fetchUserWithdrawTickets, type WithdrawTicket } from '../../lib/withdrawChat';
+import { fetchUserWithdrawTickets, type WithdrawTicket, type WithdrawTicketBundle } from '../../lib/withdrawChat';
 import { useAdminChatNotifications } from '../../lib/adminChatNotifications';
 import { useActivityLog } from '../../hooks/useActivityLog';
 import { DEV_MOBILE_LAYOUT } from '../../lib/devMobileLayout';
@@ -42,11 +42,11 @@ interface Props {
   totalUpgrades: number;
   playersOnline: number;
   onAdminGrantSkin: (skin: Skin) => void;
-  onWithdrawRequest: (skins: Skin[]) => Promise<string | null>;
-  onDepositRequest: (items: DepositItem[], bonus?: AppliedDepositBonus) => Promise<string | null>;
-  onRobuxDepositRequest?: (robuxAmount: number, bonus?: AppliedDepositBonus) => Promise<string | null>;
+  onWithdrawRequest: (skins: Skin[]) => Promise<WithdrawTicketBundle | null>;
+  onDepositRequest: (items: DepositItem[], bonus?: AppliedDepositBonus) => Promise<WithdrawTicketBundle | null>;
+  onRobuxDepositRequest?: (robuxAmount: number, bonus?: AppliedDepositBonus) => Promise<WithdrawTicketBundle | null>;
   onSupportTicketCompleted: (ticket: WithdrawTicket) => void;
-  onRegisterOpenSupportChat?: (openChat: (ticketId: string) => void) => void;
+  onRegisterOpenSupportChat?: (openChat: (ticketId: string, initialBundle?: WithdrawTicketBundle) => void) => void;
   onAdminGiftSent?: (targetEmail: string, skin: Skin, quantity: number) => void;
   onAccountCleared?: (email: string) => void;
 }
@@ -91,6 +91,7 @@ export function Header({
   const [liveChatsOpen, setLiveChatsOpen] = useState(false);
   const [supportChatOpen, setSupportChatOpen] = useState(false);
   const [supportChatTicketId, setSupportChatTicketId] = useState<string | null>(null);
+  const [supportChatInitialBundle, setSupportChatInitialBundle] = useState<WithdrawTicketBundle | null>(null);
   const [adminInboxOpen, setAdminInboxOpen] = useState(false);
   const [userDbOpen, setUserDbOpen] = useState(false);
   const [seeOpen, setSeeOpen] = useState(false);
@@ -109,8 +110,9 @@ export function Header({
     activeTicketId: activeAdminTicketId,
   });
 
-  const openSupportChat = useCallback((ticketId: string) => {
+  const openSupportChat = useCallback((ticketId: string, initialBundle?: WithdrawTicketBundle) => {
     setSupportChatTicketId(ticketId);
+    setSupportChatInitialBundle(initialBundle ?? null);
     setSupportChatOpen(true);
   }, []);
 
@@ -271,9 +273,9 @@ export function Header({
           setWithdrawPreselectedIds([]);
         }}
         onRequestWithdraw={async skins => {
-          const ticketId = await onWithdrawRequest(skins);
-          if (ticketId) openSupportChat(ticketId);
-          return ticketId;
+          const bundle = await onWithdrawRequest(skins);
+          if (bundle) openSupportChat(bundle.ticket.id, bundle);
+          return bundle;
         }}
       />
       <DepositMethodModal
@@ -287,9 +289,9 @@ export function Header({
           open={robuxDepositOpen}
           onClose={() => setRobuxDepositOpen(false)}
           onSubmit={async (amount, bonus) => {
-            const ticketId = await onRobuxDepositRequest(amount, bonus);
-            if (ticketId) openSupportChat(ticketId);
-            return ticketId;
+            const bundle = await onRobuxDepositRequest(amount, bonus);
+            if (bundle) openSupportChat(bundle.ticket.id, bundle);
+            return bundle;
           }}
         />
       )}
@@ -297,9 +299,9 @@ export function Header({
         open={depositOpen}
         onClose={() => setDepositOpen(false)}
         onRequestDeposit={async (items, bonus) => {
-          const ticketId = await onDepositRequest(items, bonus);
-          if (ticketId) openSupportChat(ticketId);
-          return ticketId;
+          const bundle = await onDepositRequest(items, bonus);
+          if (bundle) openSupportChat(bundle.ticket.id, bundle);
+          return bundle;
         }}
       />
       {user && (
@@ -325,9 +327,13 @@ export function Header({
           key={supportChatTicketId ?? 'closed'}
           open={supportChatOpen}
           ticketId={supportChatTicketId}
+          initialBundle={supportChatInitialBundle}
           session={user}
           isAdmin={isAdmin}
-          onClose={() => setSupportChatOpen(false)}
+          onClose={() => {
+            setSupportChatOpen(false);
+            setSupportChatInitialBundle(null);
+          }}
           onTicketCompleted={onSupportTicketCompleted}
         />
       )}

@@ -13,11 +13,12 @@ import {
 } from '../../lib/depositBonusCode';
 import { CoinPrice } from '../ui/CoinPrice';
 import { DepositBonusCodeField } from './DepositBonusCodeField';
+import type { WithdrawTicketBundle } from '../../lib/withdrawChat';
 
 interface Props {
   open: boolean;
   onClose: () => void;
-  onSubmit: (robuxAmount: number, bonus?: AppliedDepositBonus) => Promise<string | null>;
+  onSubmit: (robuxAmount: number, bonus?: AppliedDepositBonus) => Promise<WithdrawTicketBundle | null>;
 }
 
 export function RobuxDepositModal({ open, onClose, onSubmit }: Props) {

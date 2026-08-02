@@ -90,6 +90,20 @@ export interface AdminInboxItem {
   isUnseen?: boolean;
 }
 
+export class WithdrawTicketNotFoundError extends Error {
+  readonly ticketId: string;
+
+  constructor(ticketId: string) {
+    super(`Ticket not found: ${ticketId}`);
+    this.name = 'WithdrawTicketNotFoundError';
+    this.ticketId = ticketId;
+  }
+}
+
+export function isWithdrawTicketNotFoundError(error: unknown): error is WithdrawTicketNotFoundError {
+  return error instanceof WithdrawTicketNotFoundError;
+}
+
 function summarizeSkin(skin: Skin): WithdrawSkinSummary {
   return {
     id: skin.id,
@@ -108,6 +122,10 @@ async function api<T>(path: string, init?: RequestInit): Promise<T> {
   });
   if (!res.ok) {
     const text = await res.text().catch(() => '');
+    if (res.status === 404) {
+      const ticketMatch = path.match(/\/api\/withdraw\/tickets\/([^/?]+)/);
+      throw new WithdrawTicketNotFoundError(ticketMatch?.[1] ?? 'unknown');
+    }
     throw new Error(text || `Request failed (${res.status})`);
   }
   return res.json() as Promise<T>;
@@ -270,12 +288,17 @@ export async function createHelpTicket(
 export async function openOrCreateHelpTicket(
   session: Session,
   userLabel: string,
-): Promise<string> {
+): Promise<WithdrawTicketBundle> {
   const tickets = await fetchUserWithdrawTickets(session.userId);
   const existing = tickets.find(ticket => getTicketType(ticket) === 'help' && ticket.status === 'open');
-  if (existing) return existing.id;
-  const bundle = await createHelpTicket(session, userLabel);
-  return bundle.ticket.id;
+  if (existing) {
+    try {
+      return await fetchWithdrawTicket(existing.id);
+    } catch (error) {
+      if (!isWithdrawTicketNotFoundError(error)) throw error;
+    }
+  }
+  return createHelpTicket(session, userLabel);
 }
 
 export function formatWithdrawSummary(ticket: WithdrawTicket): string {

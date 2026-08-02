@@ -43,6 +43,8 @@ drop policy if exists "blox_events_no_public" on public.blox_user_events;
 create policy "blox_accounts_no_public" on public.blox_accounts for all using (false);
 create policy "blox_events_no_public" on public.blox_user_events for all using (false);
 
+-- Live support / withdraw chats: see scripts/supabase-withdraw-chats.sql
+
 -- Optional legacy table (not required if blox_accounts has inventory columns):
 create table if not exists public.blox_player_state (
   user_id text not null,
@@ -59,3 +61,19 @@ alter table public.blox_player_state enable row level security;
 
 drop policy if exists "blox_player_state_no_public" on public.blox_player_state;
 create policy "blox_player_state_no_public" on public.blox_player_state for all using (false);
+
+-- Live support / withdraw chats (required for production on Render)
+create table if not exists public.blox_withdraw_chats (
+  id text primary key,
+  user_id text not null,
+  bundle jsonb not null,
+  updated_at bigint not null
+);
+
+create index if not exists blox_withdraw_chats_user_id_idx on public.blox_withdraw_chats (user_id);
+create index if not exists blox_withdraw_chats_updated_at_idx on public.blox_withdraw_chats (updated_at desc);
+
+alter table public.blox_withdraw_chats enable row level security;
+
+drop policy if exists "blox_withdraw_chats_no_public" on public.blox_withdraw_chats;
+create policy "blox_withdraw_chats_no_public" on public.blox_withdraw_chats for all using (false);

@@ -32,7 +32,7 @@ import { useWheelSize } from './hooks/useWheelSize';
 import { useDocumentVisible } from './hooks/useDocumentVisible';
 import { getDisplayName, getProfileLabel, isAdmin } from './lib/auth';
 import { useAuth } from './context/AuthContext';
-import { createWithdrawTicket, createDepositTicket, createRobuxDepositTicket, fetchUserWithdrawTickets, getDepositCreditAmount, getPendingWithdrawSkinIds, getTicketType, isRobuxDeposit, openOrCreateHelpTicket, type WithdrawTicket } from './lib/withdrawChat';
+import { createWithdrawTicket, createDepositTicket, createRobuxDepositTicket, fetchUserWithdrawTickets, getDepositCreditAmount, getPendingWithdrawSkinIds, getTicketType, isRobuxDeposit, openOrCreateHelpTicket, type WithdrawTicket, type WithdrawTicketBundle } from './lib/withdrawChat';
 import type { AppliedDepositBonus } from './lib/depositBonusCode';
 import { validateDepositTotal } from './lib/deposit';
 import { validateRobuxDepositAmount } from './lib/robuxDeposit';
@@ -99,7 +99,7 @@ export default function ProdApp() {
   const inventoryRef = useRef(inventory);
   const balanceRef = useRef(balance);
   const userIdRef = useRef(userId);
-  const openSupportChatRef = useRef<(ticketId: string) => void>(() => {});
+  const openSupportChatRef = useRef<(ticketId: string, initialBundle?: WithdrawTicketBundle) => void>(() => {});
   const [liveHelpLoading, setLiveHelpLoading] = useState(false);
   const [liveHelpError, setLiveHelpError] = useState('');
   const initialWithdrawSyncRef = useRef(true);
@@ -311,7 +311,7 @@ export default function ProdApp() {
     sfx.win();
   }, [user, log]);
 
-  const handleWithdrawRequest = useCallback(async (skins: Skin[]): Promise<string | null> => {
+  const handleWithdrawRequest = useCallback(async (skins: Skin[]): Promise<WithdrawTicketBundle | null> => {
     if (!user || !skins.length) return null;
     try {
       const bundle = await createWithdrawTicket(user, skins, getProfileLabel(user));
@@ -328,7 +328,7 @@ export default function ProdApp() {
       });
       setInputSkins(prev => prev.filter(s => !skins.some(w => w.id === s.id)));
       sfx.select();
-      return bundle.ticket.id;
+      return bundle;
     } catch {
       log('WITHDRAW.request_failed', { count: skins.length });
       return null;
@@ -395,7 +395,7 @@ export default function ProdApp() {
   const handleDepositRequest = useCallback(async (
     items: DepositItem[],
     bonus?: AppliedDepositBonus,
-  ): Promise<string | null> => {
+  ): Promise<WithdrawTicketBundle | null> => {
     if (!user || !items.length) return null;
     const total = items.reduce((sum, item) => sum + item.skin.price * item.quantity, 0);
     const validation = validateDepositTotal(total);
@@ -412,7 +412,7 @@ export default function ProdApp() {
         skins: items.map(item => `${item.quantity}× ${item.skin.name}`).join(' · '),
       });
       sfx.select();
-      return bundle.ticket.id;
+      return bundle;
     } catch {
       log('DEPOSIT.request_failed', { total: formatUSD(total) });
       return null;
@@ -422,7 +422,7 @@ export default function ProdApp() {
   const handleRobuxDepositRequest = useCallback(async (
     robuxAmount: number,
     bonus?: AppliedDepositBonus,
-  ): Promise<string | null> => {
+  ): Promise<WithdrawTicketBundle | null> => {
     if (!user) return null;
     const validation = validateRobuxDepositAmount(robuxAmount);
     if (!validation.ok) return null;
@@ -436,7 +436,7 @@ export default function ProdApp() {
         bonusPercent: bonus?.percent,
       });
       sfx.select();
-      return bundle.ticket.id;
+      return bundle;
     } catch {
       log('DEPOSIT.robux_request_failed', { robuxAmount });
       return null;
@@ -460,12 +460,12 @@ export default function ProdApp() {
     setLiveHelpLoading(true);
     setLiveHelpError('');
     try {
-      const ticketId = await openOrCreateHelpTicket(user, getProfileLabel(user) ?? user.email);
+      const bundle = await openOrCreateHelpTicket(user, getProfileLabel(user) ?? user.email);
       if (!openSupportChatRef.current) {
         setLiveHelpError('Could not open chat. Reload the page.');
         return;
       }
-      openSupportChatRef.current(ticketId);
+      openSupportChatRef.current(bundle.ticket.id, bundle);
     } catch {
       setLiveHelpError('Could not connect to support. Please try again.');
       log('HELP.request_failed');

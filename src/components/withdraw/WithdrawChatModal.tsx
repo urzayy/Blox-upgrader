@@ -7,6 +7,7 @@ import {
   getDepositCreditAmount,
   getTicketType,
   isRobuxDeposit,
+  isWithdrawTicketNotFoundError,
   sendWithdrawChatMessage,
   updateWithdrawTicketStatus,
   type ChatMessage,
@@ -37,6 +38,7 @@ const CREATOR_CHAT_PROMPTS = [
 interface Props {
   open: boolean;
   ticketId: string | null;
+  initialBundle?: WithdrawTicketBundle | null;
   session: Session;
   isAdmin: boolean;
   onClose: () => void;
@@ -46,6 +48,7 @@ interface Props {
 export function WithdrawChatModal({
   open,
   ticketId,
+  initialBundle = null,
   session,
   isAdmin,
   onClose,
@@ -55,6 +58,7 @@ export function WithdrawChatModal({
   const [draft, setDraft] = useState('');
   const [sending, setSending] = useState(false);
   const [error, setError] = useState('');
+  const [notFound, setNotFound] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const completedRef = useRef(false);
   const activeTicketIdRef = useRef<string | null>(null);
@@ -62,6 +66,7 @@ export function WithdrawChatModal({
   const applyBundle = useCallback((next: WithdrawTicketBundle, forTicketId: string) => {
     if (activeTicketIdRef.current !== forTicketId) return;
     if (next.ticket.id !== forTicketId) return;
+    setNotFound(false);
     setBundle(prev => {
       if (prev && prev.ticket.id === forTicketId && prev.ticket.updatedAt > next.ticket.updatedAt) {
         return prev;
@@ -89,20 +94,30 @@ export function WithdrawChatModal({
       setDraft('');
       setSending(false);
       setError('');
+      setNotFound(false);
       completedRef.current = false;
       return;
     }
 
     activeTicketIdRef.current = ticketId;
-    setBundle(null);
     setDraft('');
     setSending(false);
     setError('');
+    setNotFound(false);
     completedRef.current = false;
 
+    if (initialBundle?.ticket.id === ticketId) {
+      setBundle(initialBundle);
+    } else {
+      setBundle(null);
+    }
+
     let cancelled = false;
+    let stopPolling = false;
+    let pollId: ReturnType<typeof setInterval> | undefined;
 
     const load = async () => {
+      if (stopPolling) return;
       const loadingTicketId = ticketId;
       try {
         const next = await fetchWithdrawTicket(loadingTicketId);
@@ -113,19 +128,31 @@ export function WithdrawChatModal({
           markAdminTicketReadFromMessages(loadingTicketId, next.messages);
         }
         maybeNotifyCompleted(next, loadingTicketId);
-      } catch {
+      } catch (err) {
         if (cancelled || activeTicketIdRef.current !== loadingTicketId) return;
-        setError('Could not load chat. Check your connection and try again.');
+        if (isWithdrawTicketNotFoundError(err)) {
+          stopPolling = true;
+          if (pollId) clearInterval(pollId);
+          setNotFound(true);
+          if (!initialBundle || initialBundle.ticket.id !== loadingTicketId) {
+            setBundle(null);
+          }
+          setError('');
+          return;
+        }
+        if (!initialBundle || initialBundle.ticket.id !== loadingTicketId) {
+          setError('Could not load chat. Check your connection and try again.');
+        }
       }
     };
 
     void load();
-    const id = setInterval(() => { void load(); }, 2500);
+    pollId = setInterval(() => { void load(); }, 2500);
     return () => {
       cancelled = true;
-      clearInterval(id);
+      if (pollId) clearInterval(pollId);
     };
-  }, [open, ticketId, isAdmin, applyBundle, maybeNotifyCompleted]);
+  }, [open, ticketId, initialBundle, isAdmin, applyBundle, maybeNotifyCompleted]);
 
   useEffect(() => {
     const el = scrollRef.current;
@@ -180,8 +207,9 @@ export function WithdrawChatModal({
   };
 
   const ticket = bundle?.ticket.id === ticketId ? bundle.ticket : null;
-  const messages = ticket ? (bundle?.messages ?? []) : [];
-  const chatClosed = ticket?.status !== 'open';
+  const messages = bundle?.ticket.id === ticketId ? (bundle.messages ?? []) : [];
+  const isConnecting = Boolean(ticketId && !ticket && !notFound);
+  const chatClosed = notFound || (ticket != null && ticket.status !== 'open');
   const ticketType = ticket ? getTicketType(ticket) : 'withdraw';
   const isDeposit = ticketType === 'deposit';
   const isHelp = ticketType === 'help';
@@ -304,7 +332,11 @@ export function WithdrawChatModal({
               ))}
               {!messages.length && (
                 <p className="py-10 text-center text-sm text-white/35">
-                  {ticket ? 'No messages yet.' : 'Connecting to support...'}
+                  {notFound
+                    ? 'This chat session was not found. It may have expired after a server restart.'
+                    : ticket
+                      ? 'No messages yet.'
+                      : 'Connecting to support...'}
                 </p>
               )}
             </div>
@@ -315,6 +347,22 @@ export function WithdrawChatModal({
               </p>
             )}
 
+            {notFound && (
+              <div className="shrink-0 border-t border-white/10 bg-white/[0.02] px-4 py-3 text-center">
+                <p className="text-[11px] text-white/55">
+                  Start a new support request from Live Help or your deposit/withdraw flow.
+                </p>
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="mt-2 rounded-lg border border-white/15 px-4 py-2 text-[11px] font-bold uppercase tracking-wide text-white/70 transition hover:border-white/30 hover:text-white"
+                >
+                  Close
+                </button>
+              </div>
+            )}
+
+            {!notFound && (
             <div className="shrink-0 border-t border-white/10 bg-[#0a0c12] px-4 py-3">
               {isAdmin && ticket?.status === 'open' && (
                 <div className="mb-2 flex flex-wrap gap-2">
@@ -377,13 +425,21 @@ export function WithdrawChatModal({
                       void handleSend(draft);
                     }
                   }}
-                  disabled={chatClosed || sending}
-                  placeholder={chatClosed ? 'This chat is closed' : 'Write a message...'}
+                  disabled={chatClosed || sending || isConnecting}
+                  placeholder={
+                    notFound
+                      ? 'Chat unavailable'
+                      : isConnecting
+                        ? 'Connecting to support...'
+                        : chatClosed
+                          ? 'This chat is closed'
+                          : 'Write a message...'
+                  }
                   className="input-filter min-w-0 flex-1 text-sm disabled:opacity-40"
                 />
                 <button
                   type="button"
-                  disabled={chatClosed || sending || !draft.trim()}
+                  disabled={chatClosed || sending || isConnecting || notFound || !draft.trim()}
                   onClick={() => { void handleSend(draft); }}
                   className="shrink-0 rounded-lg border border-gold/40 bg-gold/15 px-4 py-2 font-display text-[11px] font-bold uppercase tracking-wide text-gold transition hover:bg-gold/25 disabled:cursor-not-allowed disabled:opacity-35"
                 >
@@ -391,6 +447,7 @@ export function WithdrawChatModal({
                 </button>
               </div>
             </div>
+            )}
           </motion.div>
         </motion.div>
       )}

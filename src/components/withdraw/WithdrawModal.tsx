@@ -7,6 +7,7 @@ import { MIN_WITHDRAW_TOTAL, validateWithdrawTotal } from '../../lib/withdraw';
 import { SkinImage } from '../skins/SkinImage';
 import { SkinLockOverlay } from '../skins/SkinLockOverlay';
 import { sfx } from '../../lib/audio';
+import type { WithdrawTicketBundle } from '../../lib/withdrawChat';
 
 interface Props {
   open: boolean;
@@ -14,7 +15,7 @@ interface Props {
   lockedSkinIds?: ReadonlySet<string>;
   initialSelectedIds?: string[];
   onClose: () => void;
-  onRequestWithdraw: (skins: Skin[]) => Promise<string | null>;
+  onRequestWithdraw: (skins: Skin[]) => Promise<WithdrawTicketBundle | null>;
 }
 
 export function WithdrawModal({

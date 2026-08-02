@@ -4,6 +4,9 @@ services:
     runtime: node
     buildCommand: npm install && npm run build
     startCommand: npm start
+    scaling:
+      minInstances: 1
+      maxInstances: 1
     envVars:
       - key: NODE_ENV
         value: production

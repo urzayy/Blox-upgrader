@@ -6,7 +6,7 @@ import { ErrorBoundary } from './components/ErrorBoundary';
 import './index.css';
 
 if (import.meta.env.PROD) {
-  (window as Window & { __BLOX_BUILD?: string }).__BLOX_BUILD = '20260802-localhost-sync';
+  (window as Window & { __BLOX_BUILD?: string }).__BLOX_BUILD = '20260802-chat-persist';
 }
 
 ReactDOM.createRoot(document.getElementById('root')!).render(

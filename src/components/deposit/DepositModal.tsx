@@ -8,13 +8,14 @@ import {
 } from '../../lib/depositBonusCode';
 import { SkinCatalogCart, type CatalogCartItem } from '../shop/SkinCatalogCart';
 import { DepositBonusCodeField } from './DepositBonusCodeField';
+import type { WithdrawTicketBundle } from '../../lib/withdrawChat';
 
 export type DepositItem = CatalogCartItem;
 
 interface Props {
   open: boolean;
   onClose: () => void;
-  onRequestDeposit: (items: DepositItem[], bonus?: AppliedDepositBonus) => Promise<string | null>;
+  onRequestDeposit: (items: DepositItem[], bonus?: AppliedDepositBonus) => Promise<WithdrawTicketBundle | null>;
 }
 
 export function DepositModal({ open, onClose, onRequestDeposit }: Props) {
