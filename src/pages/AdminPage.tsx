@@ -16,6 +16,8 @@ import { AdminBanControl } from '../components/admin/AdminBanControl';
 
 import { AdminPromoCodeControl } from '../components/admin/AdminPromoCodeControl';
 
+import { AdminManageAdminsControl } from '../components/admin/AdminManageAdminsControl';
+
 import { DevTransactionHistoryControl } from '../components/admin/DevTransactionHistoryControl';
 
 import { navigateApp } from '../lib/appRoute';
@@ -176,7 +178,7 @@ function actionLabelClass(tone?: AdminAction['tone']) {
 
 export function AdminPage() {
 
-  const { isAdmin, user } = useAuth();
+  const { isAdmin, isCreator, user, refreshAdminStatus } = useAuth();
 
   const { log } = useActivityLog();
 
@@ -404,6 +406,37 @@ export function AdminPage() {
               <div className="mt-4">
 
                 <AdminPromoCodeControl adminEmail={user.email} />
+
+              </div>
+
+            </div>
+
+          )}
+
+
+
+          {isCreator && (
+
+            <div className={`rounded-2xl border p-4 ${actionCardClass('gold')}`}>
+
+              <span className="font-display text-sm font-black uppercase tracking-[0.12em] text-gold">
+
+                Admins
+
+              </span>
+
+              <p className="mt-2 text-xs leading-relaxed text-white/45">
+
+                Add or remove administrator access
+
+              </p>
+
+              <div className="mt-4">
+
+                <AdminManageAdminsControl
+                  creatorEmail={user.email}
+                  onAdminsChanged={() => { void refreshAdminStatus(); }}
+                />
 
               </div>
 

@@ -1,8 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { createClient } from '@supabase/supabase-js';
-
-const ADMIN_EMAILS = new Set(['urzay1v1@gmail.com', 'ecruzcastillo2009@gmail.com']);
+import { createAdminEmailsStore } from './adminEmailsStore.mjs';
 
 function normalizeEmail(email) {
   return String(email).trim().toLowerCase();
@@ -47,7 +46,7 @@ function rowToState(row) {
   };
 }
 
-export function createFilePlayerStateStore(rootDir) {
+export function createFilePlayerStateStore(rootDir, adminEmailsStore) {
   if (!fs.existsSync(rootDir)) fs.mkdirSync(rootDir, { recursive: true });
 
   const filePath = (email) => path.join(rootDir, `${sanitizeEmail(email)}.json`);
@@ -100,12 +99,12 @@ export function createFilePlayerStateStore(rootDir) {
       return emptyState;
     },
     isAdminEmail(email) {
-      return ADMIN_EMAILS.has(normalizeEmail(email));
+      return adminEmailsStore.isAdminEmail(email);
     },
   };
 }
 
-export function createSupabasePlayerStateStore(url, secretKey) {
+export function createSupabasePlayerStateStore(url, secretKey, adminEmailsStore) {
   const supabase = createClient(url, secretKey, {
     auth: { persistSession: false, autoRefreshToken: false },
   });
@@ -208,7 +207,7 @@ export function createSupabasePlayerStateStore(url, secretKey) {
       };
     },
     isAdminEmail(email) {
-      return ADMIN_EMAILS.has(normalizeEmail(email));
+      return adminEmailsStore.isAdminEmail(email);
     },
   };
 }
@@ -255,8 +254,10 @@ export function createHybridPlayerStateStore(fileStore, remoteStore) {
   };
 }
 
-export function createPlayerStateStore({ playerStateDir }) {
-  const fileStore = createFilePlayerStateStore(playerStateDir);
+export function createPlayerStateStore({ playerStateDir, adminEmailsStore }) {
+  const resolvedAdminEmailsStore = adminEmailsStore
+    ?? createAdminEmailsStore(path.join(path.dirname(playerStateDir), 'site-state'));
+  const fileStore = createFilePlayerStateStore(playerStateDir, resolvedAdminEmailsStore);
   const url = process.env.SUPABASE_URL?.trim();
   const secret = (
     process.env.SUPABASE_SECRET_KEY
@@ -267,7 +268,7 @@ export function createPlayerStateStore({ playerStateDir }) {
   if (url && secret) {
     return createHybridPlayerStateStore(
       fileStore,
-      createSupabasePlayerStateStore(url, secret),
+      createSupabasePlayerStateStore(url, secret, resolvedAdminEmailsStore),
     );
   }
 

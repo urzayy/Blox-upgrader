@@ -10,6 +10,7 @@ import {
 } from './src/lib/feedBot.mjs';
 import { createUserStore } from './server/lib/userStore.mjs';
 import { createPlayerStateStore } from './server/lib/playerStateStore.mjs';
+import { createAdminEmailsStore } from './server/lib/adminEmailsStore.mjs';
 import { clearAccountByEmail as resetAccountByEmail, resetPlayerProgressByEmail } from './server/lib/accountReset.mjs';
 import { createAccountResetMarkerStore } from './server/lib/accountResetMarker.mjs';
 import { createAccountBanStore } from './server/lib/accountBanStore.mjs';
@@ -52,11 +53,12 @@ for (const dir of [LOGS_DIR, USER_DB_DIR, path.join(USER_DB_DIR, 'events'), PLAY
   if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
 }
 
-const userStore = createUserStore({ userDbDir: USER_DB_DIR });
+const adminEmailsStore = createAdminEmailsStore(STATE_DIR);
+const userStore = createUserStore({ userDbDir: USER_DB_DIR, adminEmailsStore });
 const promoCodeStore = createPromoCodeStore(PROMO_CODES_DIR);
 initPromoCodeStore(promoCodeStore);
 const announcementStore = createAnnouncementStore(ANNOUNCEMENTS_DIR);
-const playerStateStore = createPlayerStateStore({ playerStateDir: PLAYER_STATE_DIR });
+const playerStateStore = createPlayerStateStore({ playerStateDir: PLAYER_STATE_DIR, adminEmailsStore });
 const resetMarkerStore = createAccountResetMarkerStore(ACCOUNT_RESETS_DIR);
 const banStore = createAccountBanStore(ACCOUNT_BANS_DIR);
 const profilePhotoStore = createProfilePhotoStore(PROFILE_PHOTOS_DIR);
@@ -685,6 +687,53 @@ app.get('/api/admin/bans', (req, res) => {
   }
   banStore.purgeExpired();
   sendJson(res, 200, { bans: banStore.listActiveBans() });
+});
+
+app.get('/api/admin/status', (req, res) => {
+  const email = String(req.query.email ?? '').trim();
+  sendJson(res, 200, {
+    isAdmin: adminEmailsStore.isAdminEmail(email),
+    isCreator: adminEmailsStore.isCreatorEmail(email),
+  });
+});
+
+app.get('/api/admin/emails', (req, res) => {
+  const creatorEmail = String(req.query.creatorEmail ?? '').trim();
+  if (!adminEmailsStore.isCreatorEmail(creatorEmail)) {
+    sendJson(res, 403, { error: 'forbidden' });
+    return;
+  }
+  sendJson(res, 200, { emails: adminEmailsStore.listAdmins() });
+});
+
+app.post('/api/admin/emails/add', (req, res) => {
+  try {
+    const { creatorEmail, email } = req.body ?? {};
+    const result = adminEmailsStore.addAdmin(
+      String(creatorEmail ?? '').trim(),
+      String(email ?? '').trim(),
+    );
+    sendJson(res, 200, { ok: true, ...result });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'error';
+    const status = message.includes('creator') ? 403 : 400;
+    sendJson(res, status, { error: message });
+  }
+});
+
+app.post('/api/admin/emails/remove', (req, res) => {
+  try {
+    const { creatorEmail, email } = req.body ?? {};
+    const result = adminEmailsStore.removeAdmin(
+      String(creatorEmail ?? '').trim(),
+      String(email ?? '').trim(),
+    );
+    sendJson(res, 200, { ok: true, ...result });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'error';
+    const status = message.includes('creator') ? 403 : 400;
+    sendJson(res, status, { error: message });
+  }
 });
 
 app.get('/api/admin/player-state', async (req, res) => {

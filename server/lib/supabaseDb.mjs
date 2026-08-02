@@ -1,8 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import { createHash } from 'node:crypto';
 
-const ADMIN_EMAILS = new Set(['urzay1v1@gmail.com', 'ecruzcastillo2009@gmail.com']);
-
 function normalizeEmail(email) {
   return String(email).trim().toLowerCase();
 }
@@ -28,7 +26,7 @@ function rowToUser(row) {
   };
 }
 
-export function createSupabaseDb(url, secretKey) {
+export function createSupabaseDb(url, secretKey, adminEmailsStore) {
   const supabase = createClient(url, secretKey, {
     auth: { persistSession: false, autoRefreshToken: false },
   });
@@ -386,7 +384,7 @@ export function createSupabaseDb(url, secretKey) {
 
   async function clearUserByEmail(email) {
     const normalizedEmail = normalizeEmail(email);
-    if (ADMIN_EMAILS.has(normalizedEmail)) {
+    if (adminEmailsStore.isAdminEmail(normalizedEmail)) {
       throw new Error('Cannot reset admin accounts');
     }
 
@@ -404,10 +402,6 @@ export function createSupabaseDb(url, secretKey) {
     await supabase.from('blox_accounts').delete().eq('email', normalizedEmail);
 
     return { cleared: Boolean(userId), userId };
-  }
-
-  function isAdminEmail(email) {
-    return ADMIN_EMAILS.has(normalizeEmail(email));
   }
 
   return {
@@ -428,7 +422,5 @@ export function createSupabaseDb(url, secretKey) {
     exportUserTxt,
     checkConnection,
     clearUserByEmail,
-    isAdminEmail,
-    ADMIN_EMAILS: [...ADMIN_EMAILS],
   };
 }

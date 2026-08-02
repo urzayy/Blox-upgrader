@@ -3,6 +3,7 @@ import {
   getActivePresenceCount,
   registerPresenceHeartbeat,
 } from './server/lib/presenceStore.mjs';
+import { createAdminEmailsStore } from './server/lib/adminEmailsStore.mjs';
 
 function readBody(req: { on: (event: string, cb: (chunk: Buffer) => void) => void }): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -23,12 +24,9 @@ function sendJson(
   res.end(JSON.stringify(data));
 }
 
-const ADMIN_EMAILS = new Set([
-  'urzay1v1@gmail.com',
-  'ecruzcastillo2009@gmail.com',
-]);
+export function presencePlugin(stateDir: string): Plugin {
+  const adminEmailsStore = createAdminEmailsStore(stateDir);
 
-export function presencePlugin(): Plugin {
   return {
     name: 'presence-api',
     configureServer(server) {
@@ -52,7 +50,7 @@ export function presencePlugin(): Plugin {
               .get('adminEmail')
               ?.trim()
               .toLowerCase() ?? '';
-            if (!ADMIN_EMAILS.has(adminEmail)) {
+            if (!adminEmailsStore.isAdminEmail(adminEmail)) {
               sendJson(res, 403, { error: 'forbidden' });
               return;
             }

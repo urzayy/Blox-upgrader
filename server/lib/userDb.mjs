@@ -2,13 +2,11 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { createHash } from 'node:crypto';
 
-const ADMIN_EMAILS = new Set(['urzay1v1@gmail.com', 'ecruzcastillo2009@gmail.com']);
-
 function defaultDbRoot() {
   return path.join(process.cwd(), 'user-db');
 }
 
-export function createUserDb(rootDir = process.env.USER_DB_DIR || defaultDbRoot()) {
+export function createUserDb(rootDir = process.env.USER_DB_DIR || defaultDbRoot(), adminEmailsStore) {
   const eventsDir = path.join(rootDir, 'events');
   const usersFile = path.join(rootDir, 'users.json');
   const accountsFile = path.join(rootDir, 'accounts.json');
@@ -353,20 +351,9 @@ export function createUserDb(rootDir = process.env.USER_DB_DIR || defaultDbRoot(
     return Object.values(index.users).find(u => u.email === normalizedEmail) ?? null;
   }
 
-  function isAdminEmail(email) {
-    return ADMIN_EMAILS.has(normalizeEmail(email));
-  }
-
-  function listRegisteredEmails() {
-    const store = loadAccountsStore();
-    return Object.values(store.accounts)
-      .map(a => a.email)
-      .sort((a, b) => a.localeCompare(b));
-  }
-
   function clearUserByEmail(email) {
     const normalizedEmail = normalizeEmail(email);
-    if (ADMIN_EMAILS.has(normalizedEmail)) {
+    if (adminEmailsStore.isAdminEmail(normalizedEmail)) {
       throw new Error('Cannot reset admin accounts');
     }
 
@@ -400,6 +387,13 @@ export function createUserDb(rootDir = process.env.USER_DB_DIR || defaultDbRoot(
     return { cleared: Boolean(userId), userId };
   }
 
+  function listRegisteredEmails() {
+    const store = loadAccountsStore();
+    return Object.values(store.accounts)
+      .map(a => a.email)
+      .sort((a, b) => a.localeCompare(b));
+  }
+
   return {
     rootDir,
     upsertUser,
@@ -416,7 +410,5 @@ export function createUserDb(rootDir = process.env.USER_DB_DIR || defaultDbRoot(
     getUserEvents,
     exportUserTxt,
     clearUserByEmail,
-    isAdminEmail,
-    ADMIN_EMAILS: [...ADMIN_EMAILS],
   };
 }

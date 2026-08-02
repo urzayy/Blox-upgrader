@@ -103,7 +103,8 @@ export type AdminPanelId =
   | 'gift'
   | 'userDb'
   | 'skinPicker'
-  | 'announcement';
+  | 'announcement'
+  | 'manageAdmins';
 
 const adminPanelHandlers: Partial<Record<AdminPanelId, VoidHandler>> = {};
 

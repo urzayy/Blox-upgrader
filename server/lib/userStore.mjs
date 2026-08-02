@@ -1,7 +1,9 @@
 import { createUserDb } from './userDb.mjs';
 import { createSupabaseDb } from './supabaseDb.mjs';
+import { createAdminEmailsStore } from './adminEmailsStore.mjs';
+import path from 'node:path';
 
-function wrapSync(db) {
+function wrapSync(db, adminEmailsStore) {
   return {
     type: 'file',
     rootDir: db.rootDir,
@@ -26,12 +28,26 @@ function wrapSync(db) {
     getUserEvents: async (userId, limit) => db.getUserEvents(userId, limit),
     exportUserTxt: async (userId) => db.exportUserTxt(userId),
     clearUserByEmail: async (email) => db.clearUserByEmail(email),
-    isAdminEmail: (email) => db.isAdminEmail(email),
-    ADMIN_EMAILS: db.ADMIN_EMAILS,
+    isAdminEmail: (email) => adminEmailsStore.isAdminEmail(email),
+    get ADMIN_EMAILS() {
+      return adminEmailsStore.listAdmins();
+    },
   };
 }
 
-export function createUserStore({ userDbDir }) {
+function wrapRemote(db, adminEmailsStore) {
+  return {
+    ...db,
+    isAdminEmail: (email) => adminEmailsStore.isAdminEmail(email),
+    get ADMIN_EMAILS() {
+      return adminEmailsStore.listAdmins();
+    },
+  };
+}
+
+export function createUserStore({ userDbDir, adminEmailsStore }) {
+  const resolvedAdminEmailsStore = adminEmailsStore
+    ?? createAdminEmailsStore(path.join(path.dirname(userDbDir), 'site-state'));
   const url = process.env.SUPABASE_URL?.trim();
   const secret = (
     process.env.SUPABASE_SECRET_KEY
@@ -40,8 +56,8 @@ export function createUserStore({ userDbDir }) {
   ).trim();
 
   if (url && secret) {
-    return createSupabaseDb(url, secret);
+    return wrapRemote(createSupabaseDb(url, secret, resolvedAdminEmailsStore), resolvedAdminEmailsStore);
   }
 
-  return wrapSync(createUserDb(userDbDir));
+  return wrapSync(createUserDb(userDbDir, resolvedAdminEmailsStore), resolvedAdminEmailsStore);
 }

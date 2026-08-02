@@ -374,9 +374,16 @@ export function logout(): void {
   saveSession(null);
 }
 
+export const CREATOR_EMAIL = 'urzay1v1@gmail.com';
+
 export const ADMIN_EMAILS = ['urzay1v1@gmail.com', 'ecruzcastillo2009@gmail.com'] as const;
 
 export function isAdmin(session: Session | null): boolean {
   if (!session) return false;
   return (ADMIN_EMAILS as readonly string[]).includes(session.email);
+}
+
+export function isCreator(session: Session | null): boolean {
+  if (!session) return false;
+  return session.email === CREATOR_EMAIL;
 }

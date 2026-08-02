@@ -4,6 +4,7 @@ import dotenv from 'dotenv';
 import type { Plugin } from 'vite';
 import { createUserStore } from './server/lib/userStore.mjs';
 import { createPlayerStateStore } from './server/lib/playerStateStore.mjs';
+import { createAdminEmailsStore } from './server/lib/adminEmailsStore.mjs';
 import { clearAccountByEmail as resetAccountByEmail } from './server/lib/accountReset.mjs';
 import { createAccountResetMarkerStore } from './server/lib/accountResetMarker.mjs';
 import { createAccountBanStore } from './server/lib/accountBanStore.mjs';
@@ -32,10 +33,12 @@ function sendJson(res: { statusCode: number; setHeader: (k: string, v: string) =
   res.end(JSON.stringify(data));
 }
 
-export function userDbPlugin(dbDir: string): Plugin {
-  const userStore = createUserStore({ userDbDir: dbDir });
+export function userDbPlugin(dbDir: string, stateDir?: string): Plugin {
+  const siteStateDir = stateDir ?? path.resolve(path.dirname(dbDir), 'site-state');
+  const adminEmailsStore = createAdminEmailsStore(siteStateDir);
+  const userStore = createUserStore({ userDbDir: dbDir, adminEmailsStore });
   const playerStateDir = path.resolve(path.dirname(dbDir), 'player-state');
-  const playerStateStore = createPlayerStateStore({ playerStateDir });
+  const playerStateStore = createPlayerStateStore({ playerStateDir, adminEmailsStore });
   const accountResetsDir = path.resolve(path.dirname(dbDir), 'account-resets');
   const accountBansDir = path.resolve(path.dirname(dbDir), 'account-bans');
   const resetMarkerStore = createAccountResetMarkerStore(accountResetsDir);

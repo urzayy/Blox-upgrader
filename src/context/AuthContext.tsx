@@ -8,15 +8,19 @@ import {
   pushAccountToServer,
   updateNickname as saveNickname,
   isAdmin as checkIsAdmin,
+  isCreator as checkIsCreator,
   type Session,
 } from '../lib/auth';
 import { appendUserLog, initUserLogFile } from '../lib/userActivityLog';
 import { fetchAccountBanStatus } from '../lib/accountBanApi';
+import { fetchAdminStatus } from '../lib/adminEmailsApi';
 
 interface AuthContextValue {
   user: Session | null;
   profileLabel: string;
   isAdmin: boolean;
+  isCreator: boolean;
+  refreshAdminStatus: () => Promise<void>;
   loginOpen: boolean;
   openLogin: () => void;
   closeLogin: () => void;
@@ -40,6 +44,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return session;
   });
   const [loginOpen, setLoginOpen] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(() => checkIsAdmin(user));
+  const [isCreator, setIsCreator] = useState(() => checkIsCreator(user));
+
+  const refreshAdminStatus = useCallback(async () => {
+    if (!user) {
+      setIsAdmin(false);
+      setIsCreator(false);
+      return;
+    }
+    const status = await fetchAdminStatus(user.email);
+    setIsAdmin(status.isAdmin);
+    setIsCreator(status.isCreator);
+  }, [user]);
+
+  useEffect(() => {
+    void refreshAdminStatus();
+  }, [refreshAdminStatus]);
 
   useEffect(() => {
     if (!user) return;
@@ -117,12 +138,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [user]);
 
   const profileLabel = user ? getProfileLabel(user) : '';
-  const isAdmin = checkIsAdmin(user);
 
   const value = useMemo(() => ({
     user,
     profileLabel,
     isAdmin,
+    isCreator,
+    refreshAdminStatus,
     loginOpen,
     openLogin,
     closeLogin,
@@ -130,7 +152,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     logout,
     isNewEmail,
     setNickname,
-  }), [user, profileLabel, isAdmin, loginOpen, openLogin, closeLogin, login, logout, isNewEmail, setNickname]);
+  }), [user, profileLabel, isAdmin, isCreator, refreshAdminStatus, loginOpen, openLogin, closeLogin, login, logout, isNewEmail, setNickname]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

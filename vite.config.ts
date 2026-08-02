@@ -11,6 +11,7 @@ import { promoCodesPlugin } from './vite-promo-codes-plugin';
 import { giveawaysPlugin } from './vite-giveaways-plugin';
 import { caseBattlesPlugin } from './vite-case-battles-plugin';
 import { announcementPlugin } from './vite-announcement-plugin';
+import { adminEmailsPlugin } from './vite-admin-emails-plugin';
 import { presencePlugin } from './vite-presence-plugin';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -28,7 +29,7 @@ export default defineConfig({
   appType: 'spa',
   plugins: [
     react(),
-    userDbPlugin(userDbDir),
+    userDbPlugin(userDbDir, siteStateDir),
     promoCodesPlugin(promoCodesDir, userDbDir),
     giveawaysPlugin(giveawaysDir, userDbDir, inventoryGrantsDir),
     caseBattlesPlugin(caseBattlesDir),
@@ -37,7 +38,8 @@ export default defineConfig({
     inventoryGrantsPlugin(inventoryGrantsDir),
     balanceGrantsPlugin(balanceGrantsDir),
     siteStatePlugin(siteStateDir),
-    presencePlugin(),
+    adminEmailsPlugin(siteStateDir),
+    presencePlugin(siteStateDir),
   ],
   server: {
     port: 5173,
