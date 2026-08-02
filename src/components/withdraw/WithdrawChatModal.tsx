@@ -62,6 +62,12 @@ export function WithdrawChatModal({
   const scrollRef = useRef<HTMLDivElement>(null);
   const completedRef = useRef(false);
   const activeTicketIdRef = useRef<string | null>(null);
+  const loadedTicketRef = useRef<string | null>(null);
+  const onTicketCompletedRef = useRef(onTicketCompleted);
+  const initialBundleRef = useRef(initialBundle);
+
+  onTicketCompletedRef.current = onTicketCompleted;
+  initialBundleRef.current = initialBundle;
 
   const applyBundle = useCallback((next: WithdrawTicketBundle, forTicketId: string) => {
     if (activeTicketIdRef.current !== forTicketId) return;
@@ -75,7 +81,7 @@ export function WithdrawChatModal({
     });
   }, []);
 
-  const maybeNotifyCompleted = useCallback((next: WithdrawTicketBundle, forTicketId: string) => {
+  const notifyCompleted = useCallback((next: WithdrawTicketBundle, forTicketId: string) => {
     if (
       !isAdmin
       && next.ticket.status === 'completed'
@@ -83,13 +89,20 @@ export function WithdrawChatModal({
       && activeTicketIdRef.current === forTicketId
     ) {
       completedRef.current = true;
-      onTicketCompleted(next.ticket);
+      onTicketCompletedRef.current(next.ticket);
     }
-  }, [isAdmin, onTicketCompleted]);
+  }, [isAdmin]);
+
+  useEffect(() => {
+    if (!open || !ticketId || !initialBundle) return;
+    if (initialBundle.ticket.id !== ticketId) return;
+    applyBundle(initialBundle, ticketId);
+  }, [open, ticketId, initialBundle, applyBundle]);
 
   useEffect(() => {
     if (!open || !ticketId) {
       activeTicketIdRef.current = null;
+      loadedTicketRef.current = null;
       setBundle(null);
       setDraft('');
       setSending(false);
@@ -100,16 +113,21 @@ export function WithdrawChatModal({
     }
 
     activeTicketIdRef.current = ticketId;
-    setDraft('');
-    setSending(false);
-    setError('');
-    setNotFound(false);
-    completedRef.current = false;
 
-    if (initialBundle?.ticket.id === ticketId) {
-      setBundle(initialBundle);
-    } else {
-      setBundle(null);
+    if (loadedTicketRef.current !== ticketId) {
+      loadedTicketRef.current = ticketId;
+      setDraft('');
+      setSending(false);
+      setError('');
+      setNotFound(false);
+      completedRef.current = false;
+
+      const seed = initialBundleRef.current;
+      if (seed?.ticket.id === ticketId) {
+        setBundle(seed);
+      } else {
+        setBundle(null);
+      }
     }
 
     let cancelled = false;
@@ -127,22 +145,22 @@ export function WithdrawChatModal({
         if (isAdmin) {
           markAdminTicketReadFromMessages(loadingTicketId, next.messages);
         }
-        maybeNotifyCompleted(next, loadingTicketId);
+        notifyCompleted(next, loadingTicketId);
       } catch (err) {
         if (cancelled || activeTicketIdRef.current !== loadingTicketId) return;
         if (isWithdrawTicketNotFoundError(err)) {
           stopPolling = true;
           if (pollId) clearInterval(pollId);
           setNotFound(true);
-          if (!initialBundle || initialBundle.ticket.id !== loadingTicketId) {
+          const seed = initialBundleRef.current;
+          if (!seed || seed.ticket.id !== loadingTicketId) {
             setBundle(null);
           }
           setError('');
           return;
         }
-        if (!initialBundle || initialBundle.ticket.id !== loadingTicketId) {
-          setError('Could not load chat. Check your connection and try again.');
-        }
+        // Keep showing the last loaded bundle when a poll fails transiently.
+        setError('Could not refresh chat. Showing the last loaded messages.');
       }
     };
 
@@ -152,7 +170,7 @@ export function WithdrawChatModal({
       cancelled = true;
       if (pollId) clearInterval(pollId);
     };
-  }, [open, ticketId, initialBundle, isAdmin, applyBundle, maybeNotifyCompleted]);
+  }, [open, ticketId, isAdmin, applyBundle, notifyCompleted]);
 
   useEffect(() => {
     const el = scrollRef.current;
@@ -194,7 +212,7 @@ export function WithdrawChatModal({
       const next = await updateWithdrawTicketStatus(currentTicketId, status);
       if (activeTicketIdRef.current !== currentTicketId) return;
       applyBundle(next, currentTicketId);
-      maybeNotifyCompleted(next, currentTicketId);
+      notifyCompleted(next, currentTicketId);
     } catch {
       if (activeTicketIdRef.current === currentTicketId) {
         setError('Could not update request.');
