@@ -1,5 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
-import { createHash } from 'node:crypto';
+import { createHash, randomBytes } from 'node:crypto';
 
 function normalizeEmail(email) {
   return String(email).trim().toLowerCase();
@@ -79,6 +79,41 @@ export function createSupabaseDb(url, secretKey, adminEmailsStore) {
 
   function hashPassword(password, salt) {
     return createHash('sha256').update(`${salt}:${String(password)}`).digest('hex');
+  }
+
+  function randomSalt() {
+    return randomBytes(16).toString('hex');
+  }
+
+  async function resetAccountPassword({ email, password }) {
+    const normalizedEmail = normalizeEmail(email);
+    const plain = String(password ?? '');
+    if (plain.length < 6) {
+      throw new Error('Password must be at least 6 characters');
+    }
+
+    const { data: account, error: lookupError } = await supabase
+      .from('blox_accounts')
+      .select('id, email')
+      .eq('email', normalizedEmail)
+      .maybeSingle();
+    if (lookupError) throw lookupError;
+    if (!account?.id) return { ok: false, notFound: true };
+
+    const salt = randomSalt();
+    const passwordHash = hashPassword(plain, salt);
+    const { error: updateError } = await supabase
+      .from('blox_accounts')
+      .update({ password_hash: passwordHash, salt })
+      .eq('id', account.id);
+    if (updateError) throw updateError;
+
+    return {
+      ok: true,
+      userId: account.id,
+      email: normalizedEmail,
+      salt,
+    };
   }
 
   async function getAccountByEmail(email) {
@@ -422,5 +457,6 @@ export function createSupabaseDb(url, secretKey, adminEmailsStore) {
     exportUserTxt,
     checkConnection,
     clearUserByEmail,
+    resetAccountPassword,
   };
 }

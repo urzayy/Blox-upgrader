@@ -774,6 +774,36 @@ app.post('/api/admin/emails/remove', (req, res) => {
   }
 });
 
+app.post('/api/admin/reset-password', async (req, res) => {
+  try {
+    const { creatorEmail, email, password } = req.body ?? {};
+    if (!adminEmailsStore.isCreatorEmail(String(creatorEmail ?? '').trim())) {
+      sendJson(res, 403, { error: 'forbidden' });
+      return;
+    }
+    const targetEmail = String(email ?? '').trim().toLowerCase();
+    if (!targetEmail) {
+      sendJson(res, 400, { error: 'email required' });
+      return;
+    }
+    const result = await userStore.resetAccountPassword({ email: targetEmail, password });
+    if (result.notFound) {
+      sendJson(res, 404, { ok: false, notFound: true, error: 'account_not_found' });
+      return;
+    }
+    appendUserTxtLog(
+      targetEmail,
+      `[${new Date().toLocaleString('en-US', { hour12: false })}] AUTH.password_reset | email=${targetEmail}`,
+    );
+    sendJson(res, 200, { ok: true, email: result.email, userId: result.userId });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'error';
+    const status = message.includes('6 characters') ? 400 : 500;
+    console.error('[admin/reset-password]', error);
+    sendJson(res, status, { error: message });
+  }
+});
+
 app.get('/api/admin/player-state', async (req, res) => {
   try {
     const adminEmail = req.query.adminEmail?.trim() ?? '';

@@ -28,6 +28,7 @@ function wrapSync(db, adminEmailsStore) {
     getUserEvents: async (userId, limit) => db.getUserEvents(userId, limit),
     exportUserTxt: async (userId) => db.exportUserTxt(userId),
     clearUserByEmail: async (email) => db.clearUserByEmail(email),
+    resetAccountPassword: async (payload) => db.resetAccountPassword(payload),
     isAdminEmail: (email) => adminEmailsStore.isAdminEmail(email),
     get ADMIN_EMAILS() {
       return adminEmailsStore.listAdmins();

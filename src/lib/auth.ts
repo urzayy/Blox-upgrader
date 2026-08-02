@@ -234,6 +234,9 @@ export async function loginOrRegister(
   const serverSession = await requestServerSession(normalized, password);
 
   if (serverSession.wrongPassword) {
+    const withoutStale = accounts.filter(a => a.email !== normalized);
+    if (withoutStale.length !== accounts.length) saveAccounts(withoutStale);
+    saveSession(null);
     return { ok: false, error: 'Incorrect password.' };
   }
 

@@ -1,6 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { createHash } from 'node:crypto';
+import { createHash, randomBytes } from 'node:crypto';
 
 function defaultDbRoot() {
   return path.join(process.cwd(), 'user-db');
@@ -194,6 +194,37 @@ export function createUserDb(rootDir = process.env.USER_DB_DIR || defaultDbRoot(
 
   function hashPassword(password, salt) {
     return createHash('sha256').update(`${salt}:${String(password)}`).digest('hex');
+  }
+
+  function randomSalt() {
+    return randomBytes(16).toString('hex');
+  }
+
+  function resetAccountPassword({ email, password }) {
+    const normalizedEmail = normalizeEmail(email);
+    const plain = String(password ?? '');
+    if (plain.length < 6) {
+      throw new Error('Password must be at least 6 characters');
+    }
+    const account = getAccountByEmail(normalizedEmail);
+    if (!account) return { ok: false, notFound: true };
+    const salt = randomSalt();
+    const passwordHash = hashPassword(plain, salt);
+    const store = loadAccountsStore();
+    store.accounts[account.id] = {
+      ...account,
+      email: normalizedEmail,
+      salt,
+      passwordHash,
+    };
+    store.byEmail[normalizedEmail] = account.id;
+    saveAccountsStore(store);
+    return {
+      ok: true,
+      userId: account.id,
+      email: normalizedEmail,
+      salt,
+    };
   }
 
   function getAccountByEmail(email) {
@@ -410,5 +441,6 @@ export function createUserDb(rootDir = process.env.USER_DB_DIR || defaultDbRoot(
     getUserEvents,
     exportUserTxt,
     clearUserByEmail,
+    resetAccountPassword,
   };
 }
