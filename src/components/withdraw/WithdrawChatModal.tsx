@@ -62,7 +62,7 @@ export function WithdrawChatModal({
   const scrollRef = useRef<HTMLDivElement>(null);
   const completedRef = useRef(false);
   const activeTicketIdRef = useRef<string | null>(null);
-  const loadedTicketRef = useRef<string | null>(null);
+  const pollingTicketRef = useRef<string | null>(null);
   const onTicketCompletedRef = useRef(onTicketCompleted);
   const initialBundleRef = useRef(initialBundle);
 
@@ -102,7 +102,7 @@ export function WithdrawChatModal({
   useEffect(() => {
     if (!open || !ticketId) {
       activeTicketIdRef.current = null;
-      loadedTicketRef.current = null;
+      pollingTicketRef.current = null;
       setBundle(null);
       setDraft('');
       setSending(false);
@@ -114,8 +114,9 @@ export function WithdrawChatModal({
 
     activeTicketIdRef.current = ticketId;
 
-    if (loadedTicketRef.current !== ticketId) {
-      loadedTicketRef.current = ticketId;
+    const isNewTicket = pollingTicketRef.current !== ticketId;
+    if (isNewTicket) {
+      pollingTicketRef.current = ticketId;
       setDraft('');
       setSending(false);
       setError('');

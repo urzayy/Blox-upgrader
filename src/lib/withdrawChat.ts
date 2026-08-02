@@ -84,6 +84,7 @@ export interface WithdrawTicketBundle {
 
 export interface AdminInboxItem {
   ticket: WithdrawTicket;
+  bundle?: WithdrawTicketBundle;
   unreadCount: number;
   lastUserMessageAt: number;
   lastUserMessageText?: string | null;

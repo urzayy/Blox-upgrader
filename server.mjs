@@ -67,6 +67,7 @@ const profilePhotoStore = createProfilePhotoStore(PROFILE_PHOTOS_DIR);
 const giveawayStore = createGiveawayStore(GIVEAWAYS_DIR, GRANTS_DIR);
 const caseBattleStore = createCaseBattleStore(CASE_BATTLES_DIR);
 const withdrawChatStore = createWithdrawChatStore({ chatsDir: CHATS_DIR });
+console.log(`[withdraw-chat] using ${withdrawChatStore.type} store`);
 let storageStatus = { ok: false, path: userStore.type === 'supabase' ? 'supabase' : USER_DB_DIR };
 
 async function refreshStorageStatus() {

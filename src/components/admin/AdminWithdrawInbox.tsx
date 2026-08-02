@@ -1,12 +1,12 @@
 import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { CoinPrice } from '../ui/CoinPrice';
-import { loadAdminInbox, getTicketAttentionCount, getTicketType, formatWithdrawSummary, isRobuxDeposit, type AdminInboxItem } from '../../lib/withdrawChat';
+import { loadAdminInbox, getTicketAttentionCount, getTicketType, formatWithdrawSummary, isRobuxDeposit, type AdminInboxItem, type WithdrawTicketBundle } from '../../lib/withdrawChat';
 
 interface Props {
   open: boolean;
   onClose: () => void;
-  onOpenTicket: (ticketId: string) => void;
+  onOpenTicket: (ticketId: string, initialBundle?: WithdrawTicketBundle) => void;
 }
 
 export function AdminWithdrawInbox({ open, onClose, onOpenTicket }: Props) {
@@ -99,7 +99,7 @@ export function AdminWithdrawInbox({ open, onClose, onOpenTicket }: Props) {
                       key={ticket.id}
                       type="button"
                       onClick={() => {
-                        onOpenTicket(ticket.id);
+                        onOpenTicket(ticket.id, item.bundle);
                         onClose();
                       }}
                       className={`relative flex w-full items-center justify-between gap-3 rounded-xl border px-3 py-3 text-left transition ${

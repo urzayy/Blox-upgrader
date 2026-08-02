@@ -19,7 +19,7 @@ import { RobuxDepositModal } from '../deposit/RobuxDepositModal';
 import type { AppliedDepositBonus } from '../../lib/depositBonusCode';
 import { LiveChatsInbox } from '../support/LiveChatsInbox';
 import { LiveChatsFloatingButton } from '../support/LiveChatsFloatingButton';
-import { fetchUserWithdrawTickets, type WithdrawTicket, type WithdrawTicketBundle } from '../../lib/withdrawChat';
+import { fetchUserWithdrawTickets, fetchWithdrawTicket, type WithdrawTicket, type WithdrawTicketBundle } from '../../lib/withdrawChat';
 import { useAdminChatNotifications } from '../../lib/adminChatNotifications';
 import { useActivityLog } from '../../hooks/useActivityLog';
 import { DEV_MOBILE_LAYOUT } from '../../lib/devMobileLayout';
@@ -114,6 +114,18 @@ export function Header({
     setSupportChatTicketId(ticketId);
     setSupportChatInitialBundle(initialBundle ?? null);
     setSupportChatOpen(true);
+
+    if (!initialBundle) {
+      void fetchWithdrawTicket(ticketId)
+        .then(bundle => {
+          setSupportChatInitialBundle(prev => (
+            prev?.ticket.id === ticketId ? prev : bundle
+          ));
+        })
+        .catch(() => {
+          /* modal polling handles missing tickets */
+        });
+    }
   }, []);
 
   const openDepositFlow = useCallback(() => {
