@@ -337,6 +337,44 @@ app.post('/api/auth/register', async (req, res) => {
   }
 });
 
+app.post('/api/auth/session', async (req, res) => {
+  try {
+    const { email, password } = req.body ?? {};
+    if (!email || !password) {
+      sendJson(res, 400, { error: 'bad request' });
+      return;
+    }
+    const normalizedEmail = String(email).trim().toLowerCase();
+    if (banStore.isBanned(normalizedEmail)) {
+      sendJson(res, 403, { error: 'account_suspended', message: 'Cuenta suspendida.' });
+      return;
+    }
+    const auth = await userStore.authenticateAccount({ email: normalizedEmail, password });
+    if (auth.notFound) {
+      sendJson(res, 404, { ok: false, notFound: true });
+      return;
+    }
+    if (!auth.ok) {
+      sendJson(res, 401, { ok: false, error: 'wrong_password' });
+      return;
+    }
+    const playerState = await playerStateStore.getPlayerStateByEmail(normalizedEmail);
+    sendJson(res, 200, {
+      ok: true,
+      user: {
+        userId: auth.userId,
+        email: auth.email,
+        nickname: auth.nickname,
+        salt: auth.salt,
+      },
+      playerState,
+    });
+  } catch (error) {
+    console.error('[auth/session]', error);
+    sendJson(res, 500, { error: 'error' });
+  }
+});
+
 app.post('/api/auth/login', async (req, res) => {
   try {
     const { userId, email, nickname } = req.body ?? {};
