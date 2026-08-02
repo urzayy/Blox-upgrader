@@ -1,6 +1,7 @@
 import type { FreeCaseTier } from '../../lib/freeCaseTiers';
 import type { Skin } from '../../data/skins';
 import type { FreeCaseLootItem } from '../../lib/freeCaseLoot';
+import { getLootRollRanges } from '../../lib/freeCaseLoot';
 import { CoinPrice } from '../ui/CoinPrice';
 import { RoyalCrownBadge } from './RoyalCrownBadge';
 import { PreviewSkinCard } from './PreviewSkinCard';
@@ -11,6 +12,7 @@ interface Props {
   leftSkins: Skin[];
   rightSkins: Skin[];
   loot: FreeCaseLootItem[];
+  caseSlug?: string;
   price?: number;
   hasRoyalLoot?: boolean;
   jokerMode?: boolean;
@@ -112,10 +114,13 @@ export function CaseOpenPreview({
   leftSkins,
   rightSkins,
   loot,
+  caseSlug,
   price,
   hasRoyalLoot,
   jokerMode,
 }: Props) {
+  const rollRanges = caseSlug ? getLootRollRanges(caseSlug, loot) : new Map();
+
   return (
     <div className="relative w-full overflow-hidden">
       <div className="flex items-center justify-center gap-1.5 px-1 sm:gap-2.5 sm:px-2 lg:gap-3">
@@ -125,6 +130,7 @@ export function CaseOpenPreview({
               key={skin.id}
               skin={skin}
               chance={chanceForSkin(loot, skin.id)}
+              rollRange={rollRanges.get(skin.id)}
               edge={index === 0}
             />
           ))}
@@ -144,6 +150,7 @@ export function CaseOpenPreview({
               key={skin.id}
               skin={skin}
               chance={chanceForSkin(loot, skin.id)}
+              rollRange={rollRanges.get(skin.id)}
               edge={index === rightSkins.length - 1}
             />
           ))}

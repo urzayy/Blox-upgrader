@@ -1,5 +1,5 @@
 export const ARROW_ANGLE = 90;
-export const HOUSE_EDGE = 0.9;
+export const HOUSE_EDGE = 0.85;
 export const MAX_UPGRADE_PROBABILITY = 80;
 export const ROLL_MAX = 100_000;
 export const OCTAGON_ROTATION = -22.5;
@@ -536,7 +536,7 @@ export function fairProbability(input: number, target: number): number {
   return (input / target) * 100;
 }
 
-/** House keeps a 10% edge on win rate: 50% fair → 45%, 10% fair → 9%. */
+/** House keeps a 15% edge on win rate: 50% fair → 42.5%, 10% fair → 8.5%. */
 
 export function applyHouseEdge(fairPercent: number): number {
   return Math.round(Math.min(fairPercent * HOUSE_EDGE, MAX_UPGRADE_PROBABILITY) * 10) / 10;

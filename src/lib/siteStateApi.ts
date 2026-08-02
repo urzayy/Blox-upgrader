@@ -4,6 +4,7 @@ export interface SiteState {
   feed: FeedItem[];
   totalUpgrades: number;
   playersOnline: number;
+  registeredUsers: number;
   updatedAt: number;
 }
 
@@ -42,9 +43,15 @@ export function applySiteState(
     setFeed: (value: FeedItem[] | ((prev: FeedItem[]) => FeedItem[])) => void;
     setTotalUpgrades: (value: number | ((prev: number) => number)) => void;
     setPlayersOnline: (value: number | ((prev: number) => number)) => void;
+    setRegisteredUsers?: (value: number | ((prev: number) => number)) => void;
   },
 ) {
   setters.setFeed(prev => (feedsEqual(prev, state.feed) ? prev : state.feed));
   setters.setTotalUpgrades(prev => (prev === state.totalUpgrades ? prev : state.totalUpgrades));
   setters.setPlayersOnline(prev => (prev === state.playersOnline ? prev : state.playersOnline));
+  const registeredUsers =
+    typeof state.registeredUsers === 'number' && Number.isFinite(state.registeredUsers)
+      ? state.registeredUsers
+      : 0;
+  setters.setRegisteredUsers?.(prev => (prev === registeredUsers ? prev : registeredUsers));
 }

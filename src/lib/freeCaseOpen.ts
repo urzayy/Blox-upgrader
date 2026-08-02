@@ -2,6 +2,7 @@ import { canOpenFreeCase, recordFreeCaseOpen } from './freeCaseCooldown';
 import { getFreeCaseLoot, pickWeightedFromLoot, toEqualChanceLoot } from './freeCaseLoot';
 import { canPlayerOpenFreeCase } from './freeCaseUnlock';
 import type { Skin } from '../data/skins';
+import { attachFairProofToSkin, pickFairCaseReward } from './fairCaseRoll';
 
 export interface FreeCaseOpenResult {
   granted: Skin;
@@ -9,19 +10,23 @@ export interface FreeCaseOpenResult {
 }
 
 /** Picks and grants a daily free case reward when level and cooldown allow. */
-export function tryOpenFreeCase(
+export async function tryOpenFreeCase(
   userId: string,
   slug: string,
   now = Date.now(),
-): FreeCaseOpenResult | null {
+): Promise<FreeCaseOpenResult | null> {
   if (!canPlayerOpenFreeCase(userId, slug)) return null;
   if (!canOpenFreeCase(userId, slug, now)) return null;
 
-  const rewardBase = pickFreeCaseReward(slug);
-  if (!rewardBase) return null;
+  const fairPick = await pickFairCaseReward(userId, slug, { gameType: 'free-case' });
+  if (!fairPick) return null;
 
   const openedAt = now;
-  const granted = createGrantedFreeCaseSkin(rewardBase, openedAt);
+  const granted = attachFairProofToSkin(
+    createGrantedFreeCaseSkin(fairPick.skin, openedAt),
+    fairPick.proof,
+    userId,
+  );
   recordFreeCaseOpen(userId, slug, openedAt);
   return { granted, openedAt };
 }

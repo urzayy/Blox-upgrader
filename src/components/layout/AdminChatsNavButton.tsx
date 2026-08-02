@@ -31,7 +31,7 @@ export function AdminChatsNavButton({
       title="Live chat inbox — deposits and withdrawals"
       aria-label="Open admin live chats inbox"
       onClick={onOpen}
-      className={`group relative flex shrink-0 items-center gap-2 rounded-lg px-2.5 py-2 transition sm:px-3 ${
+      className={`group relative flex shrink-0 items-center rounded-lg px-2 py-2 transition 2xl:gap-2 2xl:px-3 ${
         active
           ? 'bg-cyan-500/[0.12] shadow-[0_0_22px_rgba(34,211,238,0.28)]'
           : 'hover:bg-white/[0.03]'
@@ -48,7 +48,7 @@ export function AdminChatsNavButton({
       </span>
       <span
         className={`relative z-10 whitespace-nowrap font-display font-bold uppercase tracking-wide transition ${
-          compact ? 'text-[10px]' : 'text-[11px] sm:text-xs'
+          compact ? 'text-[10px]' : 'hidden text-[11px] 2xl:inline 2xl:text-xs'
         } ${
           active
             ? 'text-cyan-200'

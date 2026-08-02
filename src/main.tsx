@@ -6,7 +6,7 @@ import { ErrorBoundary } from './components/ErrorBoundary';
 import './index.css';
 
 if (import.meta.env.PROD) {
-  (window as Window & { __BLOX_BUILD?: string }).__BLOX_BUILD = '20260705-supabase-sync';
+  (window as Window & { __BLOX_BUILD?: string }).__BLOX_BUILD = '20260802-localhost-sync';
 }
 
 ReactDOM.createRoot(document.getElementById('root')!).render(

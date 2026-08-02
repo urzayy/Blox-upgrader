@@ -35,8 +35,13 @@ export function useGiveawaysState() {
 
   useEffect(() => {
     void refresh();
-    const id = window.setInterval(() => { void refresh(); }, 15000);
-    return () => window.clearInterval(id);
+    const id = window.setInterval(() => { void refresh(); }, 10000);
+    const onUpdate = () => { void refresh(); };
+    window.addEventListener('giveaway-updated', onUpdate);
+    return () => {
+      window.clearInterval(id);
+      window.removeEventListener('giveaway-updated', onUpdate);
+    };
   }, [refresh]);
 
   return { slots, loading, refresh };

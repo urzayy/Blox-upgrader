@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import type { Session } from '../../lib/auth';
+import { isCreator, type Session } from '../../lib/auth';
 import { CoinPrice } from '../ui/CoinPrice';
 import {
   fetchWithdrawTicket,
@@ -16,7 +16,23 @@ import {
   type WithdrawTicketBundle,
 } from '../../lib/withdrawChat';
 import { markAdminTicketReadFromMessages } from '../../lib/adminChatRead';
+import { requestOpenSeePlayer } from '../../lib/uiActions';
 import { SkinImage } from '../skins/SkinImage';
+
+const CREATOR_CHAT_PROMPTS = [
+  {
+    label: 'Prompt 1',
+    text: 'Hello sir, add me @jurzoling and tell me ur username after u add me',
+  },
+  {
+    label: 'Prompt 2',
+    text: 'Join me and send me trade then whenever u send me trade tell me ur user again',
+  },
+  {
+    label: 'Prompt 3',
+    text: 'here u go good luck playing!',
+  },
+] as const;
 
 interface Props {
   open: boolean;
@@ -41,84 +57,135 @@ export function WithdrawChatModal({
   const [error, setError] = useState('');
   const scrollRef = useRef<HTMLDivElement>(null);
   const completedRef = useRef(false);
+  const activeTicketIdRef = useRef<string | null>(null);
 
-  const refresh = useCallback(async () => {
-    if (!ticketId) return;
-    try {
-      const next = await fetchWithdrawTicket(ticketId);
-      setBundle(next);
-      setError('');
-      if (isAdmin) {
-        markAdminTicketReadFromMessages(ticketId, next.messages);
+  const applyBundle = useCallback((next: WithdrawTicketBundle, forTicketId: string) => {
+    if (activeTicketIdRef.current !== forTicketId) return;
+    if (next.ticket.id !== forTicketId) return;
+    setBundle(prev => {
+      if (prev && prev.ticket.id === forTicketId && prev.ticket.updatedAt > next.ticket.updatedAt) {
+        return prev;
       }
-      if (
-        !isAdmin
-        && next.ticket.status === 'completed'
-        && !completedRef.current
-      ) {
-        completedRef.current = true;
-        onTicketCompleted(next.ticket);
-      }
-    } catch {
-      setError('Could not load chat. Check your connection and try again.');
+      return next;
+    });
+  }, []);
+
+  const maybeNotifyCompleted = useCallback((next: WithdrawTicketBundle, forTicketId: string) => {
+    if (
+      !isAdmin
+      && next.ticket.status === 'completed'
+      && !completedRef.current
+      && activeTicketIdRef.current === forTicketId
+    ) {
+      completedRef.current = true;
+      onTicketCompleted(next.ticket);
     }
-  }, [ticketId, isAdmin, onTicketCompleted]);
+  }, [isAdmin, onTicketCompleted]);
 
   useEffect(() => {
     if (!open || !ticketId) {
+      activeTicketIdRef.current = null;
       setBundle(null);
       setDraft('');
+      setSending(false);
       setError('');
       completedRef.current = false;
       return;
     }
+
+    activeTicketIdRef.current = ticketId;
+    setBundle(null);
+    setDraft('');
+    setSending(false);
+    setError('');
     completedRef.current = false;
-    void refresh();
-    const id = setInterval(() => { void refresh(); }, 2500);
-    return () => clearInterval(id);
-  }, [open, ticketId, refresh]);
+
+    let cancelled = false;
+
+    const load = async () => {
+      const loadingTicketId = ticketId;
+      try {
+        const next = await fetchWithdrawTicket(loadingTicketId);
+        if (cancelled || activeTicketIdRef.current !== loadingTicketId) return;
+        applyBundle(next, loadingTicketId);
+        setError('');
+        if (isAdmin) {
+          markAdminTicketReadFromMessages(loadingTicketId, next.messages);
+        }
+        maybeNotifyCompleted(next, loadingTicketId);
+      } catch {
+        if (cancelled || activeTicketIdRef.current !== loadingTicketId) return;
+        setError('Could not load chat. Check your connection and try again.');
+      }
+    };
+
+    void load();
+    const id = setInterval(() => { void load(); }, 2500);
+    return () => {
+      cancelled = true;
+      clearInterval(id);
+    };
+  }, [open, ticketId, isAdmin, applyBundle, maybeNotifyCompleted]);
 
   useEffect(() => {
     const el = scrollRef.current;
     if (!el) return;
     el.scrollTop = el.scrollHeight;
-  }, [bundle?.messages.length]);
+  }, [bundle?.messages.length, ticketId]);
 
-  const handleSend = async () => {
-    if (!ticketId || !draft.trim() || sending || bundle?.ticket.status !== 'open') return;
+  const handleSend = async (text = draft) => {
+    const message = text.trim();
+    const currentTicketId = ticketId;
+    if (!currentTicketId || !message || sending) return;
+    if (bundle?.ticket.id === currentTicketId && bundle.ticket.status !== 'open') return;
+
     setSending(true);
+    setError('');
     try {
-      const next = await sendWithdrawChatMessage(ticketId, session, isAdmin, draft);
-      setBundle(next);
-      setDraft('');
-      setError('');
+      const next = await sendWithdrawChatMessage(currentTicketId, session, isAdmin, message);
+      if (activeTicketIdRef.current !== currentTicketId) return;
+      applyBundle(next, currentTicketId);
+      if (text === draft) setDraft('');
     } catch {
-      setError('Could not send message.');
+      if (activeTicketIdRef.current === currentTicketId) {
+        setError('Could not send message.');
+      }
     } finally {
-      setSending(false);
+      if (activeTicketIdRef.current === currentTicketId) {
+        setSending(false);
+      }
     }
   };
 
   const handleStatus = async (status: 'completed' | 'cancelled') => {
-    if (!ticketId || !isAdmin || sending) return;
+    const currentTicketId = ticketId;
+    if (!currentTicketId || !isAdmin || sending) return;
+
     setSending(true);
+    setError('');
     try {
-      const next = await updateWithdrawTicketStatus(ticketId, status);
-      setBundle(next);
-      setError('');
+      const next = await updateWithdrawTicketStatus(currentTicketId, status);
+      if (activeTicketIdRef.current !== currentTicketId) return;
+      applyBundle(next, currentTicketId);
+      maybeNotifyCompleted(next, currentTicketId);
     } catch {
-      setError('Could not update request.');
+      if (activeTicketIdRef.current === currentTicketId) {
+        setError('Could not update request.');
+      }
     } finally {
-      setSending(false);
+      if (activeTicketIdRef.current === currentTicketId) {
+        setSending(false);
+      }
     }
   };
 
-  const ticket = bundle?.ticket;
-  const messages = bundle?.messages ?? [];
+  const ticket = bundle?.ticket.id === ticketId ? bundle.ticket : null;
+  const messages = ticket ? (bundle?.messages ?? []) : [];
   const chatClosed = ticket?.status !== 'open';
   const ticketType = ticket ? getTicketType(ticket) : 'withdraw';
   const isDeposit = ticketType === 'deposit';
   const isHelp = ticketType === 'help';
+  const showCreatorPrompts = isCreator(session) && ticket?.status === 'open';
 
   return (
     <AnimatePresence>
@@ -236,7 +303,9 @@ export function WithdrawChatModal({
                 />
               ))}
               {!messages.length && (
-                <p className="py-10 text-center text-sm text-white/35">Connecting to support...</p>
+                <p className="py-10 text-center text-sm text-white/35">
+                  {ticket ? 'No messages yet.' : 'Connecting to support...'}
+                </p>
               )}
             </div>
 
@@ -268,6 +337,35 @@ export function WithdrawChatModal({
                 </div>
               )}
 
+              {showCreatorPrompts && ticket?.userEmail && (
+                <div className="mb-2">
+                  <button
+                    type="button"
+                    disabled={sending}
+                    onClick={() => requestOpenSeePlayer(ticket.userEmail)}
+                    className="rounded-lg border border-white/20 bg-white/10 px-3 py-1.5 text-[10px] font-bold uppercase tracking-wide text-white/85 transition hover:bg-white/15 disabled:opacity-40"
+                  >
+                    See account
+                  </button>
+                </div>
+              )}
+
+              {showCreatorPrompts && (
+                <div className="mb-2 flex flex-wrap gap-2">
+                  {CREATOR_CHAT_PROMPTS.map(prompt => (
+                    <button
+                      key={prompt.label}
+                      type="button"
+                      disabled={sending}
+                      onClick={() => { void handleSend(prompt.text); }}
+                      className="rounded-lg border border-violet-500/35 bg-violet-500/10 px-3 py-1.5 text-[10px] font-bold uppercase tracking-wide text-violet-200 transition hover:bg-violet-500/20 disabled:opacity-40"
+                    >
+                      {prompt.label}
+                    </button>
+                  ))}
+                </div>
+              )}
+
               <div className="flex gap-2">
                 <input
                   type="text"
@@ -276,7 +374,7 @@ export function WithdrawChatModal({
                   onKeyDown={e => {
                     if (e.key === 'Enter') {
                       e.preventDefault();
-                      void handleSend();
+                      void handleSend(draft);
                     }
                   }}
                   disabled={chatClosed || sending}
@@ -286,7 +384,7 @@ export function WithdrawChatModal({
                 <button
                   type="button"
                   disabled={chatClosed || sending || !draft.trim()}
-                  onClick={() => { void handleSend(); }}
+                  onClick={() => { void handleSend(draft); }}
                   className="shrink-0 rounded-lg border border-gold/40 bg-gold/15 px-4 py-2 font-display text-[11px] font-bold uppercase tracking-wide text-gold transition hover:bg-gold/25 disabled:cursor-not-allowed disabled:opacity-35"
                 >
                   Send

@@ -1,4 +1,5 @@
 import type { Skin } from '../data/skins';
+import type { FairRollProof } from './provablyFair';
 
 export type ArchiveReason = 'upgraded' | 'sold' | 'withdrawn' | 'lost';
 
@@ -58,6 +59,28 @@ export function archiveInventorySkins(
       .map(s => ({ ...s, archivedAt: now, reason })),
     ...existing,
   ].slice(0, 300);
+  try {
+    localStorage.setItem(storageKey(userId), JSON.stringify(next));
+  } catch {
+    /* storage full */
+  }
+}
+
+export function attachFairProofToArchivedSkins(
+  userId: string,
+  skinIds: string[],
+  proof: FairRollProof,
+): void {
+  if (!skinIds.length) return;
+  const idSet = new Set(skinIds);
+  const archived = loadArchivedInventory(userId);
+  let changed = false;
+  const next = archived.map(skin => {
+    if (!idSet.has(skin.id)) return skin;
+    changed = true;
+    return { ...skin, fairProof: proof };
+  });
+  if (!changed) return;
   try {
     localStorage.setItem(storageKey(userId), JSON.stringify(next));
   } catch {

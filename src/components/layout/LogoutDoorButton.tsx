@@ -23,7 +23,7 @@ function DoorIcon() {
 export function LogoutDoorButton() {
   const { logout } = useAuth();
   const clean = DEV_CLEAN_HEADER_LAYOUT;
-  const sizeClass = clean ? 'h-11 w-11' : 'h-12 w-12';
+  const sizeClass = clean ? 'h-10 w-10 2xl:h-11 2xl:w-11' : 'h-12 w-12';
 
   return (
     <button

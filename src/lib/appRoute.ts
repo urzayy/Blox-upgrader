@@ -1,4 +1,4 @@
-export type AppRoute = 'main' | 'upgrade' | 'profile' | 'free-cases' | 'giveaways' | 'admin' | 'case-battles';
+export type AppRoute = 'main' | 'upgrade' | 'profile' | 'free-cases' | 'giveaways' | 'admin' | 'case-battles' | 'terms-of-service' | 'privacy-policy' | 'cookie-policy' | 'provably-fair';
 
 export function routeFromPathname(pathname = window.location.pathname): AppRoute {
   const normalized = pathname.replace(/\/+$/, '') || '/';
@@ -8,6 +8,10 @@ export function routeFromPathname(pathname = window.location.pathname): AppRoute
   if (normalized === '/giveaways' || normalized.startsWith('/giveaways/')) return 'giveaways';
   if (normalized === '/case-battles' || normalized.startsWith('/case-battles/')) return 'case-battles';
   if (normalized === '/admin') return 'admin';
+  if (normalized === '/terms-of-service') return 'terms-of-service';
+  if (normalized === '/privacy-policy') return 'privacy-policy';
+  if (normalized === '/cookie-policy') return 'cookie-policy';
+  if (normalized === '/provably-fair') return 'provably-fair';
   return 'main';
 }
 
@@ -24,6 +28,10 @@ export function pathForRoute(route: AppRoute): string {
   if (route === 'giveaways') return '/giveaways';
   if (route === 'case-battles') return '/case-battles';
   if (route === 'admin') return '/admin';
+  if (route === 'terms-of-service') return '/terms-of-service';
+  if (route === 'privacy-policy') return '/privacy-policy';
+  if (route === 'cookie-policy') return '/cookie-policy';
+  if (route === 'provably-fair') return '/provably-fair';
   return '/';
 }
 
@@ -96,6 +104,22 @@ export function navigateCreateCaseBattle(): void {
     window.history.pushState({ route: 'case-battles' }, '', nextPath);
     window.dispatchEvent(new PopStateEvent('popstate'));
   }
+}
+
+export function navigateTermsOfService(): void {
+  navigateApp('terms-of-service');
+}
+
+export function navigatePrivacyPolicy(): void {
+  navigateApp('privacy-policy');
+}
+
+export function navigateCookiePolicy(): void {
+  navigateApp('cookie-policy');
+}
+
+export function navigateProvablyFair(): void {
+  navigateApp('provably-fair');
 }
 
 export function isCreateCaseBattlePath(pathname = window.location.pathname): boolean {

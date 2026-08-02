@@ -7,12 +7,12 @@ import {
 import {
   CASE_PICKER_SECTIONS,
   battleSlotsTotalCount,
+  caseSlotPrice,
   caseSlotQuantity,
   findBattleSlotIndex,
 } from '../../lib/caseBattleCatalog';
 import { resolveSectionCases } from '../../lib/caseCatalogFilters';
 import { catalogCaseToTier } from '../../lib/catalogCaseUi';
-import { getJokerCasePrice } from '../../lib/freeCaseLoot';
 import { CoinPrice } from '../ui/CoinPrice';
 import { BattleCaseQuantitySelector } from './BattleCaseQuantitySelector';
 
@@ -65,7 +65,7 @@ function CasePickerCard({
   onQuantityChange: (quantity: number) => void;
 }) {
   const tier = catalogCaseToTier(item);
-  const price = joker ? getJokerCasePrice(item.slug) : item.price;
+  const price = caseSlotPrice({ slug: item.slug, joker });
 
   return (
     <div
@@ -184,7 +184,7 @@ export function BattleCasePickerModal({
 
     return CASE_PICKER_SECTIONS.map(section => {
       const cases = resolveSectionCases(section.slugs, CASE_CATALOG).filter(item => {
-        const price = joker ? getJokerCasePrice(item.slug) : item.price;
+        const price = caseSlotPrice({ slug: item.slug, joker });
         if (query && !item.name.toLowerCase().includes(query)) return false;
         if (price < priceMin || price > priceMax) return false;
         if (affordableOnly && price > balance) return false;

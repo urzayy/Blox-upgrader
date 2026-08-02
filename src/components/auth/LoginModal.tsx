@@ -1,6 +1,7 @@
-import { useEffect, useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent, type ReactNode } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../../context/AuthContext';
+import { navigateTermsOfService } from '../../lib/appRoute';
 
 export function LoginModal() {
   const { loginOpen, closeLogin, login, isNewEmail } = useAuth();
@@ -150,7 +151,21 @@ export function LoginModal() {
                       id="accept-terms"
                       checked={acceptedTerms}
                       onChange={setAcceptedTerms}
-                      label="I accept the terms of service"
+                      label={
+                        <>
+                          I accept the{' '}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              closeLogin();
+                              navigateTermsOfService();
+                            }}
+                            className="font-semibold text-gold underline decoration-gold/40 underline-offset-2 transition hover:text-gold/80"
+                          >
+                            Terms and Conditions
+                          </button>
+                        </>
+                      }
                     />
                   </motion.div>
                 )}
@@ -186,7 +201,7 @@ function Checkbox({
   id: string;
   checked: boolean;
   onChange: (v: boolean) => void;
-  label: string;
+  label: ReactNode;
 }) {
   return (
     <label htmlFor={id} className="flex cursor-pointer items-start gap-3">

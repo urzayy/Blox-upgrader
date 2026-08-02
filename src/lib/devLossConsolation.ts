@@ -1,5 +1,5 @@
-/** Loss consolation case — enabled in production. */
-export const LOSS_CONSOLATION_ENABLED = true;
+/** Loss consolation case — disabled in local dev; enabled in production builds. */
+export const LOSS_CONSOLATION_ENABLED = !import.meta.env.DEV;
 
 /** Minimum lost stake (coins) to trigger the consolation case. */
 export const MIN_LOSS_CONSOLATION_STAKE = 15;

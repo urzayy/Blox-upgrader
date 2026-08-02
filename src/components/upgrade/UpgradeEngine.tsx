@@ -24,6 +24,7 @@ interface Props {
   onCap: (c: number) => void;
   onUpgradeStart?: () => boolean | void;
   onUpgradeRollLocked?: (roll: RollResult) => void;
+  resolveRoll?: (probability: number) => Promise<RollResult>;
   onComplete: (won: boolean, roll: RollResult) => void;
   showUpgradeButton?: boolean;
   showControls?: boolean;
@@ -45,6 +46,7 @@ export const UpgradeEngine = forwardRef<UpgradeEngineHandle, Props>(function Upg
   onCap,
   onUpgradeStart,
   onUpgradeRollLocked,
+  resolveRoll: resolveRollFn,
   onComplete,
   showUpgradeButton = true,
   showControls = true,
@@ -68,44 +70,48 @@ export const UpgradeEngine = forwardRef<UpgradeEngineHandle, Props>(function Upg
     const started = onUpgradeStart?.();
     if (started === false) return;
 
-    const result = resolveRoll(probability);
-    onUpgradeRollLocked?.(result);
-    setSpinning(true);
-    setPhase('spin');
-    setRollResult(null);
-    sfx.upgradeStart(turbo);
-    spinAudioRef.current.reset(arrowRef.current);
+    void (async () => {
+      const result = resolveRollFn
+        ? await resolveRollFn(probability)
+        : resolveRoll(probability);
+      onUpgradeRollLocked?.(result);
+      setSpinning(true);
+      setPhase('spin');
+      setRollResult(null);
+      sfx.upgradeStart(turbo);
+      spinAudioRef.current.reset(arrowRef.current);
 
-    const { finalArrow } = computeFinalArrowAngle(arrowRef.current, probability, result.won);
-    const anim = { val: arrowRef.current };
-    const spinDuration = turbo ? 1.1 + Math.random() * 0.35 : 4.5 + Math.random() * 1.5;
-    const resultDelay = turbo ? 650 : 2800;
+      const { finalArrow } = computeFinalArrowAngle(arrowRef.current, probability, result.won);
+      const anim = { val: arrowRef.current };
+      const spinDuration = turbo ? 1.1 + Math.random() * 0.35 : 4.5 + Math.random() * 1.5;
+      const resultDelay = turbo ? 650 : 2800;
 
-    gsap.to(anim, {
-      val: finalArrow,
-      duration: spinDuration,
-      ease: turbo ? 'power3.out' : 'power4.out',
-      onUpdate: () => {
-        arrowRef.current = anim.val;
-        setArrowAngle(anim.val);
-        spinAudioRef.current.update(anim.val, turbo);
-      },
-      onComplete: () => {
-        spinAudioRef.current.finish();
-        arrowRef.current = finalArrow;
-        setArrowAngle(finalArrow);
-        setSpinning(false);
-        setRollResult(result);
-        setPhase(result.won ? 'win' : 'lose');
-        result.won ? sfx.win() : sfx.lose();
-        onComplete(result.won, result);
-        setTimeout(() => {
-          setPhase('idle');
-          setRollResult(null);
-        }, resultDelay);
-      },
-    });
-  }, [probability, spinning, turbo, onComplete, onUpgradeStart, onUpgradeRollLocked, requiresLogin, onLoginRequired]);
+      gsap.to(anim, {
+        val: finalArrow,
+        duration: spinDuration,
+        ease: turbo ? 'power3.out' : 'power4.out',
+        onUpdate: () => {
+          arrowRef.current = anim.val;
+          setArrowAngle(anim.val);
+          spinAudioRef.current.update(anim.val, turbo);
+        },
+        onComplete: () => {
+          spinAudioRef.current.finish();
+          arrowRef.current = finalArrow;
+          setArrowAngle(finalArrow);
+          setSpinning(false);
+          setRollResult(result);
+          setPhase(result.won ? 'win' : 'lose');
+          result.won ? sfx.win() : sfx.lose();
+          onComplete(result.won, result);
+          setTimeout(() => {
+            setPhase('idle');
+            setRollResult(null);
+          }, resultDelay);
+        },
+      });
+    })();
+  }, [probability, spinning, turbo, onComplete, onUpgradeStart, onUpgradeRollLocked, resolveRollFn, requiresLogin, onLoginRequired]);
 
   useImperativeHandle(ref, () => ({ runUpgrade, spinning }), [runUpgrade, spinning]);
 

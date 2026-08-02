@@ -23,7 +23,7 @@ import { LiveChatsFloatingButton } from '../support/LiveChatsFloatingButton';
 import { fetchUserWithdrawTickets, type WithdrawTicket } from '../../lib/withdrawChat';
 import { useAdminChatNotifications } from '../../lib/adminChatNotifications';
 import { useActivityLog } from '../../hooks/useActivityLog';
-import { registerAdminPanelHandler } from '../../lib/uiActions';
+import { registerAdminPanelHandler, registerOpenSeePlayerHandler } from '../../lib/uiActions';
 import { DEV_MOBILE_LAYOUT } from '../../lib/devMobileLayout';
 import { MobileHeaderBar } from './ProdMobileHeaderBar';
 import type { Skin } from '../../data/skins';
@@ -65,7 +65,7 @@ export function Header({
   onAdminGiftSent,
   onAccountCleared,
 }: Props) {
-  const { user, profileLabel, openLogin, isAdmin } = useAuth();
+  const { user, profileLabel, openLogin, isAdmin, isCreator } = useAuth();
   const { log } = useActivityLog();
   const [nicknameOpen, setNicknameOpen] = useState(false);
   const [adminOpen, setAdminOpen] = useState(false);
@@ -81,6 +81,7 @@ export function Header({
   const [adminInboxOpen, setAdminInboxOpen] = useState(false);
   const [userDbOpen, setUserDbOpen] = useState(false);
   const [seeOpen, setSeeOpen] = useState(false);
+  const [seeTargetEmail, setSeeTargetEmail] = useState('');
   const [clearOpen, setClearOpen] = useState(false);
   const [announcementOpen, setAnnouncementOpen] = useState(false);
   const [openLiveChatCount, setOpenLiveChatCount] = useState(0);
@@ -104,6 +105,17 @@ export function Header({
     log('CLICK.open_deposit');
     setDepositMethodOpen(true);
   }, [log]);
+
+  const openSeePanel = useCallback((email = '') => {
+    setSeeTargetEmail(email.trim());
+    setSeeOpen(true);
+  }, []);
+
+  useEffect(() => {
+    if (!isCreator) return;
+    registerOpenSeePlayerHandler(openSeePanel);
+    return () => registerOpenSeePlayerHandler(null);
+  }, [isCreator, openSeePanel]);
 
   useEffect(() => {
     onRegisterOpenSupportChat?.(openSupportChat);
@@ -241,6 +253,7 @@ export function Header({
       )}
       {user && (
         <WithdrawChatModal
+          key={supportChatTicketId ?? 'closed'}
           open={supportChatOpen}
           ticketId={supportChatTicketId}
           session={user}
@@ -269,17 +282,21 @@ export function Header({
           onClose={() => setAnnouncementOpen(false)}
         />
       )}
-      {user && isAdmin && (
+      {user && isAdmin && isCreator && (
         <AdminSeePanel
           open={seeOpen}
           adminEmail={user.email}
+          initialEmail={seeTargetEmail}
           localSession={{
             userId: user.userId,
             email: user.email,
             balance,
             inventory,
           }}
-          onClose={() => setSeeOpen(false)}
+          onClose={() => {
+            setSeeOpen(false);
+            setSeeTargetEmail('');
+          }}
         />
       )}
       {user && isAdmin && (
@@ -304,6 +321,7 @@ export function Header({
           profileLabel={profileLabel}
           turbo={turbo}
           isAdmin={isAdmin}
+          isCreator={isCreator}
           openLiveChatCount={openLiveChatCount}
           liveChatsOpen={liveChatsOpen}
           withdrawOpen={withdrawOpen}
@@ -338,7 +356,7 @@ export function Header({
           }}
           onOpenSee={() => {
             log('CLICK.open_admin_see');
-            setSeeOpen(true);
+            openSeePanel();
           }}
           onOpenAdminInbox={() => {
             log('CLICK.open_withdraw_inbox');
@@ -405,13 +423,14 @@ export function Header({
             >
               CLEAR
             </button>
+            {isCreator && (
             <button
               type="button"
               onClick={() => {
                 log('CLICK.open_admin_see');
-                setSeeOpen(true);
+                openSeePanel();
               }}
-              title="View a player's inventory by email"
+              title="View a player's account — inventory and balance"
               className={`shrink-0 rounded-lg border px-2 py-2 font-display text-[10px] font-bold uppercase tracking-wider transition ${
                 seeOpen
                   ? 'border-white/40 bg-white/15 text-white shadow-[0_0_20px_rgba(255,255,255,0.15)]'
@@ -420,6 +439,7 @@ export function Header({
             >
               See
             </button>
+            )}
             <button
               type="button"
               onClick={() => {

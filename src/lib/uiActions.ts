@@ -116,3 +116,15 @@ export function registerAdminPanelHandler(id: AdminPanelId, handler: VoidHandler
 export function requestOpenAdminPanel(id: AdminPanelId): void {
   adminPanelHandlers[id]?.();
 }
+
+type SeePlayerHandler = (email?: string) => void;
+
+let openSeePlayerHandler: SeePlayerHandler | null = null;
+
+export function registerOpenSeePlayerHandler(handler: SeePlayerHandler | null): void {
+  openSeePlayerHandler = handler;
+}
+
+export function requestOpenSeePlayer(email?: string): void {
+  openSeePlayerHandler?.(email);
+}

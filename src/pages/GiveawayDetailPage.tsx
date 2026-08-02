@@ -1,11 +1,17 @@
-import { useMemo, type ReactNode } from 'react';
+import { useMemo, useState, useEffect, type ReactNode } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { CoinPrice } from '../components/ui/CoinPrice';
 import { SkinImage } from '../components/skins/SkinImage';
 import { ProfileAvatar } from '../components/ui/ProfileAvatar';
+import {
+  GiveawayWheelSpin,
+  hasSeenWheel,
+  markWheelSeen,
+} from '../components/giveaways/GiveawayWheelSpin';
 import { useGiveawayDetail } from '../hooks/useGiveawayDetail';
 import { formatGiveawayCountdown, useGiveawayCountdown } from '../hooks/useGiveawayCountdown';
 import {
+  calcGiveawayChance,
   GIVEAWAY_COINS_PER_ENTRY,
   GIVEAWAY_TEMPLATES,
   PLACEHOLDER_PRIZE,
@@ -143,6 +149,43 @@ export function GiveawayDetailPage({ period: rawPeriod }: Props) {
   const myChance = detail?.myChance ?? 0;
   const isParticipant = myDeposited > 0;
   const depositTarget = runtime?.depositRequirement ?? GIVEAWAY_COINS_PER_ENTRY;
+  const totalEntries = detail?.totalEntries ?? 0;
+  const closedAt = runtime?.closedAt ?? null;
+  const winner = detail?.winner ?? runtime?.winner ?? null;
+
+  const [wheelDismissed, setWheelDismissed] = useState(() =>
+    period ? hasSeenWheel(period, closedAt) : true,
+  );
+
+  useEffect(() => {
+    if (period) {
+      setWheelDismissed(hasSeenWheel(period, closedAt));
+    }
+  }, [period, closedAt]);
+
+  const showWheel = Boolean(
+    period
+    && !active
+    && closedAt
+    && winner
+    && detail?.participants?.length
+    && totalEntries > 0
+    && !wheelDismissed,
+  );
+
+  const handleWheelComplete = () => {
+    if (period) markWheelSeen(period, closedAt);
+    setWheelDismissed(true);
+  };
+
+  const participantRows = useMemo(() => {
+    if (!detail?.participants?.length) return [];
+    return detail.participants.map(participant => ({
+      ...participant,
+      displayName: participant.nickname || participant.email.split('@')[0] || 'Player',
+      chance: calcGiveawayChance(participant.entries, totalEntries),
+    }));
+  }, [detail?.participants, totalEntries]);
 
   const nextEntryProgress = useMemo(() => {
     const remainder = myDeposited % GIVEAWAY_COINS_PER_ENTRY;
@@ -498,40 +541,55 @@ export function GiveawayDetailPage({ period: rawPeriod }: Props) {
 
 
 
-            {detail?.participants?.length ? (
-
-              <div className="flex flex-wrap gap-1.5">
-
-                {detail.participants.map(participant => {
-
-                  const isMe = participant.userId === user?.userId;
-
-                  return (
-
-                    <div
-
-                      key={participant.userId}
-
-                      title={`${participant.nickname || participant.email.split('@')[0]} · ${participant.entries} entries`}
-
-                      className={`overflow-hidden rounded-md ${
-
-                        isMe ? 'ring-2 ring-amber-400/80 ring-offset-1 ring-offset-[#101018]' : ''
-
-                      }`}
-
-                    >
-
-                      <ProfileAvatar avatarId={participant.avatarId} size={34} />
-
-                    </div>
-
-                  );
-
-                })}
-
+            {participantRows.length ? (
+              <div className="overflow-x-auto rounded-xl border border-white/[0.08]">
+                <table className="w-full min-w-[520px] text-left text-sm">
+                  <thead>
+                    <tr className="border-b border-white/[0.06] bg-white/[0.02] font-display text-[10px] font-bold uppercase tracking-[0.12em] text-white/40">
+                      <th className="px-4 py-3">Player</th>
+                      <th className="px-4 py-3">Deposited</th>
+                      <th className="px-4 py-3">Entries</th>
+                      <th className="px-4 py-3">Chance</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {participantRows.map(participant => {
+                      const isMe = participant.userId === user?.userId;
+                      const isWinner = winner?.userId === participant.userId;
+                      return (
+                        <tr
+                          key={participant.userId}
+                          className={`border-b border-white/[0.04] last:border-0 ${
+                            isMe ? 'bg-amber-500/[0.06]' : ''
+                          } ${isWinner ? 'bg-violet-500/[0.08]' : ''}`}
+                        >
+                          <td className="px-4 py-3">
+                            <div className="flex items-center gap-2.5">
+                              <ProfileAvatar avatarId={participant.avatarId} size={28} />
+                              <span className="font-semibold text-white/90">
+                                {participant.displayName}
+                                {isMe && <span className="ml-1.5 text-[10px] text-amber-400">(you)</span>}
+                                {isWinner && !active && (
+                                  <span className="ml-1.5 text-[10px] font-bold uppercase text-violet-300">Winner</span>
+                                )}
+                              </span>
+                            </div>
+                          </td>
+                          <td className="px-4 py-3 tabular-nums text-white/70">
+                            {formatUSD(participant.totalDeposited)}
+                          </td>
+                          <td className="px-4 py-3 tabular-nums text-white/70">
+                            {participant.entries}
+                          </td>
+                          <td className="px-4 py-3 tabular-nums font-semibold text-lime-300/90">
+                            {participant.chance.toFixed(participant.chance > 0 && participant.chance < 1 ? 2 : 1)}%
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
               </div>
-
             ) : (
 
               <p className="text-sm text-white/35">
@@ -549,13 +607,21 @@ export function GiveawayDetailPage({ period: rawPeriod }: Props) {
 
 
         {!loading && !active && (
-
           <p className="mt-4 text-center font-display text-xs font-bold uppercase tracking-[0.14em] text-white/35">
-
             This giveaway is closed
-
+            {winner && (
+              <> · Winner: {winner.nickname || winner.email.split('@')[0]} ({winner.chancePercent.toFixed(1)}%)</>
+            )}
           </p>
+        )}
 
+        {showWheel && winner && detail?.participants && (
+          <GiveawayWheelSpin
+            participants={detail.participants}
+            totalEntries={totalEntries}
+            winner={winner}
+            onComplete={handleWheelComplete}
+          />
         )}
 
       </section>

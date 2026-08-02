@@ -43,10 +43,10 @@ export function DiscordLinkButton({ className = '', variant = 'compact' }: Props
       target="_blank"
       rel="noopener noreferrer"
       aria-label="Join our Discord"
-      className={`inline-flex shrink-0 items-center gap-1 rounded-md border border-[#5865F2]/50 bg-gradient-to-r from-[#5865F2] to-[#4752C4] px-2 py-1.5 font-display text-[9px] font-bold uppercase tracking-wide text-white shadow-[0_0_10px_rgba(88,101,242,0.25)] transition hover:border-[#7289DA]/70 hover:from-[#7289DA] hover:to-[#5865F2] hover:shadow-[0_0_16px_rgba(88,101,242,0.4)] ${className}`}
+      className={`inline-flex shrink-0 items-center gap-1 rounded-md border border-[#5865F2]/50 bg-gradient-to-r from-[#5865F2] to-[#4752C4] px-1.5 py-1.5 font-display text-[9px] font-bold uppercase tracking-wide text-white shadow-[0_0_10px_rgba(88,101,242,0.25)] transition hover:border-[#7289DA]/70 hover:from-[#7289DA] hover:to-[#5865F2] hover:shadow-[0_0_16px_rgba(88,101,242,0.4)] 2xl:px-2 ${className}`}
     >
       <DiscordLogo className="h-3 w-3" />
-      <span>Discord</span>
+      <span className="hidden 2xl:inline">Discord</span>
     </a>
   );
 }

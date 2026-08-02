@@ -1,4 +1,5 @@
 import type { FreeCaseLootTable } from './freeCaseLoot';
+import { FIFTY_FIFTY_Z_SLUG_SET } from './caseCatalogFilters';
 
 export type CuratedCaseTier = 'budget' | 'mid' | 'premium' | 'elite' | 'knife' | 'glove';
 
@@ -7,6 +8,14 @@ export interface CuratedCaseOverride {
   tier?: CuratedCaseTier;
   price: number;
   loot: FreeCaseLootTable;
+}
+
+/** +20% on all cases except the 50/50 row. */
+const CASE_PRICE_MARKUP = 1.2;
+
+function withCasePriceMarkup(slug: string, price: number): number {
+  if (FIFTY_FIFTY_Z_SLUG_SET.has(slug)) return price;
+  return Math.round(price * CASE_PRICE_MARKUP * 100) / 100;
 }
 
 /** Hand-configured case prices and loot — survives catalog regeneration. */
@@ -88,7 +97,7 @@ export const CURATED_CASE_OVERRIDES: Record<string, CuratedCaseOverride> = {
   'blade-roulette': {
     name: 'Sakura',
     tier: 'mid',
-    price: 253,
+    price: 310,
     loot: {
       featuredSkinId: 'skin_158_ak_47_sakura',
       entries: [
@@ -121,10 +130,10 @@ export const CURATED_CASE_OVERRIDES: Record<string, CuratedCaseOverride> = {
         { skinId: 'skin_017_sports_gloves_malibu', chance: 0.3 },
         { skinId: 'skin_018_stiletto_violet', chance: 0.5 },
         { skinId: 'skin_042_butterfly_rusted', chance: 1 },
-        { skinId: 'skin_057_gut_fade', chance: 3 },
-        { skinId: 'skin_079_skeleton_blackwidow', chance: 5 },
-        { skinId: 'skin_089_gut_scarlet', chance: 10 },
-        { skinId: 'skin_108_driver_gloves_cardinal_weave', chance: 5 },
+        { skinId: 'skin_057_gut_fade', chance: 2 },
+        { skinId: 'skin_079_skeleton_blackwidow', chance: 3 },
+        { skinId: 'skin_089_gut_scarlet', chance: 7 },
+        { skinId: 'skin_108_driver_gloves_cardinal_weave', chance: 4 },
         { skinId: 'skin_122_awp_metamorphosis', chance: 5 },
         { skinId: 'skin_137_gut_safari', chance: 10 },
         { skinId: 'skin_145_m4a1_s_anodized_red', chance: 8 },
@@ -132,7 +141,7 @@ export const CURATED_CASE_OVERRIDES: Record<string, CuratedCaseOverride> = {
         { skinId: 'skin_153_glock_18_aurora', chance: 10 },
         { skinId: 'skin_155_package_ak_47_pinpoint', chance: 7 },
         { skinId: 'skin_156_desert_eagle_high_octane', chance: 8 },
-        { skinId: 'skin_157_m4a1_s_phaseprint', chance: 7.5 },
+        { skinId: 'skin_157_m4a1_s_phaseprint', chance: 14.5 },
         { skinId: 'skin_173_awp_bird_hunt', chance: 7.5 },
       ],
     },
@@ -149,19 +158,19 @@ export const CURATED_CASE_OVERRIDES: Record<string, CuratedCaseOverride> = {
         { skinId: 'skin_039_awp_beta', chance: 0.2 },
         { skinId: 'skin_079_skeleton_blackwidow', chance: 0.5 },
         { skinId: 'skin_081_butterfly_midnight', chance: 0.5 },
-        { skinId: 'skin_113_stiletto_rusted', chance: 3 },
-        { skinId: 'skin_133_gut_midnight', chance: 5 },
-        { skinId: 'skin_142_gut_woodland', chance: 5 },
-        { skinId: 'skin_145_m4a1_s_anodized_red', chance: 10 },
-        { skinId: 'skin_150_package_awp_tekko', chance: 8 },
+        { skinId: 'skin_113_stiletto_rusted', chance: 2 },
+        { skinId: 'skin_133_gut_midnight', chance: 3 },
+        { skinId: 'skin_142_gut_woodland', chance: 3 },
+        { skinId: 'skin_145_m4a1_s_anodized_red', chance: 7.5 },
+        { skinId: 'skin_150_package_awp_tekko', chance: 7.5 },
         { skinId: 'skin_152_package_m4a4_tekko', chance: 7 },
-        { skinId: 'skin_153_glock_18_aurora', chance: 20 },
+        { skinId: 'skin_153_glock_18_aurora', chance: 15 },
         { skinId: 'skin_156_desert_eagle_high_octane', chance: 10 },
         { skinId: 'skin_158_ak_47_sakura', chance: 5 },
-        { skinId: 'skin_159_awp_tekko', chance: 5 },
-        { skinId: 'skin_157_m4a1_s_phaseprint', chance: 5 },
+        { skinId: 'skin_159_awp_tekko', chance: 12 },
+        { skinId: 'skin_157_m4a1_s_phaseprint', chance: 11 },
         { skinId: 'skin_183_mp9_x_ray', chance: 10 },
-        { skinId: 'skin_184_desert_eagle_permafrost', chance: 10 },
+        { skinId: 'skin_184_desert_eagle_permafrost', chance: 5 },
       ],
     },
   },
@@ -198,7 +207,7 @@ export const CURATED_CASE_OVERRIDES: Record<string, CuratedCaseOverride> = {
   'edge-protocol': {
     name: 'FiveSeven',
     tier: 'budget',
-    price: 5,
+    price: 6,
     loot: {
       featuredSkinId: 'skin_233_ak_47_red_baron',
       entries: [
@@ -320,19 +329,19 @@ export const CURATED_CASE_OVERRIDES: Record<string, CuratedCaseOverride> = {
         { skinId: 'skin_078_butterfly_woodland', chance: 0.1 },
         { skinId: 'skin_088_skeleton_naval', chance: 0.2 },
         { skinId: 'skin_121_flip_violet', chance: 0.5 },
-        { skinId: 'skin_151_awp_high_octane', chance: 2 },
-        { skinId: 'skin_153_glock_18_aurora', chance: 7 },
-        { skinId: 'skin_160_ak_47_luminex', chance: 10 },
-        { skinId: 'skin_161_awp_overdrive', chance: 10 },
-        { skinId: 'skin_163_ak_47_midas', chance: 10 },
+        { skinId: 'skin_151_awp_high_octane', chance: 1 },
+        { skinId: 'skin_153_glock_18_aurora', chance: 2 },
+        { skinId: 'skin_160_ak_47_luminex', chance: 2 },
+        { skinId: 'skin_161_awp_overdrive', chance: 3.5 },
+        { skinId: 'skin_163_ak_47_midas', chance: 4 },
         { skinId: 'skin_177_m4a1_s_retro', chance: 5 },
         { skinId: 'skin_178_sawed_off_supersoaked', chance: 15 },
         { skinId: 'skin_180_glock_18_pinpoint', chance: 10 },
         { skinId: 'skin_182_p90_pinpoint', chance: 10 },
-        { skinId: 'skin_183_mp9_x_ray', chance: 5 },
-        { skinId: 'skin_184_desert_eagle_permafrost', chance: 5 },
-        { skinId: 'skin_186_famas_mind', chance: 5 },
-        { skinId: 'skin_188_galil_ar_irid', chance: 5 },
+        { skinId: 'skin_183_mp9_x_ray', chance: 12 },
+        { skinId: 'skin_184_desert_eagle_permafrost', chance: 10 },
+        { skinId: 'skin_186_famas_mind', chance: 10 },
+        { skinId: 'skin_188_galil_ar_irid', chance: 14.5 },
       ],
     },
   },
@@ -372,21 +381,21 @@ export const CURATED_CASE_OVERRIDES: Record<string, CuratedCaseOverride> = {
         { skinId: 'skin_145_m4a1_s_anodized_red', chance: 1 },
         { skinId: 'skin_153_glock_18_aurora', chance: 1 },
         { skinId: 'skin_154_package_usp_s_tekko', chance: 2 },
-        { skinId: 'skin_156_desert_eagle_high_octane', chance: 5 },
-        { skinId: 'skin_158_ak_47_sakura', chance: 15 },
-        { skinId: 'skin_160_ak_47_luminex', chance: 10 },
+        { skinId: 'skin_156_desert_eagle_high_octane', chance: 3 },
+        { skinId: 'skin_158_ak_47_sakura', chance: 10 },
+        { skinId: 'skin_160_ak_47_luminex', chance: 7 },
         { skinId: 'skin_169_usp_s_tekko', chance: 5 },
-        { skinId: 'skin_157_m4a1_s_phaseprint', chance: 20 },
+        { skinId: 'skin_157_m4a1_s_phaseprint', chance: 13 },
         { skinId: 'skin_174_mp9_high_octane', chance: 9 },
         { skinId: 'skin_175_usp_s_supersoaked', chance: 11 },
-        { skinId: 'skin_183_mp9_x_ray', chance: 8 },
-        { skinId: 'skin_185_awp_typhon', chance: 12 },
+        { skinId: 'skin_183_mp9_x_ray', chance: 18 },
+        { skinId: 'skin_185_awp_typhon', chance: 19 },
       ],
     },
   },
   'operator-wrap': {
     name: 'Checkers',
-    price: 760,
+    price: 950,
     loot: {
       featuredSkinId: 'skin_139_hand_wraps_checkers',
       entries: [
@@ -403,17 +412,17 @@ export const CURATED_CASE_OVERRIDES: Record<string, CuratedCaseOverride> = {
         { skinId: 'skin_019_karambit_scarlet', chance: 0.1 },
         { skinId: 'skin_034_skeleton_scarlet', chance: 0.4 },
         { skinId: 'skin_044_flip_scarlet', chance: 1.5 },
-        { skinId: 'skin_052_driver_gloves_snow_leopard', chance: 3 },
-        { skinId: 'skin_080_driver_gloves_cobra', chance: 5 },
-        { skinId: 'skin_116_sports_gloves_hunter', chance: 10 },
-        { skinId: 'skin_127_gut_violet', chance: 10 },
-        { skinId: 'skin_140_gut_rusted', chance: 12 },
+        { skinId: 'skin_052_driver_gloves_snow_leopard', chance: 1.5 },
+        { skinId: 'skin_080_driver_gloves_cobra', chance: 2.5 },
+        { skinId: 'skin_116_sports_gloves_hunter', chance: 6 },
+        { skinId: 'skin_127_gut_violet', chance: 8 },
+        { skinId: 'skin_140_gut_rusted', chance: 10 },
         { skinId: 'skin_146_package_mp9_high_octane', chance: 8 },
         { skinId: 'skin_153_glock_18_aurora', chance: 7 },
         { skinId: 'skin_156_desert_eagle_high_octane', chance: 13 },
-        { skinId: 'skin_158_ak_47_sakura', chance: 10 },
+        { skinId: 'skin_158_ak_47_sakura', chance: 20 },
         { skinId: 'skin_159_awp_tekko', chance: 10 },
-        { skinId: 'skin_160_ak_47_luminex', chance: 10 },
+        { skinId: 'skin_160_ak_47_luminex', chance: 12 },
       ],
     },
   },
@@ -492,9 +501,9 @@ export const CURATED_CASE_OVERRIDES: Record<string, CuratedCaseOverride> = {
         { skinId: 'skin_181_m4a4_b_hop', chance: 3 },
         { skinId: 'skin_179_m4a1_s_orchids', chance: 2 },
         { skinId: 'skin_178_sawed_off_supersoaked', chance: 2 },
-        { skinId: 'skin_184_desert_eagle_permafrost', chance: 15 },
+        { skinId: 'skin_184_desert_eagle_permafrost', chance: 5 },
         { skinId: 'skin_186_famas_mind', chance: 17 },
-        { skinId: 'skin_185_awp_typhon', chance: 25 },
+        { skinId: 'skin_185_awp_typhon', chance: 35 },
         { skinId: 'skin_210_dual_berettas_choking_hazard', chance: 31.693 },
       ],
     },
@@ -526,7 +535,7 @@ export const CURATED_CASE_OVERRIDES: Record<string, CuratedCaseOverride> = {
   'sport-palm': {
     name: 'Castroil',
     tier: 'mid',
-    price: 90,
+    price: 125,
     loot: {
       featuredSkinId: 'skin_206_m4a1_s_castroil',
       entries: [
@@ -563,7 +572,7 @@ export const CURATED_CASE_OVERRIDES: Record<string, CuratedCaseOverride> = {
   'striker-knife': {
     name: 'MIDAS',
     tier: 'budget',
-    price: 25,
+    price: 30,
     loot: {
       featuredSkinId: 'skin_234_aug_hot_rod',
       entries: [
@@ -612,12 +621,17 @@ export function applyCuratedCaseOverrides<
 >(catalog: T[]): T[] {
   return catalog.map(item => {
     const override = CURATED_CASE_OVERRIDES[item.slug];
-    if (!override) return item;
+    if (!override) {
+      return {
+        ...item,
+        price: withCasePriceMarkup(item.slug, item.price),
+      };
+    }
     return {
       ...item,
       ...(override.name != null ? { name: override.name } : {}),
       ...(override.tier != null ? { tier: override.tier } : {}),
-      price: override.price,
+      price: withCasePriceMarkup(item.slug, override.price),
       loot: override.loot,
     };
   });

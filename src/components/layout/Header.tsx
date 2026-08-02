@@ -26,7 +26,7 @@ import { DEV_MOBILE_LAYOUT } from '../../lib/devMobileLayout';
 import { DEV_CLEAN_HEADER_LAYOUT } from '../../lib/devCleanHeaderLayout';
 import { cleanHeaderShell, cleanHeaderChip } from '../../lib/cleanHeaderClasses';
 import { navigateApp } from '../../lib/appRoute';
-import { registerOpenDepositHandler, registerOpenWithdrawHandler, registerAdminPanelHandler } from '../../lib/uiActions';
+import { registerOpenDepositHandler, registerOpenWithdrawHandler, registerAdminPanelHandler, registerOpenSeePlayerHandler } from '../../lib/uiActions';
 import { useAppRoute } from '../../hooks/useAppRoute';
 import { MobileHeaderBar } from './MobileHeaderBar';
 import { HeaderNavMenu } from './HeaderNavMenu';
@@ -66,7 +66,7 @@ export function Header({
   onAdminGiftSent,
   onAccountCleared,
 }: Props) {
-  const { user, openLogin, isAdmin } = useAuth();
+  const { user, openLogin, isAdmin, isCreator } = useAuth();
   const { log } = useActivityLog();
   const isProfilePage = useAppRoute() === 'profile';
   const isMainPage = useAppRoute() === 'main';
@@ -75,7 +75,11 @@ export function Header({
   const isGiveawaysPage = useAppRoute() === 'giveaways';
   const isCaseBattlesPage = useAppRoute() === 'case-battles';
   const isAdminPage = useAppRoute() === 'admin';
-  const isScrollableHeader = isMainPage || isProfilePage || isUpgradePage || isFreeCasesPage || isGiveawaysPage || isCaseBattlesPage || isAdminPage;
+  const isTermsPage = useAppRoute() === 'terms-of-service';
+  const isPrivacyPage = useAppRoute() === 'privacy-policy';
+  const isCookiePage = useAppRoute() === 'cookie-policy';
+  const isProvablyFairPage = useAppRoute() === 'provably-fair';
+  const isScrollableHeader = isMainPage || isProfilePage || isUpgradePage || isFreeCasesPage || isGiveawaysPage || isCaseBattlesPage || isAdminPage || isTermsPage || isPrivacyPage || isCookiePage || isProvablyFairPage;
   const [adminOpen, setAdminOpen] = useState(false);
   const [giftOpen, setGiftOpen] = useState(false);
   const [giftMoneyOpen, setGiftMoneyOpen] = useState(false);
@@ -90,6 +94,7 @@ export function Header({
   const [adminInboxOpen, setAdminInboxOpen] = useState(false);
   const [userDbOpen, setUserDbOpen] = useState(false);
   const [seeOpen, setSeeOpen] = useState(false);
+  const [seeTargetEmail, setSeeTargetEmail] = useState('');
   const [clearOpen, setClearOpen] = useState(false);
   const [announcementOpen, setAnnouncementOpen] = useState(false);
   const [openLiveChatCount, setOpenLiveChatCount] = useState(0);
@@ -130,15 +135,20 @@ export function Header({
     return () => registerOpenWithdrawHandler(null);
   }, [openWithdrawFlow]);
 
+  const openSeePanel = useCallback((email = '') => {
+    setSeeTargetEmail(email.trim());
+    setSeeOpen(true);
+  }, []);
+
   useEffect(() => {
-    if (!isAdmin) return;
+    if (!isAdmin || !isCreator) return;
     registerAdminPanelHandler('clear', () => {
       log('CLICK.open_admin_clear');
       setClearOpen(true);
     });
     registerAdminPanelHandler('see', () => {
       log('CLICK.open_admin_see');
-      setSeeOpen(true);
+      openSeePanel();
     });
     registerAdminPanelHandler('inbox', () => {
       log('CLICK.open_withdraw_inbox');
@@ -174,7 +184,13 @@ export function Header({
       registerAdminPanelHandler('skinPicker', null);
       registerAdminPanelHandler('announcement', null);
     };
-  }, [isAdmin, log]);
+  }, [isAdmin, isCreator, log, openSeePanel]);
+
+  useEffect(() => {
+    if (!isCreator) return;
+    registerOpenSeePlayerHandler(openSeePanel);
+    return () => registerOpenSeePlayerHandler(null);
+  }, [isCreator, openSeePanel]);
 
   useEffect(() => {
     onRegisterOpenSupportChat?.(openSupportChat);
@@ -306,6 +322,7 @@ export function Header({
       )}
       {user && (
         <WithdrawChatModal
+          key={supportChatTicketId ?? 'closed'}
           open={supportChatOpen}
           ticketId={supportChatTicketId}
           session={user}
@@ -334,17 +351,21 @@ export function Header({
           onClose={() => setAnnouncementOpen(false)}
         />
       )}
-      {user && isAdmin && (
+      {user && isAdmin && isCreator && (
         <AdminSeePanel
           open={seeOpen}
           adminEmail={user.email}
+          initialEmail={seeTargetEmail}
           localSession={{
             userId: user.userId,
             email: user.email,
             balance,
             inventory,
           }}
-          onClose={() => setSeeOpen(false)}
+          onClose={() => {
+            setSeeOpen(false);
+            setSeeTargetEmail('');
+          }}
         />
       )}
       {user && isAdmin && (
@@ -357,14 +378,14 @@ export function Header({
 
       <header className={
         DEV_MOBILE_LAYOUT
-          ? `${isScrollableHeader ? 'relative' : 'sticky top-0'} z-50 border-b backdrop-blur-xl max-lg:border-white/5 max-lg:bg-[#0a0812]/90 lg:px-4 ${
+          ? `${isScrollableHeader ? 'relative' : 'sticky top-0'} z-50 border-b backdrop-blur-xl max-xl:border-white/5 max-xl:bg-[#0a0812]/90 xl:px-4 ${
             DEV_CLEAN_HEADER_LAYOUT
-              ? cleanHeaderShell('lg:px-10')
-              : 'border-white/5 bg-deep/90 lg:py-3'
+              ? cleanHeaderShell('xl:px-6 2xl:px-10')
+              : 'border-white/5 bg-deep/90 xl:py-3'
           }`
-          : `${isScrollableHeader ? 'relative' : 'sticky top-0'} z-50 grid grid-cols-[1fr_auto_1fr] items-center backdrop-blur-xl ${
+          : `${isScrollableHeader ? 'relative' : 'sticky top-0'} z-50 grid grid-cols-[auto_minmax(0,1fr)_auto] items-center backdrop-blur-xl ${
             DEV_CLEAN_HEADER_LAYOUT
-              ? `${cleanHeaderShell()} gap-6 lg:gap-8`
+              ? `${cleanHeaderShell()} gap-4 xl:gap-6 2xl:gap-8`
               : 'gap-4 border-b border-white/5 bg-deep/90 px-4 py-3'
           }`
       }
@@ -382,13 +403,10 @@ export function Header({
         />
       )}
 
-      <div className={DEV_MOBILE_LAYOUT ? `hidden lg:grid lg:grid-cols-[1fr_auto_1fr] lg:items-center ${
-        DEV_CLEAN_HEADER_LAYOUT ? 'lg:gap-8' : 'lg:gap-4'
+      <div className={DEV_MOBILE_LAYOUT ? `hidden xl:grid xl:grid-cols-[auto_minmax(0,1fr)_auto] xl:items-center ${
+        DEV_CLEAN_HEADER_LAYOUT ? 'xl:gap-4 2xl:gap-8' : 'xl:gap-4'
       }` : 'contents'}>
-      <div className={`flex min-w-0 justify-self-start ${
-        DEV_CLEAN_HEADER_LAYOUT ? 'items-center gap-6 lg:gap-10' : 'items-center gap-4'
-      }`}
-      >
+      <div className="flex shrink-0 justify-self-start">
         <div className={`flex shrink-0 ${
           DEV_CLEAN_HEADER_LAYOUT ? 'flex-col items-start gap-1' : 'items-center gap-3'
         }`}
@@ -437,7 +455,9 @@ export function Header({
         </div>
         )}
         </div>
+      </div>
 
+      <div className="flex min-w-0 items-center justify-center justify-self-center overflow-hidden px-1">
         <HeaderNavMenu
           adminInboxOpen={adminInboxOpen || supportChatOpen}
           adminChatAttentionCount={adminChatAttentionCount}
@@ -446,27 +466,21 @@ export function Header({
             setAdminInboxOpen(true);
           } : undefined}
         />
-      </div>
-
-      <div className={`flex min-w-0 items-center justify-self-center overflow-x-auto ${
-        DEV_CLEAN_HEADER_LAYOUT ? 'gap-3' : 'gap-2'
-      }`}
-      >
         {!DEV_CLEAN_HEADER_LAYOUT && (
-        <div className="flex items-center gap-1.5">
-          <Stat label="Inventory value" value={inventoryTotal(inventory)} />
-          <Stat label="BALANCE" value={balance} />
-        </div>
+          <div className="ml-3 flex shrink-0 items-center gap-1.5">
+            <Stat label="Inventory value" value={inventoryTotal(inventory)} />
+            <Stat label="BALANCE" value={balance} />
+          </div>
         )}
       </div>
 
-      <div className={`flex items-center justify-self-end ${
-        DEV_CLEAN_HEADER_LAYOUT ? 'gap-2' : 'gap-2.5'
+      <div className={`flex min-w-0 shrink-0 items-center justify-self-end overflow-x-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden ${
+        DEV_CLEAN_HEADER_LAYOUT ? 'gap-1.5 xl:gap-2' : 'gap-2'
       }`}
       >
         {user ? (
           <>
-            <div className={`flex items-center ${DEV_CLEAN_HEADER_LAYOUT ? 'gap-1 -translate-x-1' : 'gap-1.5 -translate-x-0.5'}`}>
+            <div className={`flex shrink-0 items-center ${DEV_CLEAN_HEADER_LAYOUT ? 'gap-1' : 'gap-1.5'}`}>
               {!isAdmin && (
                 <button
                   type="button"
@@ -474,12 +488,12 @@ export function Header({
                     log('CLICK.open_live_chats');
                     setLiveChatsOpen(true);
                   }}
-                  className={`relative hidden rounded-md border font-display font-bold uppercase transition lg:inline-flex ${
+                  className={`relative hidden shrink-0 rounded-md border font-display font-bold uppercase transition xl:inline-flex ${
                     DEV_CLEAN_HEADER_LAYOUT
-                      ? 'px-4 py-2.5 text-xs tracking-[0.1em]'
+                      ? 'px-2.5 py-2 text-[10px] tracking-[0.08em] 2xl:px-4 2xl:py-2.5 2xl:text-xs 2xl:tracking-[0.1em]'
                       : 'px-3 py-1.5 text-[10px] tracking-[0.12em] backdrop-blur-xl'
                   } ${
-                    openLiveChatCount > 0 ? (DEV_CLEAN_HEADER_LAYOUT ? 'pr-6' : 'pr-7') : ''
+                    openLiveChatCount > 0 ? (DEV_CLEAN_HEADER_LAYOUT ? 'pr-5 2xl:pr-6' : 'pr-7') : ''
                   } ${
                     liveChatsOpen
                       ? DEV_CLEAN_HEADER_LAYOUT
@@ -490,7 +504,8 @@ export function Header({
                         : 'border-win/25 bg-win/10 text-win hover:border-win/40 hover:bg-win/15'
                   }`}
                 >
-                  Live Chats
+                  <span className="2xl:hidden">Chats</span>
+                  <span className="hidden 2xl:inline">Live Chats</span>
                   {openLiveChatCount > 0 && (
                     <span className={`absolute right-1 top-1 flex items-center justify-center rounded-full bg-gold font-black leading-none text-deep shadow-[0_0_6px_rgba(176,108,255,0.5)] ${
                       DEV_CLEAN_HEADER_LAYOUT ? 'h-3.5 min-w-3.5 px-0.5 text-[8px]' : 'h-4 min-w-4 px-1 text-[9px]'
@@ -510,9 +525,9 @@ export function Header({
             <button
               type="button"
               onClick={openDepositFlow}
-              className={`group relative overflow-hidden rounded-md border border-gold/45 font-display font-bold uppercase text-[#f5f0ff] shadow-[0_0_20px_rgba(176,108,255,0.3),inset_0_1px_0_rgba(255,255,255,0.35)] backdrop-blur-xl transition hover:border-gold hover:shadow-[0_0_32px_rgba(176,108,255,0.5),inset_0_1px_0_rgba(255,255,255,0.45)] ${
+              className={`group relative shrink-0 overflow-hidden rounded-md border border-gold/45 font-display font-bold uppercase text-[#f5f0ff] shadow-[0_0_20px_rgba(176,108,255,0.3),inset_0_1px_0_rgba(255,255,255,0.35)] backdrop-blur-xl transition hover:border-gold hover:shadow-[0_0_32px_rgba(176,108,255,0.5),inset_0_1px_0_rgba(255,255,255,0.45)] ${
                 DEV_CLEAN_HEADER_LAYOUT
-                  ? 'px-5 py-2.5 text-xs tracking-[0.1em]'
+                  ? 'px-3 py-2 text-[10px] tracking-[0.08em] 2xl:px-5 2xl:py-2.5 2xl:text-xs 2xl:tracking-[0.1em]'
                   : 'px-3.5 py-1.5 text-[11px] tracking-[0.14em]'
               }`}
             >
@@ -531,9 +546,9 @@ export function Header({
             <button
                 type="button"
                 onClick={() => openWithdrawFlow()}
-                className={`group relative overflow-hidden rounded-md border font-display font-bold uppercase text-white shadow-[0_0_16px_rgba(255,255,255,0.1),inset_0_1px_0_rgba(255,255,255,0.2)] backdrop-blur-xl transition hover:border-white/35 hover:shadow-[0_0_24px_rgba(255,255,255,0.18),inset_0_1px_0_rgba(255,255,255,0.28)] ${
+                className={`group relative shrink-0 overflow-hidden rounded-md border font-display font-bold uppercase text-white shadow-[0_0_16px_rgba(255,255,255,0.1),inset_0_1px_0_rgba(255,255,255,0.2)] backdrop-blur-xl transition hover:border-white/35 hover:shadow-[0_0_24px_rgba(255,255,255,0.18),inset_0_1px_0_rgba(255,255,255,0.28)] ${
                   DEV_CLEAN_HEADER_LAYOUT
-                    ? 'px-5 py-2.5 text-xs tracking-[0.1em]'
+                    ? 'px-3 py-2 text-[10px] tracking-[0.08em] 2xl:px-5 2xl:py-2.5 2xl:text-xs 2xl:tracking-[0.1em]'
                     : 'px-3.5 py-1.5 text-[11px] tracking-[0.14em]'
                 } ${
                   withdrawOpen ? 'border-white/40' : 'border-white/20'

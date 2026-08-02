@@ -1,5 +1,6 @@
 import type { Skin } from '../data/skins';
 import type { RollResult } from './wheelMath';
+import type { FairRollProof } from './provablyFair';
 
 export interface PendingUpgrade {
   inputSkinIds: string[];
@@ -10,6 +11,7 @@ export interface PendingUpgrade {
   targetPrice: number;
   probability: number;
   roll?: RollResult;
+  fairProof?: FairRollProof;
   won?: boolean;
   timestamp: number;
 }
@@ -52,12 +54,17 @@ export function loadPendingUpgrade(userId: string): PendingUpgrade | null {
   }
 }
 
-export function lockPendingUpgradeRoll(userId: string, roll: RollResult): void {
+export function lockPendingUpgradeRoll(
+  userId: string,
+  roll: RollResult,
+  fairProof?: FairRollProof,
+): void {
   const pending = loadPendingUpgrade(userId);
   if (!pending) return;
   savePendingUpgrade(userId, {
     ...pending,
     roll,
+    fairProof,
     won: roll.won,
   });
 }

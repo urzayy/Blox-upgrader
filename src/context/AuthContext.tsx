@@ -11,6 +11,7 @@ import {
   isCreator as checkIsCreator,
   type Session,
 } from '../lib/auth';
+import { setEssentialCookiesEnabled } from '../lib/cookies';
 import { appendUserLog, initUserLogFile } from '../lib/userActivityLog';
 import { fetchAccountBanStatus } from '../lib/accountBanApi';
 import { fetchAdminStatus } from '../lib/adminEmailsApi';
@@ -57,6 +58,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setIsAdmin(status.isAdmin);
     setIsCreator(status.isCreator);
   }, [user]);
+
+  useEffect(() => {
+    setEssentialCookiesEnabled();
+  }, []);
 
   useEffect(() => {
     void refreshAdminStatus();

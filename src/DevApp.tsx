@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { flushSync } from 'react-dom';
 import { LayoutGroup } from 'framer-motion';
 import { Header } from './components/layout/Header';
+import { SiteFooter } from './components/layout/SiteFooter';
 import { LiveFeed } from './components/layout/LiveFeed';
 import { UpgradePage } from './pages/UpgradePage';
 import { ParticleField } from './components/effects/ParticleField';
@@ -16,7 +17,9 @@ import {
   touchLocalPlayerStateUpdatedAt,
 } from './lib/playerStateHydration';
 import { logUpgradeResult } from './lib/userActivityLog';
-import { calcProbability, formatUSD, type RollResult } from './lib/wheelMath';
+import { calcProbability, formatUSD, winRollMax, type RollResult } from './lib/wheelMath';
+import { executeFairRoll, resolveRollFromProof, type FairRollProof } from './lib/provablyFair';
+import { saveFairProof } from './lib/fairProofStorage';
 import { applyUpgradeWin, commitUpgradeStake, createConsolationGrantedSkin, grantSkinToInventory, inventoryTotal, MAX_INPUT_SKINS, purchaseSkinCopies, sellSkinFromInventory, withdrawSkinsFromInventory } from './lib/inventory';
 import { loadInventory, saveInventory, clearInventoryForUserId, getInventoryStorageKey } from './lib/inventoryStorage';
 import { loadBalance, saveBalance, clearBalanceForUserId, getBalanceStorageKey } from './lib/balanceStorage';
@@ -67,15 +70,15 @@ import { DEV_FEED_CLIENT_POLL_MS } from './lib/devLiveFeed';
 import { buildLossConsolationCase, type LossConsolationResult } from './lib/lossConsolationCase';
 import { LossConsolationCaseModal } from './components/upgrade/LossConsolationCaseModal';
 import { useAppRoute, useBattleId, useCaseSlug, useFreeCaseSlug, useGiveawayPeriod, useIsCreateCaseBattle } from './hooks/useAppRoute';
-import { recordGiveawayDeposit, ackGiveawayWin, fetchPendingGiveawayWins, type GiveawayPendingWin } from './lib/giveawayApi';
-import { resolveAvatarId } from './lib/profileAvatars';
+import { ackGiveawayWin, fetchPendingGiveawayWins, type GiveawayPendingWin } from './lib/giveawayApi';
+import { dispatchGiveawayUpdated } from './hooks/useGiveawayDetail';
 import { navigateApp } from './lib/appRoute';
 import { XP_PER_WAGERED_COIN } from './lib/playerLevel';
 import { clearXpForUserId, addWagerXp } from './lib/xpStorage';
 import { clearFreeCaseCooldowns } from './lib/freeCaseCooldown';
 import { registerBattleEntryHandlers, registerGrantBalanceHandler, registerGrantSkinsHandler, registerSellSkinHandler, registerSyncPlayerHandler, registerUpgradeWithSkinHandler } from './lib/uiActions';
 import { bootstrapCaseBattleEngine } from './lib/caseBattleEngine';
-import { archiveInventorySkins } from './lib/inventoryArchiveStorage';
+import { archiveInventorySkins, attachFairProofToArchivedSkins } from './lib/inventoryArchiveStorage';
 import { ProfilePage } from './pages/ProfilePage';
 import { MainPage } from './pages/MainPage';
 import { CaseBattlesPage } from './pages/CaseBattlesPage';
@@ -90,6 +93,10 @@ import { GiveawayWinModal } from './components/giveaways/GiveawayWinModal';
 import { PlayerAnnouncementModal } from './components/announcements/PlayerAnnouncementModal';
 import { usePlayerAnnouncement } from './hooks/usePlayerAnnouncement';
 import { AdminPage } from './pages/AdminPage';
+import { TermsOfServicePage } from './pages/TermsOfServicePage';
+import { PrivacyPolicyPage } from './pages/PrivacyPolicyPage';
+import { CookiePolicyPage } from './pages/CookiePolicyPage';
+import { ProvablyFairPage } from './pages/ProvablyFairPage';
 
 export default function DevApp() {
   const { user, logout: authLogout, openLogin } = useAuth();
@@ -110,6 +117,7 @@ export default function DevApp() {
   const [feed, setFeed] = useState<FeedItem[]>([]);
   const [totalUpgrades, setTotalUpgrades] = useState(BASE_TOTAL_UPGRADES);
   const [playersOnline, setPlayersOnline] = useState(650);
+  const [registeredUsers, setRegisteredUsers] = useState(0);
   const [turbo, setTurbo] = useState(false);
   const [lockedSkinIds, setLockedSkinIds] = useState<Set<string>>(() => new Set());
   const [playerStateHydrated, setPlayerStateHydrated] = useState(() => !user);
@@ -137,6 +145,7 @@ export default function DevApp() {
   const pendingUpgradeRecoveredRef = useRef<string | null>(null);
   const pendingConsolationRecoveredRef = useRef<string | null>(null);
   const upgradeSessionKeyRef = useRef<string | null>(null);
+  const upgradeFairProofRef = useRef<FairRollProof | null>(null);
   const [lossCase, setLossCase] = useState<{
     lostValue: number;
     inputLabel: string;
@@ -188,7 +197,11 @@ export default function DevApp() {
   const isGiveawaysPage = route === 'giveaways';
   const isCaseBattlesPage = route === 'case-battles';
   const isAdminPage = route === 'admin';
-  const isScrollablePage = isMainPage || isProfilePage || isUpgradePage || isFreeCasesPage || isGiveawaysPage || isCaseBattlesPage || isAdminPage;
+  const isTermsPage = route === 'terms-of-service';
+  const isPrivacyPage = route === 'privacy-policy';
+  const isCookiePage = route === 'cookie-policy';
+  const isProvablyFairPage = route === 'provably-fair';
+  const isScrollablePage = isMainPage || isProfilePage || isUpgradePage || isFreeCasesPage || isGiveawaysPage || isCaseBattlesPage || isAdminPage || isTermsPage || isPrivacyPage || isCookiePage || isProvablyFairPage;
   const canUpgrade = probability > 0;
 
   useEffect(() => {
@@ -651,15 +664,7 @@ export default function DevApp() {
       });
     }
     setBalance(prev => prev + amount);
-    void recordGiveawayDeposit({
-      userId: user.userId,
-      amount,
-      email: user.email,
-      nickname: user.nickname,
-      avatarId: resolveAvatarId(user.avatarId, user.email),
-    }).then(ok => {
-      if (ok) window.dispatchEvent(new CustomEvent('giveaway-deposit-recorded'));
-    });
+    dispatchGiveawayUpdated();
   }, [user, log]);
 
   const handleWithdrawTicketCompleted = useCallback((ticket: WithdrawTicket) => {
@@ -1079,7 +1084,7 @@ export default function DevApp() {
       try {
         const state = await fetchSiteState();
         if (cancelled) return;
-        applySiteState(state, { setFeed, setTotalUpgrades, setPlayersOnline });
+        applySiteState(state, { setFeed, setTotalUpgrades, setPlayersOnline, setRegisteredUsers });
       } catch {
         /* dev API offline */
       }
@@ -1139,7 +1144,7 @@ export default function DevApp() {
     };
 
     void publishFeedEvent(feedItem)
-      .then(state => applySiteState(state, { setFeed, setTotalUpgrades, setPlayersOnline }))
+      .then(state => applySiteState(state, { setFeed, setTotalUpgrades, setPlayersOnline, setRegisteredUsers }))
       .catch(() => { /* polling will catch up */ });
   }, [user, logUser]);
 
@@ -1176,6 +1181,10 @@ export default function DevApp() {
 
   useEffect(() => {
     if (!user) return;
+    if (import.meta.env.DEV) {
+      clearPendingLossConsolation(user.userId);
+      return;
+    }
     if (pendingConsolationRecoveredRef.current === user.userId) return;
     pendingConsolationRecoveredRef.current = user.userId;
 
@@ -1247,7 +1256,17 @@ export default function DevApp() {
 
     if (won) {
       const current = loadInventory(user.userId);
-      const next = applyUpgradeWin(current, targetSkin, sessionKey);
+      let next = applyUpgradeWin(current, targetSkin, sessionKey);
+      const fairProof = upgradeFairProofRef.current ?? pendingBeforeClear?.fairProof ?? null;
+      if (fairProof && sessionKey) {
+        next = next.map(skin =>
+          skin.id === `inv_upgrade_${sessionKey}`
+            ? { ...skin, fairProof }
+            : skin,
+        );
+        saveFairProof(user.userId, `inv_upgrade_${sessionKey}`, fairProof);
+      }
+      upgradeFairProofRef.current = null;
       inventoryRef.current = next;
       saveInventory(next, user.userId);
       flushSync(() => setInventory(next));
@@ -1396,9 +1415,35 @@ export default function DevApp() {
     return true;
   }, [user, inputSkins, targetSkin, probability, turbo, log, pushPlayerStateSync]);
 
+  const resolveUpgradeRoll = useCallback(async (rollProbability: number): Promise<RollResult> => {
+    if (!user) return { roll: 0, winMax: 0, won: false };
+    const proof = await executeFairRoll(user.userId, 'upgrade', {
+      probability: rollProbability,
+      winMax: winRollMax(rollProbability),
+      skinName: targetSkin?.name,
+    });
+    const roll = resolveRollFromProof(rollProbability, proof);
+    proof.gameMeta = {
+      ...proof.gameMeta,
+      won: roll.won,
+    };
+    upgradeFairProofRef.current = proof;
+    return roll;
+  }, [user, targetSkin?.name]);
+
   const handleUpgradeRollLocked = useCallback((roll: RollResult) => {
     if (!user) return;
-    lockPendingUpgradeRoll(user.userId, roll);
+    const proof = upgradeFairProofRef.current ?? undefined;
+    lockPendingUpgradeRoll(user.userId, roll, proof);
+    if (proof) {
+      const pending = loadPendingUpgrade(user.userId);
+      if (pending?.inputSkinIds.length) {
+        for (const skinId of pending.inputSkinIds) {
+          saveFairProof(user.userId, skinId, proof);
+        }
+        attachFairProofToArchivedSkins(user.userId, pending.inputSkinIds, proof);
+      }
+    }
   }, [user]);
 
   return (
@@ -1517,6 +1562,14 @@ export default function DevApp() {
               ) : (
                 <CaseBattlesPage balance={balance} />
               )
+            ) : isTermsPage ? (
+              <TermsOfServicePage />
+            ) : isPrivacyPage ? (
+              <PrivacyPolicyPage />
+            ) : isCookiePage ? (
+              <CookiePolicyPage />
+            ) : isProvablyFairPage ? (
+              <ProvablyFairPage />
             ) : isAdminPage ? (
               <AdminPage />
             ) : isMainPage ? (
@@ -1552,6 +1605,7 @@ export default function DevApp() {
                 onCap={handleCap}
                 onUpgradeStart={handleUpgradeStart}
                 onUpgradeRollLocked={handleUpgradeRollLocked}
+                resolveUpgradeRoll={resolveUpgradeRoll}
                 onUpgradeComplete={onUpgradeComplete}
                 onInputSelect={handleInputSelect}
                 onSellSkin={handleSellSkin}
@@ -1570,6 +1624,8 @@ export default function DevApp() {
             )}
           </div>
         </div>
+
+        <SiteFooter registeredUsers={registeredUsers} />
 
       </div>
     </LayoutGroup>

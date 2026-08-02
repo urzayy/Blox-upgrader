@@ -10,6 +10,7 @@ interface Props {
   profileLabel: string;
   turbo: boolean;
   isAdmin: boolean;
+  isCreator?: boolean;
   openLiveChatCount: number;
   liveChatsOpen: boolean;
   withdrawOpen: boolean;
@@ -45,6 +46,7 @@ export function MobileHeaderBar({
   profileLabel,
   turbo,
   isAdmin,
+  isCreator = false,
   openLiveChatCount,
   liveChatsOpen,
   withdrawOpen,
@@ -176,7 +178,9 @@ export function MobileHeaderBar({
             <AdminBtn active={clearOpen} onClick={onOpenClear} className="border-[#ff3344]/60 bg-[#ff3344]/15 text-[#ff6677]">
               Clear
             </AdminBtn>
-            <AdminBtn active={seeOpen} onClick={onOpenSee}>See</AdminBtn>
+            {isCreator && (
+              <AdminBtn active={seeOpen} onClick={onOpenSee}>See</AdminBtn>
+            )}
             <AdminBtn active={adminInboxOpen || supportChatOpen} onClick={onOpenAdminInbox} badge={adminChatAttentionCount}>
               Chats
             </AdminBtn>

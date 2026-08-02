@@ -19,6 +19,7 @@ import { createPromoCodeStore } from './server/lib/promoCodeStore.mjs';
 import { createAnnouncementStore } from './server/lib/announcementStore.mjs';
 import { createProfilePhotoStore } from './server/lib/profilePhotoStore.mjs';
 import { createGiveawayStore } from './server/lib/giveawayStore.mjs';
+import { recordGiveawayDepositFromTicket } from './server/lib/giveawayDepositHook.mjs';
 import { createCaseBattleStore } from './server/lib/caseBattleStore.mjs';
 
 dotenv.config();
@@ -99,6 +100,7 @@ function createInitialState() {
     feed: Array.from({ length: 24 }, () => createBotFeedItem()),
     totalUpgrades: BASE_TOTAL_UPGRADES,
     playersOnline: 500 + Math.floor(Math.random() * 300) + 1,
+    registeredUsersDrift: 0,
     updatedAt: Date.now(),
   };
 }
@@ -134,6 +136,7 @@ function loadState() {
       feed: parsed.feed.slice(0, 40).map(enrichFeedItem),
       totalUpgrades: Math.max(BASE_TOTAL_UPGRADES, Math.floor(parsed.totalUpgrades ?? BASE_TOTAL_UPGRADES)),
       playersOnline: Math.max(480, Math.min(820, Math.floor(parsed.playersOnline ?? 650))),
+      registeredUsersDrift: Math.max(0, Math.floor(parsed.registeredUsersDrift ?? 0)),
       updatedAt: parsed.updatedAt ?? Date.now(),
     };
   } catch {
@@ -149,6 +152,7 @@ function saveState(state) {
     feed: state.feed.slice(0, 40),
     totalUpgrades: Math.max(BASE_TOTAL_UPGRADES, Math.floor(state.totalUpgrades)),
     playersOnline: Math.max(480, Math.min(820, Math.floor(state.playersOnline))),
+    registeredUsersDrift: Math.max(0, Math.floor(state.registeredUsersDrift ?? 0)),
     updatedAt: Date.now(),
   };
   fs.writeFileSync(STATE_FILE, JSON.stringify(next, null, 2), 'utf8');
@@ -168,6 +172,23 @@ function appendFeedItem(state, item) {
 function driftPlayersOnline(current) {
   const delta = Math.floor(Math.random() * 17) - 8;
   return Math.max(480, Math.min(820, current + delta));
+}
+
+async function buildPublicSiteState() {
+  const state = loadState();
+  let dbCount = 0;
+  try {
+    dbCount = (await userStore.listRegisteredEmails()).length;
+  } catch {
+    /* ignore user count errors */
+  }
+  return {
+    feed: state.feed,
+    totalUpgrades: state.totalUpgrades,
+    playersOnline: state.playersOnline,
+    registeredUsers: dbCount,
+    updatedAt: state.updatedAt,
+  };
 }
 
 function ticketPath(id) {
@@ -1053,17 +1074,28 @@ app.post('/api/admin/announcement/clear', (req, res) => {
   sendJson(res, 200, announcementStore.clear());
 });
 
-app.get('/api/site-state', (_req, res) => {
-  sendJson(res, 200, loadState());
+app.get('/api/site-state', async (_req, res) => {
+  try {
+    sendJson(res, 200, await buildPublicSiteState());
+  } catch (error) {
+    console.error('[site-state]', error);
+    sendJson(res, 500, { error: 'server error' });
+  }
 });
 
-app.post('/api/site-state/feed-event', (req, res) => {
+app.post('/api/site-state/feed-event', async (req, res) => {
   const body = req.body;
   if (!isFeedItem(body)) {
     sendJson(res, 400, { error: 'invalid feed item' });
     return;
   }
-  sendJson(res, 200, saveState(appendFeedItem(loadState(), body)));
+  saveState(appendFeedItem(loadState(), body));
+  try {
+    sendJson(res, 200, await buildPublicSiteState());
+  } catch (error) {
+    console.error('[site-state/feed-event]', error);
+    sendJson(res, 500, { error: 'server error' });
+  }
 });
 
 app.get('/api/inventory-grants', (req, res) => {
@@ -1251,6 +1283,9 @@ app.patch('/api/withdraw/tickets/:ticketId', (req, res) => {
     createdAt: now,
   });
   saveBundle(bundle);
+  if (status === 'completed' && ticketType === 'deposit') {
+    recordGiveawayDepositFromTicket(giveawayStore, bundle.ticket);
+  }
   sendJson(res, 200, bundle);
 });
 

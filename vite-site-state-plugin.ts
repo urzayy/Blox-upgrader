@@ -5,11 +5,22 @@ import { BASE_TOTAL_UPGRADES, createFeedItem } from './src/lib/feed';
 import { DEV_FEED_BOT_TICK_MS, DEV_FEED_WIN_RATE } from './src/lib/devLiveFeed';
 import { driftPlayersOnline } from './src/lib/siteStorage';
 import type { FeedItem } from './src/data/skins';
+import { createUserStore } from './server/lib/userStore.mjs';
+import { createAdminEmailsStore } from './server/lib/adminEmailsStore.mjs';
+
+interface StoredSiteState {
+  feed: FeedItem[];
+  totalUpgrades: number;
+  playersOnline: number;
+  registeredUsersDrift: number;
+  updatedAt: number;
+}
 
 export interface SiteState {
   feed: FeedItem[];
   totalUpgrades: number;
   playersOnline: number;
+  registeredUsers: number;
   updatedAt: number;
 }
 
@@ -48,16 +59,24 @@ function isFeedItem(value: unknown): value is FeedItem {
   );
 }
 
-function createInitialState(): SiteState {
+function createInitialState(): StoredSiteState {
   return {
     feed: Array.from({ length: 24 }, () => createFeedItem({ winRate: DEV_FEED_WIN_RATE })),
     totalUpgrades: BASE_TOTAL_UPGRADES,
     playersOnline: 500 + Math.floor(Math.random() * 300) + 1,
+    registeredUsersDrift: 0,
     updatedAt: Date.now(),
   };
 }
 
-export function siteStatePlugin(stateDir: string): Plugin {
+export function siteStatePlugin(stateDir: string, userDbDir?: string): Plugin {
+  const userStore = userDbDir
+    ? createUserStore({
+      userDbDir,
+      adminEmailsStore: createAdminEmailsStore(stateDir),
+    })
+    : null;
+
   return {
     name: 'site-state-api',
     configureServer(server) {
@@ -65,14 +84,14 @@ export function siteStatePlugin(stateDir: string): Plugin {
 
       const stateFile = path.join(stateDir, 'state.json');
 
-      const loadState = (): SiteState => {
+      const loadState = (): StoredSiteState => {
         if (!fs.existsSync(stateFile)) {
           const initial = createInitialState();
           fs.writeFileSync(stateFile, JSON.stringify(initial, null, 2), 'utf8');
           return initial;
         }
         try {
-          const parsed = JSON.parse(fs.readFileSync(stateFile, 'utf8')) as SiteState;
+          const parsed = JSON.parse(fs.readFileSync(stateFile, 'utf8')) as Partial<StoredSiteState>;
           if (!Array.isArray(parsed.feed) || !parsed.feed.every(isFeedItem)) {
             const initial = createInitialState();
             fs.writeFileSync(stateFile, JSON.stringify(initial, null, 2), 'utf8');
@@ -82,6 +101,7 @@ export function siteStatePlugin(stateDir: string): Plugin {
             feed: parsed.feed.slice(0, 40),
             totalUpgrades: Math.max(BASE_TOTAL_UPGRADES, Math.floor(parsed.totalUpgrades ?? BASE_TOTAL_UPGRADES)),
             playersOnline: Math.floor(parsed.playersOnline ?? 650),
+            registeredUsersDrift: Math.max(0, Math.floor(parsed.registeredUsersDrift ?? 0)),
             updatedAt: parsed.updatedAt ?? Date.now(),
           };
         } catch {
@@ -91,23 +111,42 @@ export function siteStatePlugin(stateDir: string): Plugin {
         }
       };
 
-      const saveState = (state: SiteState) => {
-        const next: SiteState = {
+      const saveState = (state: StoredSiteState) => {
+        const next: StoredSiteState = {
           feed: state.feed.slice(0, 40),
           totalUpgrades: Math.max(BASE_TOTAL_UPGRADES, Math.floor(state.totalUpgrades)),
           playersOnline: Math.floor(state.playersOnline),
+          registeredUsersDrift: Math.max(0, Math.floor(state.registeredUsersDrift ?? 0)),
           updatedAt: Date.now(),
         };
         fs.writeFileSync(stateFile, JSON.stringify(next, null, 2), 'utf8');
         return next;
       };
 
-      const appendFeedItem = (state: SiteState, item: FeedItem): SiteState => ({
+      const appendFeedItem = (state: StoredSiteState, item: FeedItem): StoredSiteState => ({
         ...state,
         feed: [item, ...state.feed.filter(existing => existing.id !== item.id)].slice(0, 40),
         totalUpgrades: state.totalUpgrades + 1,
         updatedAt: Date.now(),
       });
+
+      const buildPublicSiteState = async (state: StoredSiteState): Promise<SiteState> => {
+        let dbCount = 0;
+        if (userStore) {
+          try {
+            dbCount = (await userStore.listRegisteredEmails()).length;
+          } catch {
+            /* ignore user count errors */
+          }
+        }
+        return {
+          feed: state.feed,
+          totalUpgrades: state.totalUpgrades,
+          playersOnline: state.playersOnline,
+          registeredUsers: dbCount,
+          updatedAt: state.updatedAt,
+        };
+      };
 
       const botTick = () => {
         const state = loadState();
@@ -127,7 +166,7 @@ export function siteStatePlugin(stateDir: string): Plugin {
 
         try {
           if (req.method === 'GET' && (url === '/api/site-state' || url.startsWith('/api/site-state?'))) {
-            sendJson(res, 200, loadState());
+            sendJson(res, 200, await buildPublicSiteState(loadState()));
             return;
           }
 
@@ -138,7 +177,8 @@ export function siteStatePlugin(stateDir: string): Plugin {
               return;
             }
             const state = loadState();
-            sendJson(res, 200, saveState(appendFeedItem(state, body)));
+            saveState(appendFeedItem(state, body));
+            sendJson(res, 200, await buildPublicSiteState(loadState()));
             return;
           }
 

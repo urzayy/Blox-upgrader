@@ -96,11 +96,11 @@ export function FreeCaseDetailPage({ slug }: Props) {
     : false;
   const tierIndex = FREE_CASE_TIERS.findIndex(t => t.level === tier.level);
 
-  const handleOpenCase = () => {
+  const handleOpenCase = async () => {
     if (!user || opening) return;
     if (!canPlayerOpenFreeCase(user.userId, slug) || !ready) return;
 
-    const opened = tryOpenFreeCase(user.userId, slug);
+    const opened = await tryOpenFreeCase(user.userId, slug);
     if (!opened) return;
 
     const { granted, openedAt } = opened;
@@ -298,7 +298,7 @@ export function FreeCaseDetailPage({ slug }: Props) {
           )}
         </div>
 
-        <FreeCaseLootSection loot={loot} />
+        <FreeCaseLootSection loot={loot} caseSlug={slug} />
       </section>
     </div>
   );

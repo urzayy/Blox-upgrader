@@ -51,7 +51,7 @@ import { removeLiveBattle, updateLiveBattle } from '../lib/caseBattlesStorage';
 
 import { getCatalogCaseBySlug } from '../lib/caseCatalog';
 
-import { getJokerCasePrice } from '../lib/freeCaseLoot';
+import { caseSlotPrice } from '../lib/caseBattleCatalog';
 
 import { sfx } from '../lib/audio';
 
@@ -109,9 +109,7 @@ function resolveBattleCasesWithJoker(battle: CaseBattle) {
 
       const joker = battle.jokerFlags[index] ?? false;
 
-      const price = joker ? getJokerCasePrice(slug) : item.price;
-
-      return { ...item, battlePrice: price, joker };
+      return { ...item, battlePrice: caseSlotPrice({ slug, joker }), joker };
 
     })
 

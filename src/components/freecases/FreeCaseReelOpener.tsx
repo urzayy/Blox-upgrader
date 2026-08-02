@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import gsap from 'gsap';
 import type { Skin } from '../../data/skins';
@@ -11,8 +11,12 @@ import { CoinPrice } from '../ui/CoinPrice';
 import { SkinImage } from '../skins/SkinImage';
 import { Confetti } from '../effects/Confetti';
 import { BloxRoyalCard } from './BloxRoyalCard';
-import { RoyalCrownBadge } from './RoyalCrownBadge';
+import { getLootChanceForSkin, getLootRollRanges } from '../../lib/freeCaseLoot';
+import type { LootRollRange } from '../../lib/lootRollRange';
+import { LootItemInfoButton } from './LootItemInfoButton';
 import { BattleRarityDiamond } from '../casebattles/BattleRarityDiamond';
+import { CheckRollButton } from '../provablyfair/FairRollModal';
+import type { FairRollProof } from '../../lib/provablyFair';
 
 type ReelSize = 'default' | 'large' | 'multi-2' | 'multi-3' | 'multi-4' | 'multi-5' | 'battle' | 'battle-4' | 'battle-6';
 
@@ -412,6 +416,9 @@ function ReelCard({
   battleStyle,
   battleLandHighlight,
   showLeadGlow,
+  lootChance,
+  lootRollRange,
+  showLootInfo = false,
 }: {
   item: FreeCaseReelResult['reel'][number];
   highlight?: boolean;
@@ -426,6 +433,9 @@ function ReelCard({
   battleStyle?: boolean;
   battleLandHighlight?: boolean;
   showLeadGlow?: boolean;
+  lootChance?: number;
+  lootRollRange?: LootRollRange;
+  showLootInfo?: boolean;
 }) {
   const itemStride = vertical
     ? dims.itemHeight + dims.dividerWidth
@@ -532,7 +542,14 @@ function ReelCard({
       animate={highlight ? { scale: royal ? [1.04, 1.07, 1.04] : [1.04, 1.06, 1.04] } : undefined}
       transition={{ duration: royal ? 0.55 : 0.65, repeat: highlight ? Infinity : 0, ease: 'easeInOut' }}
     >
-      {displayItem.isRoyalLoot && <RoyalCrownBadge />}
+      {showLootInfo && lootChance != null && lootRollRange && !battleStyle && (
+        <LootItemInfoButton
+          price={displayItem.skin.price}
+          chance={lootChance}
+          rollRange={lootRollRange}
+          isRoyal={displayItem.isRoyalLoot}
+        />
+      )}
       <div
         className="pointer-events-none absolute inset-0 opacity-50"
         style={{
@@ -637,6 +654,8 @@ export function FreeCaseReelOpener({
   const [offset, setOffset] = useState(0);
   const [viewportSize, setViewportSize] = useState(isVertical ? dims.viewportHeight ?? 220 : 720);
   const [showConfetti, setShowConfetti] = useState(false);
+  const fairProof = (grantedSkin?.fairProof ?? null) as FairRollProof | null;
+  const lootRollRanges = useMemo(() => getLootRollRanges(caseSlug), [caseSlug]);
   const [activeReel, setActiveReel] = useState<FreeCaseReelResult | null>(null);
   const [royalPass, setRoyalPass] = useState(false);
   const [rollKey, setRollKey] = useState(0);
@@ -996,6 +1015,9 @@ export function FreeCaseReelOpener({
                     dims={dims}
                     vertical={isVertical}
                     battleStyle={isBattleStyle}
+                    lootChance={getLootChanceForSkin(caseSlug, item.skin.id) ?? undefined}
+                    lootRollRange={lootRollRanges.get(item.skin.id)}
+                    showLootInfo={phase === 'reveal' && !embedded}
                     battleLandHighlight={
                       isBattleStyle && phase === 'reveal' && index === highlightIndex
                     }
@@ -1059,6 +1081,9 @@ export function FreeCaseReelOpener({
                       className="inline-flex align-middle"
                     />
                   </button>
+                    {fairProof && (
+                      <CheckRollButton proof={fairProof} />
+                    )}
                     <button
                       type="button"
                       onClick={onUpgrade}

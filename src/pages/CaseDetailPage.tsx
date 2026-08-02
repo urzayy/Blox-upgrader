@@ -7,9 +7,8 @@ import {
 } from '../lib/catalogCaseUi';
 import { getFreeCaseLoot, getJokerCasePrice, toEqualChanceLoot } from '../lib/freeCaseLoot';
 import { useAuth } from '../context/AuthContext';
-import { pickFreeCaseReward } from '../lib/freeCaseOpen';
+import { attachFairProofToSkin, pickFairCaseReward } from '../lib/fairCaseRoll';
 import { createGrantedCatalogCaseSkin } from '../lib/caseOpen';
-import type { Skin } from '../data/skins';
 import { CoinPrice } from '../components/ui/CoinPrice';
 import { CaseOpenPreview } from '../components/freecases/CaseOpenPreview';
 import {
@@ -111,26 +110,30 @@ export function CaseDetailPage({ slug, balance, onPurchase }: Props) {
   const isMultiOpen = openSessions.length > 1;
   const singleSession = openSessions.length === 1 ? openSessions[0] : null;
 
-  const handleOpenCase = () => {
+  const handleOpenCase = async () => {
     if (!user || opening || !canAfford) return;
 
-    const rewards: Skin[] = [];
+    const sessions: CaseOpenSession[] = [];
     for (let i = 0; i < openQuantity; i += 1) {
-      const reward = pickFreeCaseReward(slug, { joker: jokerMode });
-      if (!reward) return;
-      rewards.push(reward);
+      const fairPick = await pickFairCaseReward(user.userId, slug, { joker: jokerMode });
+      if (!fairPick) return;
+      const openedAt = Date.now();
+      const grantedSkin = attachFairProofToSkin(
+        createGrantedCatalogCaseSkin(fairPick.skin, openedAt),
+        fairPick.proof,
+        user.userId,
+      );
+      sessions.push({
+        id: `${openedAt}-${i}`,
+        result: buildFreeCaseReel(slug, fairPick.skin, previewSkins, { joker: jokerMode }),
+        grantedSkin,
+        revealed: false,
+      });
     }
 
     if (!onPurchase(totalCost)) return;
 
     openedAtRef.current = Date.now();
-    const sessions: CaseOpenSession[] = rewards.map((reward, index) => ({
-      id: `${openedAtRef.current}-${index}`,
-      result: buildFreeCaseReel(slug, reward, previewSkins, { joker: jokerMode }),
-      grantedSkin: createGrantedCatalogCaseSkin(reward, openedAtRef.current),
-      revealed: false,
-    }));
-
     requestGrantSkinsToInventory(sessions.map(session => session.grantedSkin!));
 
     setRollTurbo(turbo);
@@ -264,6 +267,7 @@ export function CaseDetailPage({ slug, balance, onPurchase }: Props) {
                     title={caseLabel}
                     leftSkins={previewLeft}
                     rightSkins={previewRight}
+                    caseSlug={slug}
                     loot={displayLoot}
                     price={unitPrice}
                     hasRoyalLoot={!jokerMode && loot.some(item => item.chance <= 1)}
@@ -417,7 +421,7 @@ export function CaseDetailPage({ slug, balance, onPurchase }: Props) {
           </div>
         </div>
 
-        <FreeCaseLootSection loot={displayLoot} large />
+        <FreeCaseLootSection loot={displayLoot} large caseSlug={slug} />
       </section>
     </div>
   );

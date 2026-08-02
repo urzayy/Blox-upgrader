@@ -1,8 +1,10 @@
 import { useMemo } from 'react';
 import type { Skin } from '../../data/skins';
 import type { FreeCaseReelResult } from '../../lib/freeCaseReel';
+import type { FairRollProof } from '../../lib/provablyFair';
 import { CoinPrice } from '../ui/CoinPrice';
 import { FreeCaseReelOpener, getMultiReelLayout } from './FreeCaseReelOpener';
+import { CheckRollButton } from '../provablyfair/FairRollModal';
 
 export interface CaseOpenSession {
   id: string;
@@ -55,6 +57,19 @@ export function MultiCaseReelBoard({
         0,
       ),
     [unsoldSessions],
+  );
+
+  const sessionsWithProof = useMemo(
+    () =>
+      sessions
+        .map((session, index) => {
+          const proof = session.grantedSkin?.fairProof as FairRollProof | undefined;
+          if (!proof) return null;
+          const skin = session.grantedSkin ?? session.result.rewardSkin;
+          return { index, session, proof, skin };
+        })
+        .filter((entry): entry is NonNullable<typeof entry> => entry !== null),
+    [sessions],
   );
 
   return (
@@ -169,6 +184,24 @@ export function MultiCaseReelBoard({
               className="inline-flex align-middle"
             />
           </button>
+        </div>
+      )}
+
+      {allRevealed && sessionsWithProof.length > 0 && (
+        <div className="mt-4 flex flex-col items-center gap-2 sm:mt-5">
+          <p className="font-display text-[10px] font-bold uppercase tracking-[0.14em] text-white/40">
+            Verify roll
+          </p>
+          <div className="flex flex-wrap items-center justify-center gap-2">
+            {sessionsWithProof.map(({ index, proof }) => (
+              <CheckRollButton
+                key={`verify-${index}-${proof.nonce}`}
+                proof={proof}
+                label={sessionsWithProof.length > 1 ? `Weapon ${index + 1}` : 'Check roll'}
+                compact
+              />
+            ))}
+          </div>
         </div>
       )}
     </div>

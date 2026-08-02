@@ -103,3 +103,4 @@ export function driftPlayersOnline(current: number): number {
   const delta = Math.floor(Math.random() * 17) - 8;
   return Math.max(MIN_PLAYERS, Math.min(MAX_PLAYERS, current + delta));
 }
+

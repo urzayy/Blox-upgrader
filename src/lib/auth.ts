@@ -2,6 +2,13 @@ import { loginAccountOnServer, registerAccountOnServer, requestServerSession } f
 import { fetchAccountBanStatus } from './accountBanApi';
 import { applyPlayerStateSnapshot } from './playerStateHydration';
 import {
+  getCookie,
+  removeCookie,
+  SESSION_COOKIE,
+  setCookie,
+  setEssentialCookiesEnabled,
+} from './cookies';
+import {
   type ProfileAvatarId,
   avatarIdFromEmail,
   pickRandomAvatarId,
@@ -120,10 +127,8 @@ async function hashPassword(password: string, salt: string): Promise<string> {
   return Array.from(new Uint8Array(hash), b => b.toString(16).padStart(2, '0')).join('');
 }
 
-export function loadSession(): Session | null {
+function parseStoredSession(raw: string): Session | null {
   try {
-    const raw = localStorage.getItem(SESSION_KEY);
-    if (!raw) return null;
     const parsed: unknown = JSON.parse(raw);
     if (!parsed || typeof parsed !== 'object') return null;
     const s = parsed as Session;
@@ -137,10 +142,47 @@ export function loadSession(): Session | null {
   }
 }
 
+export function loadSession(): Session | null {
+  try {
+    const rawLocal = localStorage.getItem(SESSION_KEY);
+    if (rawLocal) {
+      const session = parseStoredSession(rawLocal);
+      if (session) {
+        setCookie(SESSION_COOKIE, rawLocal);
+        setEssentialCookiesEnabled();
+        return session;
+      }
+      localStorage.removeItem(SESSION_KEY);
+    }
+
+    const rawCookie = getCookie(SESSION_COOKIE);
+    if (rawCookie) {
+      const session = parseStoredSession(rawCookie);
+      if (session) {
+        localStorage.setItem(SESSION_KEY, rawCookie);
+        setEssentialCookiesEnabled();
+        return session;
+      }
+      removeCookie(SESSION_COOKIE);
+    }
+
+    return null;
+  } catch {
+    return null;
+  }
+}
+
 export function saveSession(session: Session | null): void {
   try {
-    if (session) localStorage.setItem(SESSION_KEY, JSON.stringify(session));
-    else localStorage.removeItem(SESSION_KEY);
+    if (session) {
+      const raw = JSON.stringify(session);
+      localStorage.setItem(SESSION_KEY, raw);
+      setCookie(SESSION_COOKIE, raw);
+      setEssentialCookiesEnabled();
+    } else {
+      localStorage.removeItem(SESSION_KEY);
+      removeCookie(SESSION_COOKIE);
+    }
   } catch {
     /* noop */
   }

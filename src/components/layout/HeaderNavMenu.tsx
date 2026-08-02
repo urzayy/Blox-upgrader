@@ -35,7 +35,11 @@ export function HeaderNavMenu({
   return (
     <nav
       aria-label="Main navigation"
-      className={`flex items-center ${compact ? 'gap-1 overflow-x-auto pb-0.5 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden' : 'gap-0.5 sm:gap-1 lg:gap-2'}`}
+      className={`flex min-w-0 max-w-full items-center ${
+        compact
+          ? 'gap-1 overflow-x-auto pb-0.5 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden'
+          : 'gap-0.5 overflow-x-auto [-ms-overflow-style:none] [scrollbar-width:none] xl:gap-1 2xl:gap-2 [&::-webkit-scrollbar]:hidden'
+      }`}
     >
       {items.map(item => {
         const active = isNavItemActive(item, route);
@@ -46,7 +50,7 @@ export function HeaderNavMenu({
             disabled={!item.available}
             title={item.available ? item.label : `${item.label} — coming soon`}
             onClick={() => handleClick(item)}
-            className={`group relative flex shrink-0 items-center gap-2 rounded-lg px-2.5 py-2 transition sm:px-3 ${
+            className={`group relative flex shrink-0 items-center rounded-lg px-2 py-2 transition 2xl:gap-2 2xl:px-3 ${
               item.available ? 'cursor-pointer' : 'cursor-default opacity-50'
             } ${
               active
@@ -65,7 +69,7 @@ export function HeaderNavMenu({
             </span>
             <span
               className={`relative z-10 whitespace-nowrap font-display font-bold uppercase tracking-wide transition ${
-                compact ? 'text-[10px]' : 'text-[11px] sm:text-xs'
+                compact ? 'text-[10px]' : 'hidden text-[11px] 2xl:inline 2xl:text-xs'
               } ${
                 active
                   ? 'text-[#e4d4ff]'

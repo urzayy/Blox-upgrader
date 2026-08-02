@@ -289,7 +289,7 @@ export function AdminPage() {
 
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 lg:gap-4">
 
-          {CORE_ACTIONS.map(action => (
+          {CORE_ACTIONS.filter(action => action.id !== 'see' || isCreator).map(action => (
 
             <button
 

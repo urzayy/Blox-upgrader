@@ -2,7 +2,7 @@ import { getCatalogCaseBySlug, type CatalogCase } from './caseCatalog';
 import type { Skin } from '../data/skins';
 import type { ProfileAvatarId } from './profileAvatars';
 import type { FreeCaseReelResult } from './freeCaseReel';
-import { battleSlotsTotalCost, expandBattleSlots } from './caseBattleCatalog';
+import { battleSlotsTotalCost, expandBattleSlots, slugsToBattleSlots } from './caseBattleCatalog';
 import { battleLoanEntryCost, isBattleFormatAvailable } from './caseBattleCreate';
 import { defaultBotSideForSlot, hostBattleSlotIndex, type BattleSide } from './battleSides';
 import { loadLiveBattles, type BattleCaseSlot } from './caseBattlesStorage';
@@ -140,8 +140,8 @@ export function resolveBattleCases(slugs: string[]): CatalogCase[] {
     .filter((item): item is CatalogCase => Boolean(item));
 }
 
-export function battleTotalCost(slugs: string[]): number {
-  return resolveBattleCases(slugs).reduce((sum, item) => sum + item.price, 0);
+export function battleTotalCost(slugs: string[], jokerFlags?: boolean[]): number {
+  return battleSlotsTotalCost(slugsToBattleSlots(slugs, jokerFlags));
 }
 
 export function canJoinBattle(battle: CaseBattle): boolean {

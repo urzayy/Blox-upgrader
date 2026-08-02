@@ -30,7 +30,7 @@ export function cleanHeaderShell(extra = ''): string {
 
     CLEAN_HEADER_BORDER,
 
-    'px-6 lg:px-10',
+    'px-4 xl:px-6 2xl:px-10',
 
     'py-3.5',
 

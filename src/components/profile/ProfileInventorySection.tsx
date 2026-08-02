@@ -2,9 +2,49 @@ import { useMemo, useState } from 'react';
 import { RARITY, type Skin } from '../../data/skins';
 import { archiveReasonLabel, type ArchivedSkin } from '../../lib/inventoryArchiveStorage';
 import { requestOpenWithdraw, requestUpgradeWithSkin } from '../../lib/uiActions';
+import { getFairProof } from '../../lib/fairProofStorage';
+import { getSkinObtainedAt } from '../../lib/skinObtainedAt';
+import type { FairRollProof } from '../../lib/provablyFair';
+import { useAuth } from '../../context/AuthContext';
 import { CoinPrice } from '../ui/CoinPrice';
 import { SkinImage } from '../skins/SkinImage';
 import { ProfileActiveSkinActionMenu } from './ProfileActiveSkinActionMenu';
+import { CheckRollButton } from '../provablyfair/FairRollModal';
+
+const SORT_CYCLE = ['price-asc', 'price-desc', 'time-desc', 'time-asc'] as const;
+type InventorySortMode = (typeof SORT_CYCLE)[number];
+
+const SORT_LABELS: Record<InventorySortMode, string> = {
+  'price-asc': 'Price ↑',
+  'price-desc': 'Price ↓',
+  'time-desc': 'Time ↑',
+  'time-asc': 'Time ↓',
+};
+
+function nextSortMode(mode: InventorySortMode): InventorySortMode {
+  const index = SORT_CYCLE.indexOf(mode);
+  return SORT_CYCLE[(index + 1) % SORT_CYCLE.length];
+}
+
+function sortInventoryItems(
+  items: Array<{ skin: Skin; archived: boolean }>,
+  mode: InventorySortMode,
+): Array<{ skin: Skin; archived: boolean }> {
+  return [...items].sort((a, b) => {
+    if (mode === 'price-asc') return a.skin.price - b.skin.price;
+    if (mode === 'price-desc') return b.skin.price - a.skin.price;
+
+    const timeA = a.archived
+      ? (a.skin as ArchivedSkin).archivedAt ?? getSkinObtainedAt(a.skin) ?? 0
+      : getSkinObtainedAt(a.skin) ?? 0;
+    const timeB = b.archived
+      ? (b.skin as ArchivedSkin).archivedAt ?? getSkinObtainedAt(b.skin) ?? 0
+      : getSkinObtainedAt(b.skin) ?? 0;
+
+    if (mode === 'time-desc') return timeB - timeA;
+    return timeA - timeB;
+  });
+}
 
 interface Props {
   activeSkins: Skin[];
@@ -19,18 +59,17 @@ export function ProfileInventorySection({
   lockedSkinIds,
   onSellSkin,
 }: Props) {
+  const { user } = useAuth();
   const [activeDrops, setActiveDrops] = useState(true);
-  const [sortPriceDesc, setSortPriceDesc] = useState(true);
+  const [sortMode, setSortMode] = useState<InventorySortMode>('price-asc');
 
   const visibleSkins = useMemo(() => {
     const list = activeDrops
       ? activeSkins.map(skin => ({ skin, archived: false as const }))
       : archivedSkins.map(skin => ({ skin, archived: true as const }));
 
-    return [...list].sort((a, b) => (
-      sortPriceDesc ? b.skin.price - a.skin.price : a.skin.price - b.skin.price
-    ));
-  }, [activeDrops, activeSkins, archivedSkins, sortPriceDesc]);
+    return sortInventoryItems(list, sortMode);
+  }, [activeDrops, activeSkins, archivedSkins, sortMode]);
 
   return (
     <section className="overflow-hidden rounded-2xl border border-white/[0.08] bg-[#141024]/95">
@@ -57,10 +96,10 @@ export function ProfileInventorySection({
           </label>
           <button
             type="button"
-            onClick={() => setSortPriceDesc(v => !v)}
-            className="rounded-lg border border-white/10 bg-[#1a1530] px-4 py-2 text-[11px] font-semibold uppercase tracking-wide text-white/55 hover:text-white lg:text-xs"
+            onClick={() => setSortMode(nextSortMode)}
+            className="rounded-lg border border-white/10 bg-[#1a1530] px-4 py-2 font-display text-[11px] font-semibold uppercase tracking-wide text-white/55 transition hover:text-white lg:text-xs"
           >
-            Price {sortPriceDesc ? '↓' : '↑'}
+            {SORT_LABELS[sortMode]}
           </button>
         </div>
       </div>
@@ -89,6 +128,12 @@ export function ProfileInventorySection({
                 archived={archived}
                 locked={!archived && lockedSkinIds.has(skin.id)}
                 statusLabel={archived ? archiveReasonLabel((skin as ArchivedSkin).reason) : undefined}
+                fairProof={
+                  !activeDrops
+                    ? (skin.fairProof as FairRollProof | undefined)
+                      ?? (user ? getFairProof(user.userId, skin.id) : null)
+                    : null
+                }
                 onSell={onSellSkin}
                 onUpgrade={requestUpgradeWithSkin}
                 onWithdraw={s => requestOpenWithdraw([s.id])}
@@ -106,6 +151,7 @@ function ProfileInventoryCard({
   archived,
   locked,
   statusLabel,
+  fairProof,
   onSell,
   onUpgrade,
   onWithdraw,
@@ -114,6 +160,7 @@ function ProfileInventoryCard({
   archived: boolean;
   locked?: boolean;
   statusLabel?: string;
+  fairProof?: FairRollProof | null;
   onSell: (skin: Skin) => void;
   onUpgrade: (skin: Skin) => void;
   onWithdraw: (skin: Skin) => void;
@@ -167,10 +214,13 @@ function ProfileInventoryCard({
         />
       )}
       {archived && statusLabel && (
-        <div className="absolute inset-0 z-20 flex items-center justify-center bg-black/35">
+        <div className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-2 bg-black/35 px-2">
           <span className="rounded-md border border-white/15 bg-black/70 px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-white/80">
             {statusLabel}
           </span>
+          {fairProof && (
+            <CheckRollButton proof={fairProof} compact label="Verify roll" />
+          )}
         </div>
       )}
     </div>

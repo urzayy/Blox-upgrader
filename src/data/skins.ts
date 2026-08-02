@@ -7,6 +7,20 @@ export type RarityKey =
   | 'covert'
   | 'extraordinary';
 
+export interface FairRollProofRef {
+  clientSeed: string;
+  serverSeed: string;
+  secretSalt: string;
+  nonce: number;
+  serverSeedHash: string;
+  roll: number;
+  rollFloat: number;
+  hash: string;
+  gameType: string;
+  gameMeta?: Record<string, unknown>;
+  createdAt: number;
+}
+
 export interface Skin {
   id: string;
   name: string;
@@ -16,6 +30,7 @@ export interface Skin {
   price: number;
   image: string;
   obtainedAt?: number;
+  fairProof?: FairRollProofRef;
 }
 
 export interface FeedItem {

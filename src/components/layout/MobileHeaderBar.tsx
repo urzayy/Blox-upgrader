@@ -68,7 +68,7 @@ export function MobileHeaderBar({
 
   return (
 
-    <div className={`z-40 flex flex-col border-b border-white/5 bg-[#0a0812]/95 px-3 py-2.5 backdrop-blur-xl lg:hidden ${
+    <div className={`z-40 flex flex-col border-b border-white/5 bg-[#0a0812]/95 px-3 py-2.5 backdrop-blur-xl xl:hidden ${
 
       clean ? 'gap-2' : 'gap-2'
 

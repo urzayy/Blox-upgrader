@@ -37,6 +37,22 @@ function emptySlot(period) {
     participants: 0,
     openedBy: null,
     closedAt: null,
+    winner: null,
+  };
+}
+
+function normalizeWinner(raw) {
+  if (!raw || typeof raw !== 'object') return null;
+  const userId = typeof raw.userId === 'string' ? raw.userId : '';
+  if (!userId) return null;
+  const entries = Math.max(0, Math.floor(Number(raw.entries) || 0));
+  const chancePercent = Number(raw.chancePercent);
+  return {
+    userId,
+    email: typeof raw.email === 'string' ? raw.email.trim().toLowerCase() : '',
+    nickname: typeof raw.nickname === 'string' ? raw.nickname.trim() : '',
+    entries,
+    chancePercent: Number.isFinite(chancePercent) ? chancePercent : 0,
   };
 }
 
@@ -54,21 +70,8 @@ function normalizeSlot(raw, period) {
   const skin = isSkin(raw.skin) ? raw.skin : null;
   const endsAt = typeof raw.endsAt === 'number' ? raw.endsAt : null;
   const startedAt = typeof raw.startedAt === 'number' ? raw.startedAt : null;
-  const now = Date.now();
 
-  if (status === 'active' && endsAt != null && endsAt <= now) {
-    return {
-      ...base,
-      status: 'closed',
-      skin,
-      depositRequirement: normalizeDeposit(raw.depositRequirement),
-      startedAt,
-      endsAt,
-      participants: Math.max(0, Math.floor(Number(raw.participants ?? 0))),
-      openedBy: typeof raw.openedBy === 'string' ? raw.openedBy : null,
-      closedAt: now,
-    };
-  }
+  const winner = normalizeWinner(raw.winner);
 
   return {
     period,
@@ -80,6 +83,7 @@ function normalizeSlot(raw, period) {
     participants: Math.max(0, Math.floor(Number(raw.participants ?? 0))),
     openedBy: typeof raw.openedBy === 'string' ? raw.openedBy : null,
     closedAt: typeof raw.closedAt === 'number' ? raw.closedAt : null,
+    winner: status === 'closed' ? winner : null,
   };
 }
 
@@ -125,6 +129,58 @@ export function createGiveawayStore(giveawaysDir, grantsDir = null) {
     };
   }
 
+  function tryPickAndGrantWinner(period, slot, grantedBy = 'giveaway@bloxupgrader.com') {
+    const participants = participantsStore.listParticipants(period);
+    const picked = pickWeightedWinner(participants);
+    if (!picked || !slot.skin) return { winner: null };
+
+    const totalEntries = participantsStore.getTotalEntries(period);
+    const chancePercent = totalEntries > 0 ? (picked.entries / totalEntries) * 100 : 0;
+
+    if (inventoryGrants) {
+      inventoryGrants.createPendingGrant({
+        targetEmail: picked.email,
+        grantedBy: String(grantedBy ?? 'giveaway@bloxupgrader.com').trim().toLowerCase(),
+        skin: slot.skin,
+        quantity: 1,
+      });
+    }
+
+    winnersStore.addWinner({
+      period,
+      skin: slot.skin,
+      winnerUserId: picked.userId,
+      winnerEmail: picked.email,
+      winnerNickname: picked.nickname,
+    });
+
+    winnersStore.queuePendingWin({
+      userId: picked.userId,
+      period,
+      skin: slot.skin,
+    });
+
+    return {
+      winner: {
+        userId: picked.userId,
+        email: picked.email,
+        nickname: picked.nickname,
+        entries: picked.entries,
+        chancePercent,
+      },
+    };
+  }
+
+  function expireActiveGiveaway(period, slot, now) {
+    const { winner } = tryPickAndGrantWinner(period, slot);
+    return {
+      ...slot,
+      status: 'closed',
+      closedAt: now,
+      winner: winner ?? null,
+    };
+  }
+
   function getAll(now = Date.now()) {
     const raw = loadRaw();
     let changed = false;
@@ -132,7 +188,7 @@ export function createGiveawayStore(giveawaysDir, grantsDir = null) {
     for (const period of PERIODS) {
       let slot = normalizeSlot(raw.giveaways?.[period], period);
       if (slot.status === 'active' && slot.endsAt != null && slot.endsAt <= now) {
-        slot = { ...slot, status: 'closed', closedAt: now };
+        slot = expireActiveGiveaway(period, slot, now);
         changed = true;
       }
       giveaways[period] = enrichSlot(slot);
@@ -167,6 +223,7 @@ export function createGiveawayStore(giveawaysDir, grantsDir = null) {
       participants: 0,
       openedBy: String(openedBy ?? '').trim().toLowerCase() || null,
       closedAt: null,
+      winner: null,
     };
 
     participantsStore.clearPeriod(period);
@@ -187,55 +244,16 @@ export function createGiveawayStore(giveawaysDir, grantsDir = null) {
     }
 
     let winner = null;
-    let grantError = null;
 
     if (pickWinner) {
-      const participants = participantsStore.listParticipants(period);
-      const picked = pickWeightedWinner(participants);
-      if (!picked) {
-        return { error: 'no_eligible_winner' };
-      }
       if (!existing.skin) {
         return { error: 'missing_prize_skin' };
       }
-      if (!inventoryGrants) {
-        return { error: 'grants_unavailable' };
+      const pickResult = tryPickAndGrantWinner(period, existing, grantedBy);
+      if (!pickResult.winner) {
+        return { error: 'no_eligible_winner' };
       }
-
-      const grantResult = inventoryGrants.createPendingGrant({
-        targetEmail: picked.email,
-        grantedBy: String(grantedBy ?? 'giveaway@bloxupgrader.com').trim().toLowerCase(),
-        skin: existing.skin,
-        quantity: 1,
-      });
-      if (grantResult.error) {
-        return { error: grantResult.error };
-      }
-
-      const winnerRecord = winnersStore.addWinner({
-        period,
-        skin: existing.skin,
-        winnerUserId: picked.userId,
-        winnerEmail: picked.email,
-        winnerNickname: picked.nickname,
-      });
-      if (winnerRecord.error) {
-        return { error: winnerRecord.error };
-      }
-
-      winnersStore.queuePendingWin({
-        userId: picked.userId,
-        period,
-        skin: existing.skin,
-      });
-
-      winner = {
-        userId: picked.userId,
-        email: picked.email,
-        nickname: picked.nickname,
-        entries: picked.entries,
-        skin: existing.skin,
-      };
+      winner = { ...pickResult.winner, skin: existing.skin };
     }
 
     current[period] = {
@@ -243,13 +261,19 @@ export function createGiveawayStore(giveawaysDir, grantsDir = null) {
       status: 'closed',
       endsAt: existing.endsAt ?? now,
       closedAt: now,
+      winner: pickWinner ? (winner ? {
+        userId: winner.userId,
+        email: winner.email,
+        nickname: winner.nickname,
+        entries: winner.entries,
+        chancePercent: winner.chancePercent,
+      } : null) : null,
     };
 
     return {
       ok: true,
       giveaway: enrichSlot(persistAll(current).giveaways[period]),
       winner,
-      grantError,
     };
   }
 
@@ -285,6 +309,7 @@ export function createGiveawayStore(giveawaysDir, grantsDir = null) {
       me,
       myChance,
       coinsPerEntry: participantsStore.GIVEAWAY_COINS_PER_ENTRY,
+      winner: slot.winner ?? null,
     };
   }
 

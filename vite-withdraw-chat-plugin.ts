@@ -2,6 +2,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import type { Plugin } from 'vite';
 import { resolveDepositBonus, resolveRobuxDepositBonus } from './server/lib/depositBonus.mjs';
+import { createGiveawayStore } from './server/lib/giveawayStore.mjs';
+import { recordGiveawayDepositFromTicket } from './server/lib/giveawayDepositHook.mjs';
 
 const MIN_DEPOSIT_TOTAL = 250;
 const MIN_WITHDRAW_TOTAL = 20;
@@ -69,7 +71,14 @@ function sendJson(
   res.end(JSON.stringify(data));
 }
 
-export function withdrawChatPlugin(chatsDir: string): Plugin {
+export function withdrawChatPlugin(
+  chatsDir: string,
+  options?: { giveawaysDir?: string; grantsDir?: string },
+): Plugin {
+  const giveawayStore = options?.giveawaysDir
+    ? createGiveawayStore(options.giveawaysDir, options.grantsDir ?? null)
+    : null;
+
   return {
     name: 'withdraw-chat-api',
     configureServer(server) {
@@ -248,6 +257,9 @@ export function withdrawChatPlugin(chatsDir: string): Plugin {
                 createdAt: now,
               });
               saveBundle(bundle);
+              if (body.status === 'completed' && ticketType === 'deposit' && giveawayStore) {
+                recordGiveawayDepositFromTicket(giveawayStore, bundle.ticket);
+              }
               sendJson(res, 200, bundle);
               return;
             }

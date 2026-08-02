@@ -30,6 +30,7 @@ interface Props {
   onCap: (c: number) => void;
   onUpgradeStart: () => boolean;
   onUpgradeRollLocked: (roll: RollResult) => void;
+  resolveUpgradeRoll?: (probability: number) => Promise<RollResult>;
   onUpgradeComplete: (won: boolean, roll: RollResult) => void;
   onInputSelect: (skin: Skin) => void;
   onSellSkin: (skin: Skin) => void;
@@ -65,6 +66,7 @@ export function UpgradePage({
   onCap,
   onUpgradeStart,
   onUpgradeRollLocked,
+  resolveUpgradeRoll,
   onUpgradeComplete,
   onInputSelect,
   onSellSkin,
@@ -108,6 +110,7 @@ export function UpgradePage({
             onCap={onCap}
             onUpgradeStart={onUpgradeStart}
             onUpgradeRollLocked={onUpgradeRollLocked}
+            resolveRoll={resolveUpgradeRoll}
             onComplete={onUpgradeComplete}
             showUpgradeButton={false}
             showControls={false}

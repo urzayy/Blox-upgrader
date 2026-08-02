@@ -1,8 +1,8 @@
 import { CoinPrice } from '../ui/CoinPrice';
 import { RARITY } from '../../data/skins';
-import { formatLootChance, type FreeCaseLootItem } from '../../lib/freeCaseLoot';
+import { formatLootChance, getLootRollRanges, type FreeCaseLootItem } from '../../lib/freeCaseLoot';
 import { isRoyalLootChance } from '../../lib/freeCaseRoyal';
-import { RoyalCrownBadge } from './RoyalCrownBadge';
+import { LootItemInfoButton } from './LootItemInfoButton';
 import { SkinImage } from '../skins/SkinImage';
 
 function splitSkinName(name: string): { weapon: string; skin: string } {
@@ -21,10 +21,19 @@ function DiagonalLines() {
   );
 }
 
-function LootChanceCard({ item, large }: { item: FreeCaseLootItem; large?: boolean }) {
+function LootChanceCard({
+  item,
+  large,
+  caseSlug,
+}: {
+  item: FreeCaseLootItem;
+  large?: boolean;
+  caseSlug?: string;
+}) {
   const r = RARITY[item.skin.rarity];
   const { weapon, skin: skinName } = splitSkinName(item.skin.name);
   const isRoyal = isRoyalLootChance(item.chance);
+  const rollRange = caseSlug ? getLootRollRanges(caseSlug).get(item.skin.id) : undefined;
 
   return (
     <article
@@ -33,7 +42,14 @@ function LootChanceCard({ item, large }: { item: FreeCaseLootItem; large?: boole
       }`}
       style={{ boxShadow: `inset 0 0 0 1px rgba(124,58,237,0.08), 0 8px 24px -8px rgba(0,0,0,0.55)` }}
     >
-      {isRoyal && <RoyalCrownBadge />}
+      {rollRange && (
+        <LootItemInfoButton
+          price={item.skin.price}
+          chance={item.chance}
+          rollRange={rollRange}
+          isRoyal={isRoyal}
+        />
+      )}
       <div
         className="pointer-events-none absolute inset-0 opacity-30"
         style={{ background: `radial-gradient(circle at 50% 30%, ${r.color}, transparent 70%)` }}
@@ -74,9 +90,10 @@ function LootChanceCard({ item, large }: { item: FreeCaseLootItem; large?: boole
 interface Props {
   loot: FreeCaseLootItem[];
   large?: boolean;
+  caseSlug?: string;
 }
 
-export function FreeCaseLootSection({ loot, large }: Props) {
+export function FreeCaseLootSection({ loot, large, caseSlug }: Props) {
   if (!loot.length) return null;
 
   const compactCentered = loot.length <= 6;
@@ -106,14 +123,14 @@ export function FreeCaseLootSection({ loot, large }: Props) {
         <div className={`flex flex-wrap justify-center ${large ? 'gap-4 sm:gap-5' : 'gap-3 sm:gap-4'}`}>
           {loot.map(item => (
             <div key={item.skin.id} className={cardWrapClass}>
-              <LootChanceCard item={item} large={large} />
+              <LootChanceCard item={item} large={large} caseSlug={caseSlug} />
             </div>
           ))}
         </div>
       ) : (
         <div className={`grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 ${large ? 'gap-4 sm:gap-5' : 'gap-3 sm:gap-4'}`}>
           {loot.map(item => (
-            <LootChanceCard key={item.skin.id} item={item} large={large} />
+            <LootChanceCard key={item.skin.id} item={item} large={large} caseSlug={caseSlug} />
           ))}
         </div>
       )}

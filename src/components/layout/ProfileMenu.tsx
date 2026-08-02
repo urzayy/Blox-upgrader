@@ -17,8 +17,8 @@ export function ProfileMenu() {
   const avatarId = resolveAvatarId(user.avatarId, user.email);
   const displayName = user.nickname?.trim() || user.email.split('@')[0];
   const active = route === 'profile';
-  const photoSize = DEV_CLEAN_HEADER_LAYOUT ? 38 : 42;
-  const buttonSize = DEV_CLEAN_HEADER_LAYOUT ? 'h-11 w-11' : 'h-12 w-12';
+  const photoSize = DEV_CLEAN_HEADER_LAYOUT ? 36 : 42;
+  const buttonSize = DEV_CLEAN_HEADER_LAYOUT ? 'h-10 w-10 2xl:h-11 2xl:w-11' : 'h-12 w-12';
 
   return (
     <button

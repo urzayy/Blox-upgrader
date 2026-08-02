@@ -15,17 +15,26 @@ export function AdminWithdrawInbox({ open, onClose, onOpenTicket }: Props) {
 
   useEffect(() => {
     if (!open) return;
+    let cancelled = false;
+
     const load = async () => {
       try {
-        setItems(await loadAdminInbox());
+        const nextItems = await loadAdminInbox();
+        if (cancelled) return;
+        setItems(nextItems);
         setError('');
       } catch {
+        if (cancelled) return;
         setError('Could not load withdrawal requests.');
       }
     };
+
     void load();
     const id = setInterval(() => { void load(); }, 3000);
-    return () => clearInterval(id);
+    return () => {
+      cancelled = true;
+      clearInterval(id);
+    };
   }, [open]);
 
   return (

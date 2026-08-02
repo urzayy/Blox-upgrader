@@ -1,7 +1,8 @@
 import { RARITY } from '../../data/skins';
 import type { Skin } from '../../data/skins';
+import type { LootRollRange } from '../../lib/lootRollRange';
 import { isRoyalLootChance } from '../../lib/freeCaseRoyal';
-import { RoyalCrownBadge } from './RoyalCrownBadge';
+import { LootItemInfoButton } from './LootItemInfoButton';
 import { SkinImage } from '../skins/SkinImage';
 
 function splitSkinName(name: string): { weapon: string; skin: string } {
@@ -22,11 +23,12 @@ function rarityCardBackground(color: string, isKnife: boolean): string {
 interface Props {
   skin: Skin;
   chance?: number;
+  rollRange?: LootRollRange;
   /** Outer cards on each side are slightly smaller/dimmer. */
   edge?: boolean;
 }
 
-export function PreviewSkinCard({ skin, chance, edge = false }: Props) {
+export function PreviewSkinCard({ skin, chance, rollRange, edge = false }: Props) {
   const r = RARITY[skin.rarity];
   const isKnife = skin.weapon === 'Knife' || skin.weapon === 'Gloves';
   const accent = isKnife ? '#ffd700' : r.color;
@@ -46,7 +48,14 @@ export function PreviewSkinCard({ skin, chance, edge = false }: Props) {
         boxShadow: edge ? undefined : `inset 0 0 0 1px rgba(255,255,255,0.04), 0 8px 24px -10px rgba(0,0,0,0.65)`,
       }}
     >
-      {isRoyal && <RoyalCrownBadge />}
+      {chance != null && rollRange && (
+        <LootItemInfoButton
+          price={skin.price}
+          chance={chance}
+          rollRange={rollRange}
+          isRoyal={isRoyal}
+        />
+      )}
       <div
         className="pointer-events-none absolute inset-0 opacity-45"
         style={{

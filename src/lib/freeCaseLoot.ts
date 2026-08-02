@@ -1,5 +1,7 @@
 import { ALL_SKINS_CATALOG, findSkinById, sortSkinsByPriceDesc, type Skin } from '../data/skins';
 import { getCatalogCaseLoot } from './caseCatalog';
+import { buildLootRollRangesFromEntries, type LootRollRange } from './lootRollRange';
+import { FIFTY_FIFTY_Z_SLUG_SET } from './caseCatalogFilters';
 import { getFreeCaseBySlug, type FreeCaseTier } from './freeCaseTiers';
 
 export interface FreeCaseLootEntry {
@@ -234,15 +236,18 @@ export function getFreeCaseLoot(slug: string): {
   featured: Skin | null;
   items: Skin[];
   loot: FreeCaseLootItem[];
+  entryOrder: string[];
 } {
   const table = resolveLootTable(slug);
   const loot = resolveLootItems(table);
   const featured = findSkinById(table.featuredSkinId) ?? loot[0]?.skin ?? null;
+  const entryOrder = table.entries.map(entry => entry.skinId);
 
   return {
     featured,
     items: loot.map(item => item.skin),
     loot,
+    entryOrder,
   };
 }
 
@@ -253,12 +258,20 @@ export function pickWeightedFreeCaseSkin(slug: string): Skin | null {
 
 export const JOKER_CASE_PRICE = 355;
 
+/** +29% on joker base prices (20% base + extra 7.5%) — 50/50 excluded. */
+const JOKER_PRICE_MARKUP = 1.29;
+
+function withJokerPriceMarkup(slug: string, price: number): number {
+  if (FIFTY_FIFTY_Z_SLUG_SET.has(slug)) return price;
+  return Math.round(price * JOKER_PRICE_MARKUP * 100) / 100;
+}
+
 const CASE_JOKER_PRICE_OVERRIDES: Record<string, number> = {
-  'edge-protocol': 5,
-  'striker-knife': 25,
-  'sport-palm': 90,
-  'blade-roulette': 203,
-  'operator-wrap': 750,
+  'edge-protocol': 6,
+  'striker-knife': 30,
+  'sport-palm': 125,
+  'blade-roulette': 310,
+  'operator-wrap': 950,
   'chrome-factory': 700,
   'violet-storm': 2900,
   'ember-core': 1150,
@@ -288,7 +301,8 @@ const CASE_JOKER_PRICE_OVERRIDES: Record<string, number> = {
 };
 
 export function getJokerCasePrice(slug: string): number {
-  return CASE_JOKER_PRICE_OVERRIDES[slug] ?? JOKER_CASE_PRICE;
+  const base = CASE_JOKER_PRICE_OVERRIDES[slug] ?? JOKER_CASE_PRICE;
+  return withJokerPriceMarkup(slug, base);
 }
 
 export function toEqualChanceLoot(loot: FreeCaseLootItem[]): FreeCaseLootItem[] {
@@ -326,6 +340,20 @@ export const MID_DROP_SOUND_MIN_CHANCE = 1.01;
 export const MID_DROP_SOUND_MAX_CHANCE = 5;
 
 export type FreeCaseDropSound = 'common' | 'mid' | 'none';
+
+export function getLootRollRanges(slug: string, lootOverride?: FreeCaseLootItem[]): Map<string, LootRollRange> {
+  const table = resolveLootTable(slug);
+  const entryOrder = table.entries.map(entry => entry.skinId);
+  const lootById = new Map((lootOverride ?? resolveLootItems(table)).map(item => [item.skin.id, item]));
+  const entries = entryOrder
+    .map(skinId => {
+      const item = lootById.get(skinId);
+      return item ? { skinId, chance: item.chance } : null;
+    })
+    .filter((entry): entry is { skinId: string; chance: number } => entry !== null);
+
+  return buildLootRollRangesFromEntries(entries);
+}
 
 export function getLootChanceForSkin(slug: string, skinId: string): number | null {
   const { loot } = getFreeCaseLoot(slug);

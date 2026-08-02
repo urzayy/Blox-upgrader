@@ -3,6 +3,14 @@ import type { GiveawayPeriod } from './giveaways';
 
 export type GiveawayStatus = 'active' | 'closed';
 
+export interface GiveawayWinnerInfo {
+  userId: string;
+  email: string;
+  nickname: string;
+  entries: number;
+  chancePercent: number;
+}
+
 export interface GiveawayRuntimeSlot {
   period: GiveawayPeriod;
   status: GiveawayStatus;
@@ -14,6 +22,7 @@ export interface GiveawayRuntimeSlot {
   totalEntries?: number;
   openedBy: string | null;
   closedAt: number | null;
+  winner?: GiveawayWinnerInfo | null;
 }
 
 export interface GiveawayParticipant {
@@ -33,6 +42,7 @@ export interface GiveawayDetailResponse {
   me: GiveawayParticipant | null;
   myChance: number;
   coinsPerEntry: number;
+  winner?: GiveawayWinnerInfo | null;
 }
 
 export interface GiveawaysStateResponse {

@@ -36,6 +36,7 @@ import { createWithdrawTicket, createDepositTicket, createRobuxDepositTicket, fe
 import type { AppliedDepositBonus } from './lib/depositBonusCode';
 import { validateDepositTotal } from './lib/deposit';
 import { validateRobuxDepositAmount } from './lib/robuxDeposit';
+import { dispatchGiveawayUpdated } from './hooks/useGiveawayDetail';
 import {
   acknowledgeInventoryGrants,
   fetchPendingInventoryGrants,
@@ -384,6 +385,7 @@ export default function ProdApp() {
       });
     }
     setBalance(prev => prev + amount);
+    dispatchGiveawayUpdated();
   }, [user, log]);
 
   const handleWithdrawTicketCompleted = useCallback((ticket: WithdrawTicket) => {

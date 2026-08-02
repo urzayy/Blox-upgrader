@@ -35,6 +35,11 @@ function isSkin(value: unknown): value is Skin {
     && typeof s.price === 'number'
     && typeof s.image === 'string'
     && (s.obtainedAt === undefined || typeof s.obtainedAt === 'number')
+    && (s.fairProof === undefined || (
+      typeof s.fairProof === 'object'
+      && s.fairProof !== null
+      && typeof s.fairProof.roll === 'number'
+    ))
   );
 }
 
