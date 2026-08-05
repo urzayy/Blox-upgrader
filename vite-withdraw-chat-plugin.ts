@@ -5,7 +5,7 @@ import { resolveDepositBonus, resolveRobuxDepositBonus } from './server/lib/depo
 import { createGiveawayStore } from './server/lib/giveawayStore.mjs';
 import { recordGiveawayDepositFromTicket } from './server/lib/giveawayDepositHook.mjs';
 
-const MIN_DEPOSIT_TOTAL = 250;
+const MIN_DEPOSIT_TOTAL = 1000;
 const MIN_WITHDRAW_TOTAL = 20;
 
 type WithdrawTicketStatus = 'open' | 'completed' | 'cancelled';
